@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 
 export async function GET(
   _request: Request,
@@ -7,15 +8,8 @@ export async function GET(
 ) {
   const { id } = await params;
   const supabase = createServiceClient();
-  const { data, error } = await supabase
-    .from("events")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 404 });
-  }
+  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
   return NextResponse.json(data);
 }
 
@@ -26,6 +20,8 @@ export async function PATCH(
   const { id } = await params;
   const supabase = createServiceClient();
   const body = await request.json();
+
+  const { data: before } = await supabase.from("events").select("*").eq("id", id).single();
 
   const { data, error } = await supabase
     .from("events")
@@ -46,8 +42,22 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  await audit("update", "event", id, { before, after: data }, request);
+
   return NextResponse.json(data);
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = createServiceClient();
+  const { data: before } = await supabase.from("events").select("*").eq("id", id).single();
+  const { error } = await supabase.from("events").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("delete", "event", id, { before }, request);
+  return NextResponse.json({ success: true });
 }

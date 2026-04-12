@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 
 export async function GET() {
   const supabase = createServiceClient();
@@ -18,7 +19,6 @@ export async function POST(request: Request) {
   const supabase = createServiceClient();
   const body = await request.json();
 
-  // Auto-generate event ID: type_code + 5 random digits
   const typeCode = body.type_code || "RF";
   const randomDigits = Math.floor(10000 + Math.random() * 90000);
   const eventId = `${typeCode}${randomDigits}`;
@@ -46,5 +46,8 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  await audit("create", "event", data.id, { after: data }, request);
+
   return NextResponse.json(data, { status: 201 });
 }

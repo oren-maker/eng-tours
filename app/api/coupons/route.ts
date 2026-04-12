@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 
 // GET /api/coupons - List all coupons (admin)
 export async function GET() {

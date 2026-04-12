@@ -27,18 +27,7 @@ const navItems: NavItem[] = [
   },
   { href: "/orders", label: "הזמנות", icon: "📋" },
   { href: "/financial", label: "כלכלי", icon: "💰" },
-  {
-    href: "/settings",
-    label: "הגדרות כלליות",
-    icon: "⚙️",
-    children: [
-      { href: "/faq", label: "שאלות ותשובות", icon: "❓" },
-      { href: "/users", label: "משתמשים", icon: "👥" },
-      { href: "/whatsapp", label: "WhatsApp", icon: "💬" },
-      { href: "/audit-log", label: "יומן פעולות", icon: "📜" },
-      { href: "/settings", label: "הגדרות", icon: "⚙️" },
-    ],
-  },
+  { href: "/settings-hub", label: "הגדרות כלליות", icon: "⚙️" },
 ];
 
 export default function AdminSidebar() {

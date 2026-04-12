@@ -45,7 +45,7 @@ export default function EventsPage() {
             href="/coupons"
             className="border border-primary-300 text-primary-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors"
           >
-            🏷️ קופונים
+            רשימת קופונים
           </Link>
           <Link
             href="/events/new"

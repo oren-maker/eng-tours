@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 
 export async function GET() {
   const supabase = createServiceClient();
@@ -34,8 +35,7 @@ export async function POST(request: Request) {
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("create", "hotel", data?.id, { after: data }, request);
   return NextResponse.json(data, { status: 201 });
 }

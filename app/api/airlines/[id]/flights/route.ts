@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -48,6 +49,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("create", "flight", data?.id, { after: data }, req);
   return NextResponse.json(data, { status: 201 });
 }
 
@@ -57,8 +59,10 @@ export async function PATCH(req: Request) {
   if (!body.flight_id) return NextResponse.json({ error: "flight_id required" }, { status: 400 });
 
   const { flight_id, ...update } = body;
+  const { data: before } = await supabase.from("flights").select("*").eq("id", flight_id).single();
   const { data, error } = await supabase.from("flights").update(update).eq("id", flight_id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("update", "flight", flight_id, { before, after: data }, req);
   return NextResponse.json(data);
 }
 
@@ -66,7 +70,9 @@ export async function DELETE(req: Request) {
   const supabase = createServiceClient();
   const body = await req.json();
   if (!body.flight_id) return NextResponse.json({ error: "flight_id required" }, { status: 400 });
+  const { data: before } = await supabase.from("flights").select("*").eq("id", body.flight_id).single();
   const { error } = await supabase.from("flights").delete().eq("id", body.flight_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("delete", "flight", body.flight_id, { before }, req);
   return NextResponse.json({ success: true });
 }
