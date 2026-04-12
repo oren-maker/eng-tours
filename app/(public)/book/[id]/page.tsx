@@ -31,10 +31,12 @@ function BookingContent() {
   const [flights, setFlights] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [openFaq, setOpenFaq] = useState<string | null>(null);
 
   const [peopleCount, setPeopleCount] = useState(1);
   const [outboundFlight, setOutboundFlight] = useState<string>("");
@@ -43,6 +45,7 @@ function BookingContent() {
   const [selectedTicket, setSelectedTicket] = useState<string>("");
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [contactEmail, setContactEmail] = useState("");
+  const [phonePrefix, setPhonePrefix] = useState("+972");
   const [contactPhone, setContactPhone] = useState("");
 
   useEffect(() => {
@@ -51,15 +54,30 @@ function BookingContent() {
       fetch(`/api/flights?event_id=${eventId}`).then((r) => r.json()),
       fetch(`/api/rooms`).then((r) => r.json()),
       fetch(`/api/tickets`).then((r) => r.json()),
+      fetch(`/api/faq`).then((r) => r.json()).catch(() => []),
     ])
-      .then(([evData, flightsData, roomsData, ticketsData]) => {
+      .then(([evData, flightsData, roomsData, ticketsData, faqData]) => {
         setEvent(evData);
         if (Array.isArray(flightsData)) setFlights(flightsData);
         if (Array.isArray(roomsData)) setRooms(roomsData.filter((r: any) => r.event_id === eventId));
         if (Array.isArray(ticketsData)) setTickets(ticketsData.filter((t: any) => t.event_id === eventId));
+        if (Array.isArray(faqData)) setFaqs(faqData.filter((f: any) => f.is_active));
       })
       .finally(() => setLoading(false));
   }, [eventId]);
+
+  const phonePrefixes = [
+    { value: "+972", label: "🇮🇱 +972 ישראל" },
+    { value: "+1", label: "🇺🇸 +1 ארה״ב" },
+    { value: "+44", label: "🇬🇧 +44 בריטניה" },
+    { value: "+33", label: "🇫🇷 +33 צרפת" },
+    { value: "+49", label: "🇩🇪 +49 גרמניה" },
+    { value: "+39", label: "🇮🇹 +39 איטליה" },
+    { value: "+34", label: "🇪🇸 +34 ספרד" },
+    { value: "+30", label: "🇬🇷 +30 יוון" },
+    { value: "+31", label: "🇳🇱 +31 הולנד" },
+    { value: "+7", label: "🇷🇺 +7 רוסיה" },
+  ];
 
   useEffect(() => {
     setPassengers((prev) => {
@@ -119,7 +137,7 @@ function BookingContent() {
         total_price: totalPrice,
         mode: event?.mode || "registration",
         contact_email: contactEmail,
-        contact_phone: contactPhone,
+        contact_phone: phonePrefix + contactPhone,
       };
       const res = await fetch("/api/orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -400,8 +418,14 @@ function BookingContent() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">טלפון *</label>
-                      <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required dir="ltr"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                      <div className="flex gap-1" dir="ltr">
+                        <select value={phonePrefix} onChange={(e) => setPhonePrefix(e.target.value)}
+                          className="w-28 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-primary-500 outline-none">
+                          {phonePrefixes.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        </select>
+                        <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required placeholder="524802830"
+                          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -491,6 +515,28 @@ function BookingContent() {
           </div>
         </div>
       </main>
+
+      {/* FAQ Section */}
+      {faqs.length > 0 && (
+        <section className="max-w-5xl mx-auto px-4 pb-8">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h3 className="text-xl font-bold text-primary-900 mb-4">❓ שאלות ותשובות</h3>
+            <div className="space-y-2">
+              {faqs.map((faq) => (
+                <details key={faq.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                  <summary className="p-3 cursor-pointer hover:bg-gray-50 flex items-center justify-between text-sm font-medium text-gray-800">
+                    <span>{faq.question}</span>
+                    <span className="text-primary-500 text-xs">▼</span>
+                  </summary>
+                  <div className="p-3 pt-0 text-sm text-gray-600 leading-relaxed">
+                    {faq.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <footer className="text-center py-6 text-xs text-gray-500">
         © ENG Tours - כל הזכויות שמורות

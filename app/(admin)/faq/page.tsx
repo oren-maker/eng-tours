@@ -1,5 +1,6 @@
 "use client";
 
+import BackToSettings from "@/components/back-to-settings";
 import { useState, useEffect } from "react";
 
 interface FaqItem {
@@ -160,6 +161,8 @@ export default function FaqPage() {
   };
 
   return (
+    <>
+      <BackToSettings />
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold text-primary-900">ניהול שאלות נפוצות</h2>
@@ -353,5 +356,6 @@ export default function FaqPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

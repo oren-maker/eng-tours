@@ -46,6 +46,36 @@ export async function PATCH(
       );
     }
 
+    // Business rule: Cannot mark as "confirmed" without supplier_approved first
+    if (status === "confirmed" && currentOrder.status !== "supplier_approved") {
+      return NextResponse.json(
+        { error: "לא ניתן לאשר הזמנה סופית ללא אישור ספק. יש לעבור דרך supplier_approved תחילה" },
+        { status: 400 }
+      );
+    }
+
+    // Business rule: Check age if event has min_age
+    if (status === "confirmed" || status === "supplier_approved") {
+      const { data: ev } = await supabase.from("events").select("min_age").eq("id", currentOrder.event_id).single();
+      if (ev?.min_age) {
+        const { data: participants } = await supabase
+          .from("participants")
+          .select("birth_date")
+          .eq("order_id", id);
+        const today = new Date();
+        for (const p of participants || []) {
+          if (!p.birth_date) continue;
+          const age = Math.floor((today.getTime() - new Date(p.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+          if (age < ev.min_age) {
+            return NextResponse.json(
+              { error: `לא ניתן לאשר - יש נוסע מתחת לגיל ${ev.min_age} (בן ${age})` },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    }
+
     // Build update object
     const updateData: Record<string, unknown> = { status };
 

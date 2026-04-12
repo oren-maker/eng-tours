@@ -1,5 +1,6 @@
 "use client";
 
+import BackToSettings from "@/components/back-to-settings";
 import { useState, useEffect, useCallback } from "react";
 
 interface AuditEntry {
@@ -87,6 +88,8 @@ export default function AuditLogPage() {
     ]);
 
     return (
+    <>
+      <BackToSettings />
       <div className="grid grid-cols-2 gap-4 text-xs">
         <div>
           <div className="font-semibold text-red-600 mb-1">לפני</div>
@@ -105,6 +108,8 @@ export default function AuditLogPage() {
   };
 
   return (
+    <>
+      <BackToSettings />
     <div>
       <h2 className="text-2xl font-bold text-primary-900 mb-6">יומן פעולות</h2>
 
@@ -269,5 +274,6 @@ export default function AuditLogPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import BackToSettings from "@/components/back-to-settings";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -81,6 +82,8 @@ export default function UsersPage() {
   const isPrimaryAdmin = session?.user?.is_primary_admin;
 
   return (
+    <>
+      <BackToSettings />
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold text-primary-900">ניהול משתמשים</h2>
@@ -175,5 +178,6 @@ export default function UsersPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import BackToSettings from "@/components/back-to-settings";
 import { useState, useEffect } from "react";
 
 interface Settings {
@@ -170,6 +171,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
+    <>
+      <BackToSettings />
       <div>
         <h2 className="text-2xl font-bold text-primary-900 mb-6">הגדרות מערכת</h2>
         <div className="text-center py-12 text-gray-400">טוען הגדרות...</div>
@@ -178,6 +181,8 @@ export default function SettingsPage() {
   }
 
   return (
+    <>
+      <BackToSettings />
     <div>
       <h2 className="text-2xl font-bold text-primary-900 mb-6">הגדרות מערכת</h2>
 
@@ -277,5 +282,6 @@ export default function SettingsPage() {
         ))}
       </div>
     </div>
+    </>
   );
 }

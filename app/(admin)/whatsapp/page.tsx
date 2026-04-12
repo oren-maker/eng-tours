@@ -1,5 +1,6 @@
 "use client";
 
+import BackToSettings from "@/components/back-to-settings";
 import { useEffect, useState } from "react";
 import QRCode from "react-qr-code";
 
@@ -170,6 +171,8 @@ export default function WhatsAppAdminPage() {
   ] as const;
 
   return (
+    <>
+      <BackToSettings />
     <div>
       {/* Page header */}
       <div className="flex items-center justify-between mb-6">
@@ -520,5 +523,6 @@ export default function WhatsAppAdminPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
