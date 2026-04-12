@@ -99,29 +99,21 @@ export default function NewUserPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">טלפון</label>
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(e) => updateField("phone", e.target.value)}
-                placeholder="050-1234567"
-                className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                dir="ltr"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-              <input
-                type="tel"
-                value={form.whatsapp}
-                onChange={(e) => updateField("whatsapp", e.target.value)}
-                placeholder="972501234567"
-                className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                dir="ltr"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">טלפון / WhatsApp</label>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => {
+                updateField("phone", e.target.value);
+                updateField("whatsapp", e.target.value);
+              }}
+              placeholder="0524802830"
+              autoComplete="off"
+              className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              dir="ltr"
+            />
+            <p className="text-xs text-gray-400 mt-1">המספר ישמש גם ל-WhatsApp</p>
           </div>
 
           <div>

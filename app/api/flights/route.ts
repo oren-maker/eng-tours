@@ -8,8 +8,8 @@ export async function GET(request: Request) {
 
   let query = supabase
     .from("flights")
-    .select("*, events(name, event_id)")
-    .order("departure_date", { ascending: true });
+    .select("*, events(name)")
+    .order("departure_time", { ascending: true });
 
   if (eventId) {
     query = query.eq("event_id", eventId);
@@ -31,11 +31,9 @@ export async function POST(request: Request) {
     .from("flights")
     .insert({
       event_id: body.event_id,
-      airline: body.airline,
+      airline_name: body.airline_name || body.airline,
       flight_code: body.flight_code,
-      departure_date: body.departure_date || null,
       departure_time: body.departure_time || null,
-      arrival_date: body.arrival_date || null,
       arrival_time: body.arrival_time || null,
       origin_city: body.origin_city || null,
       origin_iata: body.origin_iata || null,
@@ -43,9 +41,11 @@ export async function POST(request: Request) {
       dest_iata: body.dest_iata || null,
       total_seats: body.total_seats ?? null,
       booked_seats: 0,
-      price_usd: body.price_usd ?? null,
+      price_company: body.price_company ?? null,
+      price_customer: body.price_customer ?? null,
       transfer_company: body.transfer_company || null,
-      contact_info: body.contact_info || null,
+      contact_phone: body.contact_phone || null,
+      contact_name: body.contact_name || null,
     })
     .select()
     .single();

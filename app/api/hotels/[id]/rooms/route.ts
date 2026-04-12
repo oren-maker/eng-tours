@@ -9,7 +9,7 @@ export async function GET(
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("rooms")
-    .select("*, events(name, event_id)")
+    .select("*, events(name)")
     .eq("hotel_id", id)
     .order("check_in");
 
@@ -35,10 +35,11 @@ export async function POST(
       room_type: body.room_type,
       check_in: body.check_in || null,
       check_out: body.check_out || null,
-      price_per_night: body.price_per_night ?? null,
-      total_price: body.total_price ?? null,
+      price_company: body.price_company ?? null,
+      price_customer: body.price_customer ?? null,
       capacity: body.capacity ?? null,
       total_rooms: body.total_rooms ?? null,
+      booked_rooms: 0,
     })
     .select()
     .single();

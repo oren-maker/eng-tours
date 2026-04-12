@@ -5,8 +5,8 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("packages")
-    .select("*, events(name, event_id), flights(flight_code, airline), rooms(room_type, hotels(name)), tickets(name)")
-    .order("created_at", { ascending: false });
+    .select("*, events(name), flights(flight_code, airline_name), rooms(room_type), tickets(name)")
+    .order("name");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -23,11 +23,11 @@ export async function POST(request: Request) {
     .insert({
       event_id: body.event_id,
       name: body.name,
-      description: body.description || null,
+      service_level: body.service_level || null,
       flight_id: body.flight_id || null,
       room_id: body.room_id || null,
       ticket_id: body.ticket_id || null,
-      total_price: body.total_price ?? null,
+      price_total: body.price_total ?? null,
     })
     .select()
     .single();

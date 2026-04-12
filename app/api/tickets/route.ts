@@ -5,8 +5,8 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("tickets")
-    .select("*, events(name, event_id)")
-    .order("created_at", { ascending: false });
+    .select("*, events(name)")
+    .order("name");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -23,14 +23,12 @@ export async function POST(request: Request) {
     .insert({
       event_id: body.event_id,
       name: body.name,
-      ticket_type: body.ticket_type || null,
-      description: body.description || null,
-      price_usd: body.price_usd ?? null,
-      total_quantity: body.total_quantity ?? null,
-      sold_quantity: 0,
-      venue: body.venue || null,
-      event_date: body.event_date || null,
-      notes: body.notes || null,
+      price_customer: body.price_customer ?? null,
+      price_company: body.price_company ?? null,
+      external_url: body.external_url || null,
+      payment_type: body.payment_type || "credit",
+      total_qty: body.total_qty ?? null,
+      booked_qty: 0,
     })
     .select()
     .single();
