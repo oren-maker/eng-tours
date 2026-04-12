@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { COUNTRIES } from "@/lib/countries";
 
 interface HotelFormProps {
   hotel?: Record<string, unknown>;
+  defaultCountry?: string;
 }
 
-export default function HotelForm({ hotel }: HotelFormProps) {
+export default function HotelForm({ hotel, defaultCountry }: HotelFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,7 +17,7 @@ export default function HotelForm({ hotel }: HotelFormProps) {
   const [form, setForm] = useState({
     name: (hotel?.name as string) || "",
     city: (hotel?.city as string) || "",
-    country: (hotel?.country as string) || "",
+    country: (hotel?.country as string) || defaultCountry || "",
     stars: (hotel?.stars as number) || 3,
     contact_name: (hotel?.contact_name as string) || "",
     contact_phone: (hotel?.contact_phone as string) || "",
@@ -100,8 +102,15 @@ export default function HotelForm({ hotel }: HotelFormProps) {
             name="country"
             value={form.country}
             onChange={handleChange}
+            list="hotel-countries-list"
+            placeholder="הקלד שם מדינה..."
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
+          <datalist id="hotel-countries-list">
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         <div>

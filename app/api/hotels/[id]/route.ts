@@ -16,5 +16,13 @@ export async function GET(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 404 });
   }
-  return NextResponse.json(data);
+
+  // Also fetch rooms for this hotel
+  const { data: rooms } = await supabase
+    .from("rooms")
+    .select("*, events(name)")
+    .eq("hotel_id", id)
+    .order("created_at", { ascending: false });
+
+  return NextResponse.json({ ...data, rooms: rooms || [] });
 }

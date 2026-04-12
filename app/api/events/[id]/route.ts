@@ -40,6 +40,7 @@ export async function PATCH(
       mode: body.mode,
       waiting_list_enabled: body.waiting_list_enabled ?? false,
       services: body.services,
+      destination_country: body.destination_country || null,
     })
     .eq("id", id)
     .select()

@@ -49,3 +49,27 @@ export async function POST(
   }
   return NextResponse.json(data, { status: 201 });
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  await params;
+  const supabase = createServiceClient();
+  const { searchParams } = new URL(request.url);
+  const roomId = searchParams.get("roomId");
+
+  if (!roomId) {
+    return NextResponse.json({ error: "roomId is required" }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("rooms")
+    .delete()
+    .eq("id", roomId);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  return NextResponse.json({ success: true });
+}

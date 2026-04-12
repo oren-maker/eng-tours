@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       mode: body.mode || "registration",
       status: "active",
       waiting_list_enabled: body.waiting_list_enabled ?? false,
+      destination_country: body.destination_country || null,
     })
     .select()
     .single();

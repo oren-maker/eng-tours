@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CITIES } from "@/lib/countries";
 
 interface FlightFormProps {
-  events: { id: string; name: string }[];
+  events: { id: string; name: string; start_date?: string; end_date?: string }[];
   flight?: Record<string, unknown>;
 }
 
@@ -33,7 +34,20 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value };
+      // Auto-fill dates when event is selected
+      if (name === "event_id" && value) {
+        const ev = events.find((e) => e.id === value);
+        if (ev?.start_date && !prev.departure_time) {
+          updated.departure_time = ev.start_date.split("T")[0] + "T08:00";
+        }
+        if (ev?.end_date && !prev.arrival_time) {
+          updated.arrival_time = ev.end_date.split("T")[0] + "T20:00";
+        }
+      }
+      return updated;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -127,8 +141,15 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
             name="origin_city"
             value={form.origin_city}
             onChange={handleChange}
+            list="origin-cities-list"
+            placeholder="הקלד שם עיר..."
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
+          <datalist id="origin-cities-list">
+            {CITIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         <div>
@@ -150,8 +171,15 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
             name="dest_city"
             value={form.dest_city}
             onChange={handleChange}
+            list="dest-cities-list"
+            placeholder="הקלד שם עיר..."
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
+          <datalist id="dest-cities-list">
+            {CITIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         <div>

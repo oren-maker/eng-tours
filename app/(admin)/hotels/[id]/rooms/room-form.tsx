@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface RoomFormProps {
   hotelId: string;
-  events: { id: string; name: string }[];
+  events: { id: string; name: string; start_date?: string; end_date?: string }[];
 }
 
 export default function RoomForm({ hotelId, events }: RoomFormProps) {
@@ -26,7 +26,19 @@ export default function RoomForm({ hotelId, events }: RoomFormProps) {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value };
+      if (name === "event_id" && value) {
+        const ev = events.find((e) => e.id === value);
+        if (ev?.start_date && !prev.check_in) {
+          updated.check_in = ev.start_date.split("T")[0];
+        }
+        if (ev?.end_date && !prev.check_out) {
+          updated.check_out = ev.end_date.split("T")[0];
+        }
+      }
+      return updated;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {

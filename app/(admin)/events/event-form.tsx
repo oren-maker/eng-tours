@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { COUNTRIES } from "@/lib/countries";
 
 interface EventFormProps {
   event?: {
@@ -17,6 +18,7 @@ interface EventFormProps {
     mode: string;
     waiting_list_enabled: boolean;
     status: string;
+    destination_country: string;
   };
 }
 
@@ -51,6 +53,7 @@ export default function EventForm({ event }: EventFormProps) {
     max_age: event?.max_age ?? "",
     mode: event?.mode || "registration",
     waiting_list_enabled: event?.waiting_list_enabled ?? false,
+    destination_country: event?.destination_country || "",
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -136,6 +139,24 @@ export default function EventForm({ event }: EventFormProps) {
             rows={3}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
           />
+        </div>
+
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">מדינת יעד</label>
+          <input
+            type="text"
+            name="destination_country"
+            value={form.destination_country}
+            onChange={handleChange}
+            list="countries-list"
+            placeholder="הקלד שם מדינה..."
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+          />
+          <datalist id="countries-list">
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
 
         {/* Services - Multi-select checkboxes */}
