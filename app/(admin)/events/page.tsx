@@ -40,12 +40,20 @@ export default function EventsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-primary-900">אירועים</h2>
-        <Link
-          href="/events/new"
-          className="bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors"
-        >
-          + אירוע חדש
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/coupons"
+            className="border border-primary-300 text-primary-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors"
+          >
+            🏷️ קופונים
+          </Link>
+          <Link
+            href="/events/new"
+            className="bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors"
+          >
+            + אירוע חדש
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -99,8 +107,15 @@ export default function EventsPage() {
                         {event.status === "active" ? "פעיל" : "ארכיון"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex items-center gap-1">
                       <EventActions eventId={event.id} status={event.status} />
+                      <Link
+                        href={`/coupons?event=${event.id}`}
+                        className="text-xs text-primary-600 hover:text-primary-800 px-2 py-1 rounded hover:bg-primary-50"
+                        title="צור קופון לאירוע"
+                      >
+                        🏷️
+                      </Link>
                     </td>
                   </tr>
                 ))}
