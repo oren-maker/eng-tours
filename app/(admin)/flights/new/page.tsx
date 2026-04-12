@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import FlightForm from "../flight-form";
 

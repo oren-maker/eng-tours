@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import PackageForm from "../package-form";
 

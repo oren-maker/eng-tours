@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import EventForm from "../event-form";
