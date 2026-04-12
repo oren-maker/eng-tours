@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
     icon: "📦",
     children: [
       { href: "/packages", label: "חבילות", icon: "📦" },
-      { href: "/flights", label: "טיסות", icon: "✈️" },
+      { href: "/airlines", label: "חברות תעופה", icon: "✈️" },
       { href: "/hotels", label: "מלונות וחדרים", icon: "🏨" },
       { href: "/tickets", label: "כרטיסים", icon: "🎫" },
     ],
