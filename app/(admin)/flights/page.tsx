@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function FlightsPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-12 text-gray-400">טוען...</div>}>
+      <FlightsContent />
+    </Suspense>
+  );
+}
+
+function FlightsContent() {
   const [flights, setFlights] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
