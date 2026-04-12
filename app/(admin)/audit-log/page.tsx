@@ -81,7 +81,7 @@ export default function AuditLogPage() {
   const renderDiff = (before: Record<string, unknown> | null, after: Record<string, unknown> | null) => {
     if (!before && !after) return <span className="text-gray-400">אין נתונים</span>;
 
-    const allKeys = new Set([
+    const _allKeys = new Set([
       ...Object.keys(before || {}),
       ...Object.keys(after || {}),
     ]);

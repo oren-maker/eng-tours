@@ -14,7 +14,7 @@ interface Order {
 }
 
 export default function SupplierPortalPage() {
-  const { data: session } = useSession();
+  useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

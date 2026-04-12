@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create participants
-    const participantRecords = participants.map((p: Record<string, unknown>, i: number) => ({
+    const participantRecords = participants.map((p: Record<string, unknown>) => ({
       order_id: order.id,
       first_name_en: p.first_name_en,
       last_name_en: p.last_name_en,
