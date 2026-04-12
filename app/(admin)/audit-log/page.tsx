@@ -88,8 +88,6 @@ export default function AuditLogPage() {
     ]);
 
     return (
-    <>
-      <BackToSettings />
       <div className="grid grid-cols-2 gap-4 text-xs">
         <div>
           <div className="font-semibold text-red-600 mb-1">לפני</div>

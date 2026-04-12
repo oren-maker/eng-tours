@@ -362,10 +362,16 @@ export default function PackageWizardPage() {
                   <span className="text-gray-600">כמות נוסעים:</span>
                   <span className="font-medium">{peopleCount}</span>
                 </div>
-                {flight && (
+                {flightOut && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-gray-600">טיסה:</span>
-                    <span className="font-medium">{flight.airline_name} {flight.flight_code}</span>
+                    <span className="text-gray-600">טיסת הלוך:</span>
+                    <span className="font-medium">{flightOut.airline_name} {flightOut.flight_code}</span>
+                  </div>
+                )}
+                {flightBack && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-gray-600">טיסת חזור:</span>
+                    <span className="font-medium">{flightBack.airline_name} {flightBack.flight_code}</span>
                   </div>
                 )}
                 {room && (
@@ -401,10 +407,16 @@ export default function PackageWizardPage() {
           <div className="bg-white rounded-xl shadow-sm p-5 sticky top-4">
             <h3 className="text-base font-semibold text-gray-800 mb-3">💰 סיכום מחיר</h3>
             <div className="space-y-2 text-sm">
-              {flight && (
+              {flightOut && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">✈️ טיסה × {peopleCount}</span>
-                  <span className="font-medium">{currencySymbol(currency)}{flightPrice.toLocaleString()}</span>
+                  <span className="text-gray-600">✈️ הלוך × {peopleCount}</span>
+                  <span className="font-medium">{currencySymbol(currency)}{flightOutPrice.toLocaleString()}</span>
+                </div>
+              )}
+              {flightBack && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">🔁 חזור × {peopleCount}</span>
+                  <span className="font-medium">{currencySymbol(currency)}{flightBackPrice.toLocaleString()}</span>
                 </div>
               )}
               {room && (

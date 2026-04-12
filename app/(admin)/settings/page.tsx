@@ -171,9 +171,8 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-    <>
-      <BackToSettings />
       <div>
+        <BackToSettings />
         <h2 className="text-2xl font-bold text-primary-900 mb-6">הגדרות מערכת</h2>
         <div className="text-center py-12 text-gray-400">טוען הגדרות...</div>
       </div>
