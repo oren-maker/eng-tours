@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 
 interface FlightsFilterProps {
-  events: { id: string; name: string; event_id: string }[];
+  events: { id: string; name: string }[];
   selectedEventId?: string;
 }
 
@@ -30,7 +30,7 @@ export default function FlightsFilter({ events, selectedEventId }: FlightsFilter
         <option value="">כל האירועים</option>
         {events.map((ev) => (
           <option key={ev.id} value={ev.id}>
-            {ev.name} ({ev.event_id})
+            {ev.name} ({ev.id})
           </option>
         ))}
       </select>

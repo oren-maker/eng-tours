@@ -24,16 +24,17 @@ export async function POST(
   const { data, error } = await supabase
     .from("events")
     .insert({
-      event_id,
+      id: event_id,
       name: `${original.name} (עותק)`,
       description: original.description,
       type_code: original.type_code,
+      services: original.services,
       start_date: original.start_date,
       end_date: original.end_date,
       min_age: original.min_age,
       max_age: original.max_age,
-      state: original.state,
-      waitlist_enabled: original.waitlist_enabled,
+      mode: original.mode,
+      waiting_list_enabled: original.waiting_list_enabled,
       status: "active",
     })
     .select()

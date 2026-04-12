@@ -16,12 +16,12 @@ export default function HotelForm({ hotel }: HotelFormProps) {
     name: (hotel?.name as string) || "",
     city: (hotel?.city as string) || "",
     country: (hotel?.country as string) || "",
-    address: (hotel?.address as string) || "",
-    star_rating: (hotel?.star_rating as number) || 3,
-    phone: (hotel?.phone as string) || "",
-    email: (hotel?.email as string) || "",
+    stars: (hotel?.stars as number) || 3,
+    contact_name: (hotel?.contact_name as string) || "",
+    contact_phone: (hotel?.contact_phone as string) || "",
+    contact_email: (hotel?.contact_email as string) || "",
     website: (hotel?.website as string) || "",
-    notes: (hotel?.notes as string) || "",
+    rating: (hotel?.rating as number) || "",
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -37,7 +37,8 @@ export default function HotelForm({ hotel }: HotelFormProps) {
     try {
       const payload = {
         ...form,
-        star_rating: Number(form.star_rating),
+        stars: Number(form.stars),
+        rating: form.rating ? Number(form.rating) : null,
       };
 
       const res = await fetch("/api/hotels", {
@@ -103,22 +104,11 @@ export default function HotelForm({ hotel }: HotelFormProps) {
           />
         </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">כתובת</label>
-          <input
-            type="text"
-            name="address"
-            value={form.address}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">דירוג כוכבים</label>
           <select
-            name="star_rating"
-            value={form.star_rating}
+            name="stars"
+            value={form.stars}
             onChange={handleChange}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           >
@@ -131,22 +121,33 @@ export default function HotelForm({ hotel }: HotelFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">טלפון</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">שם איש קשר</label>
           <input
             type="text"
-            name="phone"
-            value={form.phone}
+            name="contact_name"
+            value={form.contact_name}
             onChange={handleChange}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">אימייל</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">טלפון איש קשר</label>
+          <input
+            type="text"
+            name="contact_phone"
+            value={form.contact_phone}
+            onChange={handleChange}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">אימייל איש קשר</label>
           <input
             type="email"
-            name="email"
-            value={form.email}
+            name="contact_email"
+            value={form.contact_email}
             onChange={handleChange}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
@@ -160,17 +161,6 @@ export default function HotelForm({ hotel }: HotelFormProps) {
             value={form.website}
             onChange={handleChange}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">הערות</label>
-          <textarea
-            name="notes"
-            value={form.notes}
-            onChange={handleChange}
-            rows={3}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
           />
         </div>
       </div>

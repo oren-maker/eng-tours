@@ -73,7 +73,7 @@ export default async function EventsPage() {
                 {events.map((event) => (
                   <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                      {event.event_id}
+                      {event.id}
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-800">
                       {event.name}
@@ -94,7 +94,7 @@ export default async function EventsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-gray-500">
-                        {event.state === "registration" ? "הרשמה" : event.state === "payment" ? "תשלום" : event.state}
+                        {event.mode === "registration" ? "הרשמה" : event.mode === "payment" ? "תשלום" : event.mode}
                       </span>
                     </td>
                     <td className="px-4 py-3">

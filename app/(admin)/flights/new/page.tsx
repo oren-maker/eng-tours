@@ -6,7 +6,7 @@ export default async function NewFlightPage() {
   const supabase = createServiceClient();
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_id")
+    .select("id, name")
     .eq("status", "active")
     .order("name");
 

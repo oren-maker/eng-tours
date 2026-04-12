@@ -6,7 +6,7 @@ export default async function TicketsPage() {
   const supabase = createServiceClient();
   const { data: tickets, error } = await supabase
     .from("tickets")
-    .select("*, events(name, event_id)")
+    .select("*, events(name)")
     .order("created_at", { ascending: false });
 
   return (
@@ -49,9 +49,9 @@ export default async function TicketsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {tickets.map((ticket) => {
-                  const remaining = (ticket.total_quantity || 0) - (ticket.sold_quantity || 0);
-                  const pct = ticket.total_quantity
-                    ? Math.round(((ticket.sold_quantity || 0) / ticket.total_quantity) * 100)
+                  const remaining = (ticket.total_qty || 0) - (ticket.booked_qty || 0);
+                  const pct = ticket.total_qty
+                    ? Math.round(((ticket.booked_qty || 0) / ticket.total_qty) * 100)
                     : 0;
                   return (
                     <tr key={ticket.id} className="hover:bg-gray-50 transition-colors">
@@ -62,16 +62,16 @@ export default async function TicketsPage() {
                         {(ticket.events as { name: string })?.name || "—"}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
-                        {ticket.ticket_type || "—"}
+                        {ticket.payment_type || "—"}
                       </td>
                       <td className="px-4 py-3 text-gray-800 font-medium">
-                        ${ticket.price_usd || 0}
+                        ${ticket.price_customer || 0}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
-                        {ticket.total_quantity || 0}
+                        {ticket.total_qty || 0}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
-                        {ticket.sold_quantity || 0}
+                        {ticket.booked_qty || 0}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">

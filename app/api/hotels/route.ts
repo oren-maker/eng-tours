@@ -24,12 +24,12 @@ export async function POST(request: Request) {
       name: body.name,
       city: body.city || null,
       country: body.country || null,
-      address: body.address || null,
-      star_rating: body.star_rating ?? null,
-      phone: body.phone || null,
-      email: body.email || null,
+      stars: body.stars ?? body.star_rating ?? null,
+      contact_name: body.contact_name || null,
+      contact_phone: body.contact_phone || body.phone || null,
+      contact_email: body.contact_email || body.email || null,
       website: body.website || null,
-      notes: body.notes || null,
+      rating: body.rating ?? null,
     })
     .select()
     .single();

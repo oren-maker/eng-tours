@@ -253,7 +253,7 @@ export default function CouponsPage() {
                 >
                   <option value="">כל האירועים</option>
                   {events.map((ev) => (
-                    <option key={ev.id} value={ev.event_id || ev.id}>
+                    <option key={ev.id} value={ev.id}>
                       {ev.name}
                     </option>
                   ))}

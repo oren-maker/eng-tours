@@ -7,14 +7,14 @@ export default async function NewPackagePage() {
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_id")
+    .select("id, name")
     .eq("status", "active")
     .order("name");
 
   const { data: flights } = await supabase
     .from("flights")
-    .select("id, flight_code, airline, event_id, origin_city, dest_city")
-    .order("departure_date");
+    .select("id, flight_code, airline_name, event_id, origin_city, dest_city")
+    .order("departure_time");
 
   const { data: rooms } = await supabase
     .from("rooms")
@@ -23,7 +23,7 @@ export default async function NewPackagePage() {
 
   const { data: tickets } = await supabase
     .from("tickets")
-    .select("id, name, event_id, ticket_type")
+    .select("id, name, event_id")
     .order("name");
 
   return (

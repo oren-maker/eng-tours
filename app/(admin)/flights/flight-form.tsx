@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface FlightFormProps {
-  events: { id: string; name: string; event_id: string }[];
+  events: { id: string; name: string }[];
   flight?: Record<string, unknown>;
 }
 
@@ -15,20 +15,20 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
 
   const [form, setForm] = useState({
     event_id: (flight?.event_id as string) || "",
-    airline: (flight?.airline as string) || "",
+    airline_name: (flight?.airline_name as string) || "",
     flight_code: (flight?.flight_code as string) || "",
-    departure_date: (flight?.departure_date as string) || "",
     departure_time: (flight?.departure_time as string) || "",
-    arrival_date: (flight?.arrival_date as string) || "",
     arrival_time: (flight?.arrival_time as string) || "",
     origin_city: (flight?.origin_city as string) || "",
     origin_iata: (flight?.origin_iata as string) || "",
     dest_city: (flight?.dest_city as string) || "",
     dest_iata: (flight?.dest_iata as string) || "",
     total_seats: (flight?.total_seats as number) || "",
-    price_usd: (flight?.price_usd as number) || "",
+    price_customer: (flight?.price_customer as number) || "",
+    price_company: (flight?.price_company as number) || "",
     transfer_company: (flight?.transfer_company as string) || "",
-    contact_info: (flight?.contact_info as string) || "",
+    contact_name: (flight?.contact_name as string) || "",
+    contact_phone: (flight?.contact_phone as string) || "",
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -45,7 +45,8 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
       const payload = {
         ...form,
         total_seats: form.total_seats ? Number(form.total_seats) : null,
-        price_usd: form.price_usd ? Number(form.price_usd) : null,
+        price_customer: form.price_customer ? Number(form.price_customer) : null,
+        price_company: form.price_company ? Number(form.price_company) : null,
       };
 
       const res = await fetch("/api/flights", {
@@ -89,7 +90,7 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
             <option value="">בחר אירוע</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>
-                {ev.name} ({ev.event_id})
+                {ev.name} ({ev.id})
               </option>
             ))}
           </select>
@@ -99,8 +100,8 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
           <label className="block text-sm font-medium text-gray-700 mb-1">חברת תעופה</label>
           <input
             type="text"
-            name="airline"
-            value={form.airline}
+            name="airline_name"
+            value={form.airline_name}
             onChange={handleChange}
             required
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
@@ -166,20 +167,9 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">תאריך המראה</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">תאריך ושעת המראה</label>
           <input
-            type="date"
-            name="departure_date"
-            value={form.departure_date}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">שעת המראה</label>
-          <input
-            type="time"
+            type="datetime-local"
             name="departure_time"
             value={form.departure_time}
             onChange={handleChange}
@@ -188,20 +178,9 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">תאריך נחיתה</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">תאריך ושעת נחיתה</label>
           <input
-            type="date"
-            name="arrival_date"
-            value={form.arrival_date}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">שעת נחיתה</label>
-          <input
-            type="time"
+            type="datetime-local"
             name="arrival_time"
             value={form.arrival_time}
             onChange={handleChange}
@@ -222,11 +201,24 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ($)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ללקוח ($)</label>
           <input
             type="number"
-            name="price_usd"
-            value={form.price_usd}
+            name="price_customer"
+            value={form.price_customer}
+            onChange={handleChange}
+            min={0}
+            step="0.01"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר לחברה ($)</label>
+          <input
+            type="number"
+            name="price_company"
+            value={form.price_company}
             onChange={handleChange}
             min={0}
             step="0.01"
@@ -246,11 +238,22 @@ export default function FlightForm({ events, flight }: FlightFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">איש קשר</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">שם איש קשר</label>
           <input
             type="text"
-            name="contact_info"
-            value={form.contact_info}
+            name="contact_name"
+            value={form.contact_name}
+            onChange={handleChange}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">טלפון איש קשר</label>
+          <input
+            type="text"
+            name="contact_phone"
+            value={form.contact_phone}
             onChange={handleChange}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />

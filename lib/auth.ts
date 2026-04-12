@@ -69,11 +69,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("אימייל או סיסמה שגויים");
         }
 
-        // Update last login
-        await supabase
-          .from("users")
-          .update({ last_login: new Date().toISOString() })
-          .eq("id", user.id);
+        // Note: no last_login column in schema, skip update
 
         return {
           id: user.id,

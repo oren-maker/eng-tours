@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface RoomFormProps {
   hotelId: string;
-  events: { id: string; name: string; event_id: string }[];
+  events: { id: string; name: string }[];
 }
 
 export default function RoomForm({ hotelId, events }: RoomFormProps) {
@@ -18,8 +18,8 @@ export default function RoomForm({ hotelId, events }: RoomFormProps) {
     room_type: "",
     check_in: "",
     check_out: "",
-    price_per_night: "",
-    total_price: "",
+    price_customer: "",
+    price_company: "",
     capacity: "",
     total_rooms: "",
   });
@@ -41,8 +41,8 @@ export default function RoomForm({ hotelId, events }: RoomFormProps) {
         room_type: form.room_type,
         check_in: form.check_in || null,
         check_out: form.check_out || null,
-        price_per_night: form.price_per_night ? Number(form.price_per_night) : null,
-        total_price: form.total_price ? Number(form.total_price) : null,
+        price_customer: form.price_customer ? Number(form.price_customer) : null,
+        price_company: form.price_company ? Number(form.price_company) : null,
         capacity: form.capacity ? Number(form.capacity) : null,
         total_rooms: form.total_rooms ? Number(form.total_rooms) : null,
       };
@@ -63,8 +63,8 @@ export default function RoomForm({ hotelId, events }: RoomFormProps) {
         room_type: "",
         check_in: "",
         check_out: "",
-        price_per_night: "",
-        total_price: "",
+        price_customer: "",
+        price_company: "",
         capacity: "",
         total_rooms: "",
       });
@@ -138,11 +138,11 @@ export default function RoomForm({ hotelId, events }: RoomFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ללילה ($)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ללקוח ($)</label>
           <input
             type="number"
-            name="price_per_night"
-            value={form.price_per_night}
+            name="price_customer"
+            value={form.price_customer}
             onChange={handleChange}
             min={0}
             step="0.01"
@@ -151,11 +151,11 @@ export default function RoomForm({ hotelId, events }: RoomFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר כולל ($)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר לחברה ($)</label>
           <input
             type="number"
-            name="total_price"
-            value={form.total_price}
+            name="price_company"
+            value={form.price_company}
             onChange={handleChange}
             min={0}
             step="0.01"

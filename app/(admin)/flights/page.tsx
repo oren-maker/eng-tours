@@ -14,15 +14,15 @@ export default async function FlightsPage({
   // Load events for filter dropdown
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_id")
+    .select("id, name")
     .eq("status", "active")
     .order("name");
 
   // Load flights, optionally filtered by event
   let query = supabase
     .from("flights")
-    .select("*, events(name, event_id)")
-    .order("departure_date", { ascending: true });
+    .select("*, events(name)")
+    .order("departure_time", { ascending: true });
 
   if (event_id) {
     query = query.eq("event_id", event_id);
@@ -82,7 +82,7 @@ export default async function FlightsPage({
                       <td className="px-4 py-3 font-mono text-xs text-gray-600">
                         {flight.flight_code}
                       </td>
-                      <td className="px-4 py-3 text-gray-800">{flight.airline}</td>
+                      <td className="px-4 py-3 text-gray-800">{flight.airline_name}</td>
                       <td className="px-4 py-3 text-gray-600">
                         {flight.origin_city} ({flight.origin_iata})
                       </td>
@@ -90,8 +90,8 @@ export default async function FlightsPage({
                         {flight.dest_city} ({flight.dest_iata})
                       </td>
                       <td className="px-4 py-3 text-gray-600">
-                        {flight.departure_date
-                          ? new Date(flight.departure_date).toLocaleDateString("he-IL")
+                        {flight.departure_time
+                          ? new Date(flight.departure_time).toLocaleDateString("he-IL")
                           : "—"}
                       </td>
                       <td className="px-4 py-3">
@@ -114,7 +114,7 @@ export default async function FlightsPage({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-800 font-medium">
-                        ${flight.price_usd || 0}
+                        ${flight.price_customer || 0}
                       </td>
                       <td className="px-4 py-3">
                         <Link

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 
 interface EventOption {
   id: string;
-  event_id: string;
   name: string;
 }
 
@@ -162,7 +161,7 @@ export default function FinancialPage() {
         >
           <option value="">-- בחר אירוע --</option>
           {events.map((ev) => (
-            <option key={ev.id} value={ev.event_id || ev.id}>
+            <option key={ev.id} value={ev.id}>
               {ev.name}
             </option>
           ))}

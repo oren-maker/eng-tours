@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface TicketFormProps {
-  events: { id: string; name: string; event_id: string }[];
+  events: { id: string; name: string }[];
   ticket?: Record<string, unknown>;
 }
 
@@ -16,13 +16,11 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
   const [form, setForm] = useState({
     event_id: (ticket?.event_id as string) || "",
     name: (ticket?.name as string) || "",
-    ticket_type: (ticket?.ticket_type as string) || "",
-    description: (ticket?.description as string) || "",
-    price_usd: (ticket?.price_usd as number) || "",
-    total_quantity: (ticket?.total_quantity as number) || "",
-    venue: (ticket?.venue as string) || "",
-    event_date: (ticket?.event_date as string) || "",
-    notes: (ticket?.notes as string) || "",
+    payment_type: (ticket?.payment_type as string) || "credit",
+    price_customer: (ticket?.price_customer as number) || "",
+    price_company: (ticket?.price_company as number) || "",
+    total_qty: (ticket?.total_qty as number) || "",
+    external_url: (ticket?.external_url as string) || "",
   });
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -38,8 +36,9 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
     try {
       const payload = {
         ...form,
-        price_usd: form.price_usd ? Number(form.price_usd) : null,
-        total_quantity: form.total_quantity ? Number(form.total_quantity) : null,
+        price_customer: form.price_customer ? Number(form.price_customer) : null,
+        price_company: form.price_company ? Number(form.price_company) : null,
+        total_qty: form.total_qty ? Number(form.total_qty) : null,
       };
 
       const res = await fetch("/api/tickets", {
@@ -83,7 +82,7 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
             <option value="">בחר אירוע</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>
-                {ev.name} ({ev.event_id})
+                {ev.name} ({ev.id})
               </option>
             ))}
           </select>
@@ -102,34 +101,38 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">סוג כרטיס</label>
-          <input
-            type="text"
-            name="ticket_type"
-            value={form.ticket_type}
+          <label className="block text-sm font-medium text-gray-700 mb-1">סוג תשלום</label>
+          <select
+            name="payment_type"
+            value={form.payment_type}
             onChange={handleChange}
-            placeholder="לדוגמה: VIP, רגיל, משפחתי"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+          >
+            <option value="credit">אשראי</option>
+            <option value="cash">מזומן</option>
+            <option value="transfer">העברה</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ללקוח ($)</label>
+          <input
+            type="number"
+            name="price_customer"
+            value={form.price_customer}
+            onChange={handleChange}
+            min={0}
+            step="0.01"
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
         </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={2}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
-          />
-        </div>
-
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ($)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר לחברה ($)</label>
           <input
             type="number"
-            name="price_usd"
-            value={form.price_usd}
+            name="price_company"
+            value={form.price_company}
             onChange={handleChange}
             min={0}
             step="0.01"
@@ -141,44 +144,22 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
           <label className="block text-sm font-medium text-gray-700 mb-1">כמות כוללת</label>
           <input
             type="number"
-            name="total_quantity"
-            value={form.total_quantity}
+            name="total_qty"
+            value={form.total_qty}
             onChange={handleChange}
             min={0}
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מקום האירוע</label>
-          <input
-            type="text"
-            name="venue"
-            value={form.venue}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">תאריך האירוע</label>
-          <input
-            type="date"
-            name="event_date"
-            value={form.event_date}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">הערות</label>
-          <textarea
-            name="notes"
-            value={form.notes}
+          <label className="block text-sm font-medium text-gray-700 mb-1">קישור חיצוני</label>
+          <input
+            type="url"
+            name="external_url"
+            value={form.external_url}
             onChange={handleChange}
-            rows={2}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none resize-none"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
         </div>
       </div>

@@ -12,7 +12,7 @@ export default function NewUserPage() {
     display_name: "",
     email: "",
     phone: "",
-    whatsapp: "",
+    whatsapp_number: "",
     password: "",
     role: "admin" as "admin" | "supplier",
   });
@@ -39,7 +39,7 @@ export default function NewUserPage() {
           display_name: form.display_name,
           email: form.email,
           phone: form.phone || undefined,
-          whatsapp: form.whatsapp || undefined,
+          whatsapp_number: form.whatsapp_number || undefined,
           password: form.password,
           role: form.role,
         }),
@@ -106,7 +106,7 @@ export default function NewUserPage() {
               value={form.phone}
               onChange={(e) => {
                 updateField("phone", e.target.value);
-                updateField("whatsapp", e.target.value);
+                updateField("whatsapp_number", e.target.value);
               }}
               placeholder="0524802830"
               autoComplete="off"

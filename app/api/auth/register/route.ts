@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, display_name, role, phone } = body;
+    const { email, password, display_name, role, phone, whatsapp_number, whatsapp } = body;
 
     // Validate required fields
     if (!email || !password || !display_name || !role) {
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         display_name,
         role,
         phone: phone || null,
+        whatsapp_number: whatsapp_number || whatsapp || null,
         is_active: true,
         is_primary_admin: false,
         created_at: new Date().toISOString(),

@@ -63,10 +63,10 @@ export default async function HotelsPage() {
                     <td className="px-4 py-3 text-gray-600">{hotel.city || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">{hotel.country || "—"}</td>
                     <td className="px-4 py-3">
-                      <StarRating stars={hotel.star_rating || 0} />
+                      <StarRating stars={hotel.stars || 0} />
                     </td>
                     <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                      {hotel.phone || "—"}
+                      {hotel.contact_phone || "—"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">

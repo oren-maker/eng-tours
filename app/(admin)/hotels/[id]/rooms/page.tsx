@@ -20,13 +20,13 @@ export default async function HotelRoomsPage({ params }: { params: Promise<{ id:
 
   const { data: rooms, error: roomsError } = await supabase
     .from("rooms")
-    .select("*, events(name, event_id)")
+    .select("*, events(name)")
     .eq("hotel_id", id)
     .order("check_in");
 
   const { data: events } = await supabase
     .from("events")
-    .select("id, name, event_id")
+    .select("id, name")
     .eq("status", "active")
     .order("name");
 
@@ -36,7 +36,7 @@ export default async function HotelRoomsPage({ params }: { params: Promise<{ id:
         <div>
           <h2 className="text-2xl font-bold text-primary-900">חדרים - {hotel.name}</h2>
           <p className="text-sm text-gray-500 mt-1">
-            {hotel.city}, {hotel.country} | {"★".repeat(hotel.star_rating || 0)}
+            {hotel.city}, {hotel.country} | {"★".repeat(hotel.stars || 0)}
           </p>
         </div>
         <Link
@@ -98,7 +98,7 @@ export default async function HotelRoomsPage({ params }: { params: Promise<{ id:
                         : "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-800 font-medium">
-                      ${room.price_per_night || 0}
+                      ${room.price_customer || 0}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{room.capacity || "—"}</td>
                     <td className="px-4 py-3 text-gray-600">{room.total_rooms || "—"}</td>

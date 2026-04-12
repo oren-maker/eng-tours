@@ -37,8 +37,9 @@ export async function PATCH(
       end_date: body.end_date || null,
       min_age: body.min_age ?? null,
       max_age: body.max_age ?? null,
-      state: body.state,
-      waitlist_enabled: body.waitlist_enabled ?? false,
+      mode: body.mode,
+      waiting_list_enabled: body.waiting_list_enabled ?? false,
+      services: body.services,
     })
     .eq("id", id)
     .select()

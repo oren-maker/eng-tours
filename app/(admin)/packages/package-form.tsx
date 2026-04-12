@@ -4,10 +4,10 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 interface PackageFormProps {
-  events: { id: string; name: string; event_id: string }[];
-  flights: { id: string; flight_code: string; airline: string; event_id: string; origin_city: string; dest_city: string }[];
+  events: { id: string; name: string }[];
+  flights: { id: string; flight_code: string; airline_name: string; event_id: string; origin_city: string; dest_city: string }[];
   rooms: { id: string; room_type: string; event_id: string; hotel_id: string; hotels: { name: string } | null }[];
-  tickets: { id: string; name: string; event_id: string; ticket_type: string }[];
+  tickets: { id: string; name: string; event_id: string }[];
 }
 
 export default function PackageForm({ events, flights, rooms, tickets }: PackageFormProps) {
@@ -22,7 +22,8 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
     flight_id: "",
     room_id: "",
     ticket_id: "",
-    total_price: "",
+    price_total: "",
+    service_level: "",
   });
 
   // Filter related items by selected event
@@ -66,7 +67,7 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
         flight_id: form.flight_id || null,
         room_id: form.room_id || null,
         ticket_id: form.ticket_id || null,
-        total_price: form.total_price ? Number(form.total_price) : null,
+        price_total: form.price_total ? Number(form.price_total) : null,
       };
 
       const res = await fetch("/api/packages", {
@@ -110,7 +111,7 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
             <option value="">בחר אירוע</option>
             {events.map((ev) => (
               <option key={ev.id} value={ev.id}>
-                {ev.name} ({ev.event_id})
+                {ev.name} ({ev.id})
               </option>
             ))}
           </select>
@@ -150,7 +151,7 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
             <option value="">ללא טיסה</option>
             {filteredFlights.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.airline} {f.flight_code} ({f.origin_city} → {f.dest_city})
+                {f.airline_name} {f.flight_code} ({f.origin_city} → {f.dest_city})
               </option>
             ))}
           </select>
@@ -184,7 +185,7 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
             <option value="">ללא כרטיס</option>
             {filteredTickets.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} {t.ticket_type ? `(${t.ticket_type})` : ""}
+                {t.name}
               </option>
             ))}
           </select>
@@ -194,8 +195,8 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
           <label className="block text-sm font-medium text-gray-700 mb-1">מחיר כולל ($)</label>
           <input
             type="number"
-            name="total_price"
-            value={form.total_price}
+            name="price_total"
+            value={form.price_total}
             onChange={handleChange}
             min={0}
             step="0.01"

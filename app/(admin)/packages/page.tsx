@@ -6,7 +6,7 @@ export default async function PackagesPage() {
   const supabase = createServiceClient();
   const { data: packages, error } = await supabase
     .from("packages")
-    .select("*, events(name, event_id), flights(flight_code, airline), rooms(room_type, hotels(name)), tickets(name)")
+    .select("*, events(name), flights(flight_code, airline_name), rooms(room_type, hotels(name)), tickets(name)")
     .order("created_at", { ascending: false });
 
   return (
@@ -56,8 +56,8 @@ export default async function PackagesPage() {
                       {(pkg.events as { name: string })?.name || "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {(pkg.flights as { flight_code: string; airline: string })
-                        ? `${(pkg.flights as { airline: string }).airline} ${(pkg.flights as { flight_code: string }).flight_code}`
+                      {(pkg.flights as { flight_code: string; airline_name: string })
+                        ? `${(pkg.flights as { airline_name: string }).airline_name} ${(pkg.flights as { flight_code: string }).flight_code}`
                         : "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
@@ -69,7 +69,7 @@ export default async function PackagesPage() {
                       {(pkg.tickets as { name: string })?.name || "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-800 font-medium">
-                      ${pkg.total_price || 0}
+                      ${pkg.price_total || 0}
                     </td>
                     <td className="px-4 py-3">
                       <Link
