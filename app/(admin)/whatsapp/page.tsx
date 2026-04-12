@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import QRCode from "react-qr-code";
 
 interface LogMessage {
   id: string;
@@ -22,7 +23,9 @@ interface Template {
 }
 
 export default function WhatsAppAdminPage() {
-  const [activeTab, setActiveTab] = useState<"log" | "templates" | "send">("log");
+  const [activeTab, setActiveTab] = useState<"log" | "templates" | "send" | "connect">("connect");
+  const [waNumber, setWaNumber] = useState("");
+  const [waLink, setWaLink] = useState("");
   const [health, setHealth] = useState<{ online: boolean; error?: string } | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
 
@@ -160,6 +163,7 @@ export default function WhatsAppAdminPage() {
   }
 
   const tabs = [
+    { key: "connect", label: "חיבור WhatsApp" },
     { key: "log", label: "לוג הודעות" },
     { key: "templates", label: "תבניות" },
     { key: "send", label: "שליחה ידנית" },
@@ -215,6 +219,68 @@ export default function WhatsAppAdminPage() {
           </button>
         ))}
       </div>
+
+      {/* Connect WhatsApp tab */}
+      {activeTab === "connect" && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">חיבור מספר WhatsApp</h3>
+          <p className="text-sm text-gray-500 mb-6">הכנס את מספר ה-WhatsApp של המערכת ליצירת QR Code לחיבור מהיר</p>
+
+          <div className="max-w-md">
+            <label className="block text-sm font-medium text-gray-700 mb-1">מספר WhatsApp</label>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="tel"
+                value={waNumber}
+                onChange={(e) => setWaNumber(e.target.value)}
+                placeholder="972524802830"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
+                dir="ltr"
+              />
+              <button
+                onClick={() => {
+                  if (waNumber) {
+                    const num = waNumber.replace(/[^0-9]/g, "");
+                    setWaLink(`https://wa.me/${num}`);
+                  }
+                }}
+                className="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+              >
+                צור QR Code
+              </button>
+            </div>
+          </div>
+
+          {waLink && (
+            <div className="mt-6 flex flex-col items-center">
+              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <QRCode value={waLink} size={220} />
+              </div>
+              <p className="text-sm text-gray-600 mt-4 font-medium">סרוק את הקוד כדי לפתוח צ׳אט עם המספר</p>
+              <p className="text-xs text-gray-400 mt-1 dir-ltr" dir="ltr">{waLink}</p>
+              <div className="flex gap-2 mt-4">
+                <a
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
+                >
+                  פתח ב-WhatsApp
+                </a>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(waLink);
+                    alert("הקישור הועתק!");
+                  }}
+                  className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                >
+                  העתק קישור
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Log tab */}
       {activeTab === "log" && (
