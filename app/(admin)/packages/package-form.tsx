@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 interface PackageFormProps {
   events: { id: string; name: string }[];
-  flights: { id: string; flight_code: string; airline_name: string; event_id: string; origin_city: string; dest_city: string }[];
-  rooms: { id: string; room_type: string; event_id: string; hotel_id: string; hotels: { name: string } | null }[];
-  tickets: { id: string; name: string; event_id: string }[];
+  flights: { id: string; flight_code: string; airline_name: string; event_id: string; origin_city: string; dest_city: string; price_customer?: number; price_company?: number; currency?: string }[];
+  rooms: { id: string; room_type: string; event_id: string; hotel_id: string; hotels: { name: string } | null; price_customer?: number; price_company?: number; capacity?: number; currency?: string }[];
+  tickets: { id: string; name: string; event_id: string; price_customer?: number; price_company?: number; currency?: string }[];
 }
+
+function currencySymbol(c?: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
 
 export default function PackageForm({ events, flights, rooms, tickets }: PackageFormProps) {
   const router = useRouter();
@@ -41,6 +43,46 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
     () => (form.event_id ? tickets.filter((t) => t.event_id === form.event_id) : tickets),
     [form.event_id, tickets]
   );
+
+  // Calculate price per person
+  const priceBreakdown = useMemo(() => {
+    const flight = flights.find((f) => f.id === form.flight_id);
+    const room = rooms.find((r) => r.id === form.room_id);
+    const ticket = tickets.find((t) => t.id === form.ticket_id);
+
+    // Flight: price per person (already per seat)
+    const flightPrice = flight?.price_customer || 0;
+    const flightCost = flight?.price_company || 0;
+
+    // Room: price per person (already stored per person per spec)
+    const roomPrice = room?.price_customer || 0;
+    const roomCost = room?.price_company || 0;
+
+    // Ticket: price per ticket (1 per person)
+    const ticketPrice = ticket?.price_customer || 0;
+    const ticketCost = ticket?.price_company || 0;
+
+    const totalPrice = flightPrice + roomPrice + ticketPrice;
+    const totalCost = flightCost + roomCost + ticketCost;
+    const profit = totalPrice - totalCost;
+    const currency = flight?.currency || room?.currency || ticket?.currency || "ILS";
+
+    return {
+      flightPrice, flightCost,
+      roomPrice, roomCost,
+      ticketPrice, ticketCost,
+      totalPrice, totalCost, profit,
+      currency,
+      hasAny: !!(flight || room || ticket),
+    };
+  }, [form.flight_id, form.room_id, form.ticket_id, flights, rooms, tickets]);
+
+  // Auto-update total price when selections change
+  useMemo(() => {
+    if (priceBreakdown.hasAny && !form.price_total) {
+      setForm((prev) => ({ ...prev, price_total: priceBreakdown.totalPrice.toString() }));
+    }
+  }, [priceBreakdown.totalPrice, priceBreakdown.hasAny, form.price_total]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
@@ -191,8 +233,10 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר כולל ($)</label>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            מחיר כולל לאדם ({currencySymbol(priceBreakdown.currency)})
+          </label>
           <input
             type="number"
             name="price_total"
@@ -202,8 +246,64 @@ export default function PackageForm({ events, flights, rooms, tickets }: Package
             step="0.01"
             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
           />
+          <p className="text-xs text-gray-400 mt-1">💡 המחיר הוא לאדם אחד (מקום בטיסה + מקום בחדר + כרטיס אחד)</p>
         </div>
       </div>
+
+      {/* Price Breakdown per Person */}
+      {priceBreakdown.hasAny && (
+        <div className="mt-5 p-4 bg-primary-50 border border-primary-200 rounded-lg">
+          <h4 className="text-sm font-semibold text-primary-900 mb-3">💰 חישוב מחיר לאדם אחד</h4>
+          <div className="space-y-2 text-sm">
+            {priceBreakdown.flightPrice > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">✈️ מקום בטיסה:</span>
+                <span className="font-medium text-gray-800">
+                  {currencySymbol(priceBreakdown.currency)}{priceBreakdown.flightPrice}
+                  <span className="text-xs text-gray-400 mr-2">(עלות: {currencySymbol(priceBreakdown.currency)}{priceBreakdown.flightCost})</span>
+                </span>
+              </div>
+            )}
+            {priceBreakdown.roomPrice > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">🏨 חלק בחדר (לאדם):</span>
+                <span className="font-medium text-gray-800">
+                  {currencySymbol(priceBreakdown.currency)}{priceBreakdown.roomPrice}
+                  <span className="text-xs text-gray-400 mr-2">(עלות: {currencySymbol(priceBreakdown.currency)}{priceBreakdown.roomCost})</span>
+                </span>
+              </div>
+            )}
+            {priceBreakdown.ticketPrice > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">🎫 כרטיס:</span>
+                <span className="font-medium text-gray-800">
+                  {currencySymbol(priceBreakdown.currency)}{priceBreakdown.ticketPrice}
+                  <span className="text-xs text-gray-400 mr-2">(עלות: {currencySymbol(priceBreakdown.currency)}{priceBreakdown.ticketCost})</span>
+                </span>
+              </div>
+            )}
+            <div className="pt-2 mt-2 border-t border-primary-200 space-y-1">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">סה״כ מחיר לצרכן:</span>
+                <span className="font-bold text-primary-900 text-base">{currencySymbol(priceBreakdown.currency)}{priceBreakdown.totalPrice}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 text-xs">סה״כ עלות:</span>
+                <span className="text-gray-600 text-xs">{currencySymbol(priceBreakdown.currency)}{priceBreakdown.totalCost}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 text-sm">רווח לאדם:</span>
+                <span className={`font-bold text-sm ${priceBreakdown.profit > 0 ? "text-green-600" : priceBreakdown.profit < 0 ? "text-red-600" : "text-gray-400"}`}>
+                  {currencySymbol(priceBreakdown.currency)}{priceBreakdown.profit}
+                  {priceBreakdown.totalCost > 0 && (
+                    <span className="mr-1">({((priceBreakdown.profit / priceBreakdown.totalCost) * 100).toFixed(0)}%)</span>
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-100">
         <button
