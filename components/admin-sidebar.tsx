@@ -17,6 +17,7 @@ const navItems = [
   { href: "/faq", label: "FAQ", icon: "❓" },
   { href: "/users", label: "משתמשים", icon: "👥" },
   { href: "/whatsapp", label: "WhatsApp", icon: "💬" },
+  { href: "/audit-log", label: "יומן פעולות", icon: "📜" },
   { href: "/settings", label: "הגדרות", icon: "⚙️" },
 ];
 

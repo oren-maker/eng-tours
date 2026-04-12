@@ -1,0 +1,51 @@
+import { NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+  return NextResponse.json(data);
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = createServiceClient();
+  const body = await request.json();
+
+  const { data, error } = await supabase
+    .from("events")
+    .update({
+      name: body.name,
+      description: body.description || null,
+      type_code: body.type_code,
+      start_date: body.start_date || null,
+      end_date: body.end_date || null,
+      min_age: body.min_age ?? null,
+      max_age: body.max_age ?? null,
+      state: body.state,
+      waitlist_enabled: body.waitlist_enabled ?? false,
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  return NextResponse.json(data);
+}
