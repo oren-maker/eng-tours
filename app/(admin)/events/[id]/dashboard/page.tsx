@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { cachedFetch } from "@/lib/cached-fetch";
 
 function currencySymbol(c?: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
 
@@ -39,12 +40,12 @@ export default function EventDashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/events/${eventId}`).then((r) => r.json()),
-      fetch(`/api/orders`).then((r) => r.json()),
-      fetch(`/api/flights?event_id=${eventId}`).then((r) => r.json()),
-      fetch(`/api/rooms`).then((r) => r.json()),
-      fetch(`/api/tickets`).then((r) => r.json()),
-      fetch(`/api/packages`).then((r) => r.json()),
+      cachedFetch<any>(`/api/events/${eventId}`),
+      cachedFetch<any>(`/api/orders`),
+      cachedFetch<any>(`/api/flights?event_id=${eventId}`),
+      cachedFetch<any>(`/api/rooms`),
+      cachedFetch<any>(`/api/tickets`),
+      cachedFetch<any>(`/api/packages`),
     ])
       .then(([evData, ordersData, flightsData, roomsData, ticketsData, packagesData]) => {
         setEvent(evData);
@@ -66,10 +67,9 @@ export default function EventDashboardPage() {
   const pendingOrders = orders.filter((o) => o.status === "pending_payment" || o.status === "draft").length;
   const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
 
-  // Revenue
-  const confirmedRevenue = orders
-    .filter((o) => o.status === "confirmed" || o.status === "completed")
-    .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+  // Non-cancelled orders = valid orders for revenue/cost calculation
+  const validOrders = orders.filter((o) => o.status !== "cancelled" && o.status !== "draft");
+  const revenue = validOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
   const totalPaid = orders.reduce((sum, o) => sum + (Number(o.amount_paid) || 0), 0);
 
   // Flight statistics
@@ -80,11 +80,35 @@ export default function EventDashboardPage() {
   const totalRooms = rooms.reduce((sum, r) => sum + (r.total_rooms || 0), 0);
   const bookedRooms = rooms.reduce((sum, r) => sum + (r.booked_rooms || 0), 0);
 
-  // Financial calculation
-  const totalCost = flights.reduce((sum, f) => sum + ((f.price_company || 0) * (f.booked_seats || 0)), 0)
-    + rooms.reduce((sum, r) => sum + ((r.price_company || 0) * (r.booked_rooms || 0)), 0);
-  const profit = confirmedRevenue - totalCost;
-  const profitMargin = confirmedRevenue > 0 ? ((profit / confirmedRevenue) * 100) : 0;
+  // Financial calculation - cost proportional to revenue (consistent basis)
+  // For each valid order, the cost is based on flights/rooms/tickets allocated
+  const avgFlightCost = flights.length > 0
+    ? flights.reduce((s, f) => s + (f.price_company || 0), 0) / flights.length
+    : 0;
+  const avgFlightPrice = flights.length > 0
+    ? flights.reduce((s, f) => s + (f.price_customer || 0), 0) / flights.length
+    : 0;
+  const avgRoomCost = rooms.length > 0
+    ? rooms.reduce((s, r) => s + (r.price_company || 0), 0) / rooms.length
+    : 0;
+  const avgRoomPrice = rooms.length > 0
+    ? rooms.reduce((s, r) => s + (r.price_customer || 0), 0) / rooms.length
+    : 0;
+  const avgTicketCost = tickets.length > 0
+    ? tickets.reduce((s, t) => s + (t.price_company || 0), 0) / tickets.length
+    : 0;
+  const avgTicketPrice = tickets.length > 0
+    ? tickets.reduce((s, t) => s + (t.price_customer || 0), 0) / tickets.length
+    : 0;
+
+  // Estimate cost ratio (avg cost / avg price) per category, combined
+  const avgTotalPrice = avgFlightPrice * 2 + avgRoomPrice + avgTicketPrice; // outbound + return + room + ticket
+  const avgTotalCost = avgFlightCost * 2 + avgRoomCost + avgTicketCost;
+  const costRatio = avgTotalPrice > 0 ? avgTotalCost / avgTotalPrice : 0.65;
+
+  const totalCost = revenue * costRatio;
+  const profit = revenue - totalCost;
+  const profitMargin = revenue > 0 ? ((profit / revenue) * 100) : 0;
 
   return (
     <div>
@@ -122,13 +146,13 @@ export default function EventDashboardPage() {
       {/* Key Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-primary-500">
-          <div className="text-xs text-gray-500 mb-1">סה״כ הכנסות מאושרות</div>
-          <div className="text-2xl font-bold text-gray-800">₪{confirmedRevenue.toLocaleString("he-IL")}</div>
+          <div className="text-xs text-gray-500 mb-1">סה״כ הכנסות</div>
+          <div className="text-2xl font-bold text-gray-800">₪{Math.round(revenue).toLocaleString("he-IL")}</div>
           <div className="text-xs text-gray-400 mt-1">שולם: ₪{totalPaid.toLocaleString("he-IL")}</div>
         </div>
         <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-green-500">
-          <div className="text-xs text-gray-500 mb-1">רווח גולמי</div>
-          <div className="text-2xl font-bold text-gray-800">₪{profit.toLocaleString("he-IL")}</div>
+          <div className="text-xs text-gray-500 mb-1">רווח גולמי משוער</div>
+          <div className="text-2xl font-bold text-gray-800">₪{Math.round(profit).toLocaleString("he-IL")}</div>
           <div className="text-xs text-gray-400 mt-1">{profitMargin.toFixed(1)}% רווח</div>
         </div>
         <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-yellow-500">
@@ -224,52 +248,82 @@ export default function EventDashboardPage() {
         {/* Right: Resources (1/3) */}
         <div className="space-y-4">
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">✈️ טיסות ({flights.length})</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">✈️ טיסות ({flights.length})</h3>
+              {flights.length > 5 && (
+                <Link href="/airlines" className="text-xs text-primary-600 hover:text-primary-800">הצג הכל →</Link>
+              )}
+            </div>
             {flights.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">אין טיסות</p>
             ) : (
               <div className="space-y-2">
-                {flights.map((f) => (
+                {flights.slice(0, 5).map((f) => (
                   <div key={f.id} className="text-sm border-r-2 border-primary-200 pr-3 py-1">
                     <div className="font-medium text-gray-700">{f.airline_name} {f.flight_code}</div>
                     <div className="text-xs text-gray-500">{f.origin_iata} → {f.dest_iata}</div>
                     <div className="text-xs text-gray-400">{f.booked_seats || 0}/{f.total_seats || 0} מקומות</div>
                   </div>
                 ))}
+                {flights.length > 5 && (
+                  <div className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
+                    + עוד {flights.length - 5} טיסות
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">🏨 חדרים ({rooms.length})</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">🏨 חדרים ({rooms.length})</h3>
+              {rooms.length > 5 && (
+                <Link href="/hotels" className="text-xs text-primary-600 hover:text-primary-800">הצג הכל →</Link>
+              )}
+            </div>
             {rooms.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">אין חדרים</p>
             ) : (
               <div className="space-y-2">
-                {rooms.map((r) => (
+                {rooms.slice(0, 5).map((r) => (
                   <div key={r.id} className="text-sm border-r-2 border-orange-200 pr-3 py-1">
                     <div className="font-medium text-gray-700">{r.hotels?.name || "מלון"}</div>
                     <div className="text-xs text-gray-500">{r.room_type} · {currencySymbol(r.currency)}{r.price_customer}/אדם</div>
                     <div className="text-xs text-gray-400">{r.booked_rooms || 0}/{r.total_rooms || 0} חדרים</div>
                   </div>
                 ))}
+                {rooms.length > 5 && (
+                  <div className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
+                    + עוד {rooms.length - 5} חדרים
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">🎫 כרטיסים ({tickets.length})</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">🎫 כרטיסים ({tickets.length})</h3>
+              {tickets.length > 5 && (
+                <Link href="/tickets" className="text-xs text-primary-600 hover:text-primary-800">הצג הכל →</Link>
+              )}
+            </div>
             {tickets.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-4">אין כרטיסים</p>
             ) : (
               <div className="space-y-2">
-                {tickets.map((t) => (
+                {tickets.slice(0, 5).map((t) => (
                   <div key={t.id} className="text-sm border-r-2 border-green-200 pr-3 py-1">
                     <div className="font-medium text-gray-700">{t.name}</div>
                     <div className="text-xs text-gray-500">{currencySymbol(t.currency)}{t.price_customer}</div>
                     <div className="text-xs text-gray-400">{t.booked_qty || 0}/{t.total_qty || 0}</div>
                   </div>
                 ))}
+                {tickets.length > 5 && (
+                  <div className="text-xs text-gray-400 text-center pt-2 border-t border-gray-100">
+                    + עוד {tickets.length - 5} כרטיסים
+                  </div>
+                )}
               </div>
             )}
           </div>

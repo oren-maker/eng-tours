@@ -1,3 +1,4 @@
+export const revalidate = 600;
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";

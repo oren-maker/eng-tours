@@ -1,3 +1,4 @@
+export const revalidate = 600;
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";

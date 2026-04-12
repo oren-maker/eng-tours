@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { cachedFetch } from "@/lib/cached-fetch";
 
 export default function DashboardPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -12,8 +13,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/events").then((r) => r.json()),
-      fetch("/api/orders").then((r) => r.json()),
+      cachedFetch<any[]>("/api/events"),
+      cachedFetch<any[]>("/api/orders"),
     ])
       .then(([eventsData, ordersData]) => {
         if (Array.isArray(eventsData)) setEvents(eventsData);
