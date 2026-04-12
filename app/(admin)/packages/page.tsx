@@ -118,7 +118,7 @@ export default function PackagesPage() {
                   )}
                 </div>
 
-                <div className="px-5 pb-5">
+                <div className="px-5 pb-5 space-y-2">
                   <Link
                     href={`/packages/wizard/${ev.id}`}
                     className={`block w-full text-center py-2.5 rounded-lg text-sm font-medium transition-colors ${
@@ -129,6 +129,28 @@ export default function PackagesPage() {
                   >
                     {hasAny ? "🛒 הזמן חבילה" : "אין שירותים זמינים"}
                   </Link>
+                  {hasAny && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <a
+                        href={`/book/${ev.id}?preview=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-center py-2 rounded-lg text-xs font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        👁️ תצוגה מקדימה
+                      </a>
+                      <button
+                        onClick={() => {
+                          const url = `${window.location.origin}/book/${ev.id}`;
+                          navigator.clipboard.writeText(url);
+                          alert("הקישור הועתק!\n\n" + url);
+                        }}
+                        className="text-center py-2 rounded-lg text-xs font-medium border border-green-300 text-green-700 hover:bg-green-50 transition-colors"
+                      >
+                        📢 פרסם - העתק קישור
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

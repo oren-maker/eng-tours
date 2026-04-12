@@ -30,7 +30,8 @@ export default function PackageWizardPage() {
 
   // Selections
   const [peopleCount, setPeopleCount] = useState(1);
-  const [selectedFlight, setSelectedFlight] = useState<string>("");
+  const [outboundFlight, setOutboundFlight] = useState<string>("");
+  const [returnFlight, setReturnFlight] = useState<string>("");
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [selectedTicket, setSelectedTicket] = useState<string>("");
   const [passengers, setPassengers] = useState<Passenger[]>([]);
@@ -62,17 +63,19 @@ export default function PackageWizardPage() {
     });
   }, [peopleCount]);
 
-  const flight = flights.find((f) => f.id === selectedFlight);
+  const flightOut = flights.find((f) => f.id === outboundFlight);
+  const flightBack = flights.find((f) => f.id === returnFlight);
   const room = rooms.find((r) => r.id === selectedRoom);
   const ticket = tickets.find((t) => t.id === selectedTicket);
 
-  const currency = flight?.currency || room?.currency || ticket?.currency || "ILS";
-  const flightPrice = (flight?.price_customer || 0) * peopleCount;
+  const currency = flightOut?.currency || flightBack?.currency || room?.currency || ticket?.currency || "ILS";
+  const flightOutPrice = (flightOut?.price_customer || 0) * peopleCount;
+  const flightBackPrice = (flightBack?.price_customer || 0) * peopleCount;
   const roomPrice = (room?.price_customer || 0) * peopleCount;
   const ticketPrice = (ticket?.price_customer || 0) * peopleCount;
-  const totalPrice = flightPrice + roomPrice + ticketPrice;
+  const totalPrice = flightOutPrice + flightBackPrice + roomPrice + ticketPrice;
 
-  const pricePerPerson = (flight?.price_customer || 0) + (room?.price_customer || 0) + (ticket?.price_customer || 0);
+  const pricePerPerson = (flightOut?.price_customer || 0) + (flightBack?.price_customer || 0) + (room?.price_customer || 0) + (ticket?.price_customer || 0);
 
   function updatePassenger(idx: number, field: keyof Passenger, value: string) {
     setPassengers((prev) => {
@@ -89,7 +92,8 @@ export default function PackageWizardPage() {
         event_id: eventId,
         participants: passengers.map((p) => ({
           ...p,
-          flight_id: selectedFlight || null,
+          flight_id: outboundFlight || null,
+          return_flight_id: returnFlight || null,
           room_id: selectedRoom || null,
           ticket_id: selectedTicket || null,
         })),
@@ -118,7 +122,7 @@ export default function PackageWizardPage() {
 
   function canGoNext() {
     if (step === 1) return peopleCount > 0;
-    if (step === 2) return !!(selectedFlight || selectedRoom || selectedTicket);
+    if (step === 2) return !!(outboundFlight || returnFlight || selectedRoom || selectedTicket);
     if (step === 3) return passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.birth_date);
     return true;
   }
@@ -182,20 +186,50 @@ export default function PackageWizardPage() {
           {/* Step 2: Select services */}
           {step === 2 && (
             <div className="space-y-4">
-              {/* Flights */}
+              {/* Outbound flight */}
               {flights.length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-5">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">✈️ בחר טיסה</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">✈️ טיסת הלוך</h3>
                   <div className="space-y-2">
                     <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input type="radio" name="flight" checked={!selectedFlight} onChange={() => setSelectedFlight("")} />
-                      <span className="text-sm text-gray-600">ללא טיסה</span>
+                      <input type="radio" name="outbound" checked={!outboundFlight} onChange={() => setOutboundFlight("")} />
+                      <span className="text-sm text-gray-600">ללא טיסת הלוך</span>
                     </label>
                     {flights.map((f) => (
                       <label key={f.id} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
-                        selectedFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"
+                        outboundFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"
                       }`}>
-                        <input type="radio" name="flight" checked={selectedFlight === f.id} onChange={() => setSelectedFlight(f.id)} className="mt-1" />
+                        <input type="radio" name="outbound" checked={outboundFlight === f.id} onChange={() => setOutboundFlight(f.id)} className="mt-1" />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-gray-800">{f.airline_name} {f.flight_code}</span>
+                            <span className="font-bold text-primary-700">{currencySymbol(f.currency)}{f.price_customer}/אדם</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {f.origin_iata} → {f.dest_iata}
+                            {f.departure_time && ` · ${new Date(f.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}`}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Return flight */}
+              {flights.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-5">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">🔁 טיסת חזור</h3>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                      <input type="radio" name="return" checked={!returnFlight} onChange={() => setReturnFlight("")} />
+                      <span className="text-sm text-gray-600">ללא טיסת חזור</span>
+                    </label>
+                    {flights.filter((f) => f.id !== outboundFlight).map((f) => (
+                      <label key={f.id} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                        returnFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"
+                      }`}>
+                        <input type="radio" name="return" checked={returnFlight === f.id} onChange={() => setReturnFlight(f.id)} className="mt-1" />
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <span className="font-medium text-gray-800">{f.airline_name} {f.flight_code}</span>

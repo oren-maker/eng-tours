@@ -12,7 +12,7 @@ const currencyOptions = [
 function currencySymbol(c: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
 
 interface TicketFormProps {
-  events: { id: string; name: string }[];
+  events: { id: string; name: string; mode?: string }[];
   ticket?: Record<string, unknown>;
 }
 
@@ -24,13 +24,15 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
   const [form, setForm] = useState({
     event_id: (ticket?.event_id as string) || "",
     name: (ticket?.name as string) || "",
-    payment_type: (ticket?.payment_type as string) || "credit",
     price_customer: (ticket?.price_customer as number) || "",
     price_company: (ticket?.price_company as number) || "",
     total_qty: (ticket?.total_qty as number) || "",
     external_url: (ticket?.external_url as string) || "",
     currency: (ticket?.currency as string) || "ILS",
   });
+
+  const selectedEvent = events.find((e) => e.id === form.event_id);
+  const eventMode = selectedEvent?.mode || "registration";
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const { name, value } = e.target;
@@ -43,8 +45,12 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
     setError("");
 
     try {
+      // Derive payment_type from event mode: payment → credit, registration → free
+      const payment_type = eventMode === "payment" ? "credit" : "free";
+
       const payload = {
         ...form,
+        payment_type,
         price_customer: form.price_customer ? Number(form.price_customer) : null,
         price_company: form.price_company ? Number(form.price_company) : null,
         total_qty: form.total_qty ? Number(form.total_qty) : null,
@@ -82,127 +88,64 @@ export default function TicketForm({ events, ticket }: TicketFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">אירוע</label>
-          <select
-            name="event_id"
-            value={form.event_id}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          >
+          <select name="event_id" value={form.event_id} onChange={handleChange} required
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none">
             <option value="">בחר אירוע</option>
             {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>
-                {ev.name} ({ev.id})
-              </option>
+              <option key={ev.id} value={ev.id}>{ev.name} ({ev.id})</option>
             ))}
           </select>
+          {form.event_id && (
+            <p className="text-xs text-gray-500 mt-1">
+              💡 סוג תשלום נקבע לפי האירוע: <span className="font-medium">{eventMode === "payment" ? "חיוב (אשראי)" : "הרשמה בלבד"}</span>
+            </p>
+          )}
         </div>
 
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">שם הכרטיס</label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">סוג תשלום</label>
-          <select
-            name="payment_type"
-            value={form.payment_type}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          >
-            <option value="credit">אשראי</option>
-            <option value="cash">מזומן</option>
-            <option value="transfer">העברה</option>
-          </select>
+          <input type="text" name="name" value={form.name} onChange={handleChange} required
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">מחיר ללקוח ({currencySymbol(form.currency)})</label>
           <div className="flex gap-2">
-            <input
-              type="number"
-              name="price_customer"
-              value={form.price_customer}
-              onChange={handleChange}
-              min={0}
-              step="0.01"
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-            />
+            <input type="number" name="price_customer" value={form.price_customer} onChange={handleChange} min={0} step="0.01"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
             <select name="currency" value={form.currency} onChange={handleChange}
               className="w-24 border border-gray-200 rounded-lg px-2 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none">
-              {currencyOptions.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
+              {currencyOptions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">מחיר לחברה ({currencySymbol(form.currency)})</label>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              name="price_company"
-              value={form.price_company}
-              onChange={handleChange}
-              min={0}
-              step="0.01"
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-            />
-            <select name="currency" value={form.currency} onChange={handleChange}
-              className="w-24 border border-gray-200 rounded-lg px-2 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none">
-              {currencyOptions.map((c) => (
-                <option key={c.value} value={c.value}>{c.label}</option>
-              ))}
-            </select>
-          </div>
+          <input type="number" name="price_company" value={form.price_company} onChange={handleChange} min={0} step="0.01"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">כמות כוללת</label>
-          <input
-            type="number"
-            name="total_qty"
-            value={form.total_qty}
-            onChange={handleChange}
-            min={0}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
+          <input type="number" name="total_qty" value={form.total_qty} onChange={handleChange} min={0}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
         </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">קישור חיצוני</label>
-          <input
-            type="url"
-            name="external_url"
-            value={form.external_url}
-            onChange={handleChange}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-          />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">קישור חיצוני (אופציונלי)</label>
+          <input type="url" name="external_url" value={form.external_url} onChange={handleChange} dir="ltr"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
         </div>
       </div>
 
       <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-100">
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-primary-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors disabled:opacity-50"
-        >
+        <button type="submit" disabled={loading}
+          className="bg-primary-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors disabled:opacity-50">
           {loading ? "שומר..." : "הוספת כרטיס"}
         </button>
-        <button
-          type="button"
-          onClick={() => router.push("/tickets")}
-          className="text-gray-500 hover:text-gray-700 px-4 py-2.5 text-sm font-medium"
-        >
+        <button type="button" onClick={() => router.push("/tickets")}
+          className="text-gray-500 hover:text-gray-700 px-4 py-2.5 text-sm font-medium">
           ביטול
         </button>
       </div>
