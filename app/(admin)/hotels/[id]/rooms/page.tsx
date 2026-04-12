@@ -92,6 +92,14 @@ export default function HotelRoomsPage() {
               + הוסף חדר
             </button>
           )}
+          {archivedRooms.length > 0 && (
+            <Link
+              href={`/hotels/${id}/rooms/archive`}
+              className="border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              📦 ארכיון ({archivedRooms.length})
+            </Link>
+          )}
           <Link href="/hotels" className="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2.5">
             חזרה למלונות
           </Link>
@@ -125,15 +133,6 @@ export default function HotelRoomsPage() {
         )}
       </div>
 
-      {/* Archived Rooms */}
-      {archivedRooms.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden opacity-60">
-          <h3 className="text-lg font-semibold text-gray-500 p-4 border-b border-gray-100">
-            ארכיון - תאריך עבר ({archivedRooms.length})
-          </h3>
-          <RoomsTable rooms={archivedRooms} onEdit={startEdit} onDelete={handleDelete} archived />
-        </div>
-      )}
     </div>
   );
 }
