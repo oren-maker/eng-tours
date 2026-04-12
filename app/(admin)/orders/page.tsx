@@ -1,34 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface Order {
   id: string;
   event_id: string;
-  event_name?: string;
+  events?: { name: string; end_date?: string };
   status: string;
   total_price: number;
   amount_paid: number;
   created_at: string;
 }
 
-interface EventOption {
+interface Waiter {
   id: string;
+  event_id: string;
+  events?: { name: string };
   name: string;
+  email: string;
+  phone: string;
+  whatsapp?: string;
+  position: number;
+  notified_at: string | null;
+  created_at: string;
 }
-
-const STATUS_OPTIONS = [
-  { value: "", label: "כל הסטטוסים" },
-  { value: "draft", label: "טיוטה" },
-  { value: "pending_payment", label: "ממתין לתשלום" },
-  { value: "partial", label: "שולם חלקית" },
-  { value: "completed", label: "הושלם" },
-  { value: "supplier_review", label: "בדיקת ספק" },
-  { value: "supplier_approved", label: "ספק אישר" },
-  { value: "confirmed", label: "מאושר" },
-  { value: "cancelled", label: "מבוטל" },
-];
 
 const STATUS_BADGES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
@@ -54,271 +50,210 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [events, setEvents] = useState<EventOption[]>([]);
-  const [filterEvent, setFilterEvent] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusChanging, setStatusChanging] = useState<string | null>(null);
+  const [view, setView] = useState<"active" | "archive">("active");
+  const [statusFilter, setStatusFilter] = useState("");
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filterEvent) params.set("event_id", filterEvent);
-      if (filterStatus) params.set("status", filterStatus);
-      const res = await fetch(`/api/orders?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setOrders(data.orders || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [filterEvent, filterStatus]);
-
-  const fetchEvents = async () => {
-    try {
-      const res = await fetch("/api/events");
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(Array.isArray(data) ? data : data.events || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch events:", err);
-    }
-  };
+  const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    fetchEvents();
+    Promise.all([
+      fetch("/api/orders").then((r) => r.json()),
+      fetch("/api/waiting-list").then((r) => r.json()),
+    ])
+      .then(([ordersData, waitersData]) => {
+        if (Array.isArray(ordersData)) setOrders(ordersData);
+        if (Array.isArray(waitersData)) setWaiters(waitersData);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // Split orders by event end_date
+  const activeOrders = orders.filter((o) => {
+    const endDate = o.events?.end_date;
+    return !endDate || endDate.split("T")[0] >= today;
+  });
+  const archivedOrders = orders.filter((o) => {
+    const endDate = o.events?.end_date;
+    return endDate && endDate.split("T")[0] < today;
+  });
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    setStatusChanging(orderId);
-    try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        fetchOrders();
-      } else {
-        const data = await res.json();
-        alert(data.error || "שגיאה בשינוי סטטוס");
-      }
-    } catch {
-      alert("שגיאה בשינוי סטטוס");
-    } finally {
-      setStatusChanging(null);
-    }
-  };
-
-  const handleCancel = async (orderId: string) => {
-    if (!confirm("האם אתה בטוח שברצונך לבטל את ההזמנה?")) return;
-    try {
-      const res = await fetch(`/api/orders/${orderId}/cancel`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        fetchOrders();
-      } else {
-        const data = await res.json();
-        alert(data.error || "שגיאה בביטול הזמנה");
-      }
-    } catch {
-      alert("שגיאה בביטול הזמנה");
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("he-IL", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("he-IL", {
-      style: "currency",
-      currency: "ILS",
-      minimumFractionDigits: 0,
-    }).format(price || 0);
-  };
+  const filteredOrders = (view === "active" ? activeOrders : archivedOrders).filter(
+    (o) => !statusFilter || o.status === statusFilter
+  );
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-primary-900">הזמנות</h2>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              אירוע
-            </label>
-            <select
-              value={filterEvent}
-              onChange={(e) => setFilterEvent(e.target.value)}
-              className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LEFT: Orders list (2/3 width) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Toggle active/archive */}
+          <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1">
+            <button
+              onClick={() => setView("active")}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                view === "active" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}
             >
-              <option value="">כל האירועים</option>
-              {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.name} ({ev.id})
-                </option>
+              הזמנות פעילות ({activeOrders.length})
+            </button>
+            <button
+              onClick={() => setView("archive")}
+              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                view === "archive" ? "bg-gray-700 text-white" : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              📦 ארכיון ({archivedOrders.length})
+            </button>
+          </div>
+
+          {/* Status filter */}
+          <div className="bg-white rounded-xl shadow-sm p-3">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none"
+            >
+              <option value="">כל הסטטוסים</option>
+              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              סטטוס
-            </label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+
+          {/* Orders list */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {view === "active" ? "רשימת הזמנות" : "ארכיון הזמנות"}
+              </h3>
+              <span className="text-sm text-gray-500">{filteredOrders.length} הזמנות</span>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-12 text-gray-400">טוען...</div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <div className="text-4xl mb-2">📋</div>
+                <p className="text-sm">אין הזמנות להצגה</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600">
+                      <th className="text-right px-4 py-3 font-medium">מספר</th>
+                      <th className="text-right px-4 py-3 font-medium">אירוע</th>
+                      <th className="text-right px-4 py-3 font-medium">סטטוס</th>
+                      <th className="text-right px-4 py-3 font-medium">סכום</th>
+                      <th className="text-right px-4 py-3 font-medium">שולם</th>
+                      <th className="text-right px-4 py-3 font-medium">תאריך</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {filteredOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <Link href={`/orders/${order.id}`} className="font-mono text-xs text-primary-600 hover:text-primary-800">
+                            #{order.id.slice(0, 8)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{order.events?.name || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[order.status]}`}>
+                            {STATUS_LABELS[order.status] || order.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-800 font-medium">₪{order.total_price || 0}</td>
+                        <td className="px-4 py-3 text-gray-600">₪{order.amount_paid || 0}</td>
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {new Date(order.created_at).toLocaleDateString("he-IL")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  מספר הזמנה
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  אירוע
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  סטטוס
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  סכום
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  שולם
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  תאריך
-                </th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">
-                  פעולות
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-400">
-                    טוען...
-                  </td>
-                </tr>
-              ) : orders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-gray-400">
-                    לא נמצאו הזמנות
-                  </td>
-                </tr>
-              ) : (
-                orders.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="border-b last:border-0 hover:bg-gray-50"
-                  >
-                    <td className="px-4 py-3 font-mono text-xs">
-                      {order.id.slice(0, 8)}...
-                    </td>
-                    <td className="px-4 py-3">
-                      {order.event_name || order.event_id}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
-                          STATUS_BADGES[order.status] || "bg-gray-100"
-                        }`}
-                      >
-                        {STATUS_LABELS[order.status] || order.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatPrice(order.total_price)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatPrice(order.amount_paid)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatDate(order.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/orders/${order.id}`}
-                          className="text-primary-700 hover:text-primary-900 text-xs font-medium"
-                        >
-                          צפייה
-                        </Link>
-                        {order.status !== "cancelled" && (
-                          <>
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleStatusChange(
-                                    order.id,
-                                    e.target.value
-                                  );
-                                }
-                              }}
-                              disabled={statusChanging === order.id}
-                              className="text-xs border rounded px-1 py-0.5 bg-white"
-                            >
-                              <option value="">שינוי סטטוס</option>
-                              {STATUS_OPTIONS.filter(
-                                (s) =>
-                                  s.value &&
-                                  s.value !== order.status &&
-                                  s.value !== "cancelled"
-                              ).map((s) => (
-                                <option key={s.value} value={s.value}>
-                                  {s.label}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => handleCancel(order.id)}
-                              className="text-red-600 hover:text-red-800 text-xs font-medium"
-                            >
-                              ביטול
-                            </button>
-                          </>
+        {/* RIGHT: Waiting list + status (1/3 width) */}
+        <div className="space-y-4">
+          {/* Quick stats */}
+          <div className="bg-white rounded-xl shadow-sm p-4">
+            <h3 className="text-base font-semibold text-gray-800 mb-3">סטטוס מהיר</h3>
+            <div className="space-y-2">
+              {Object.entries(STATUS_LABELS).map(([key, label]) => {
+                const count = orders.filter((o) => o.status === key).length;
+                if (count === 0) return null;
+                return (
+                  <div key={key} className="flex items-center justify-between py-1">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[key]}`}>
+                      {label}
+                    </span>
+                    <span className="text-sm font-bold text-gray-700">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Waiting list */}
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-800">⏳ רשימת המתנה</h3>
+              <Link href="/waiting-list" className="text-xs text-primary-600 hover:text-primary-800">
+                ניהול מלא
+              </Link>
+            </div>
+            {loading ? (
+              <div className="text-center py-8 text-gray-400 text-sm">טוען...</div>
+            ) : waiters.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <div className="text-3xl mb-2">📭</div>
+                <p className="text-xs">אין אנשים ברשימת המתנה</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {waiters.slice(0, 10).map((w) => (
+                  <div key={w.id} className="p-3 hover:bg-gray-50">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{w.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{w.events?.name || "—"}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {w.phone} {w.email && `· ${w.email}`}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                          #{w.position || "—"}
+                        </span>
+                        {w.notified_at ? (
+                          <span className="text-[10px] text-green-600">✓ הודעה נשלחה</span>
+                        ) : (
+                          <span className="text-[10px] text-gray-400">לא יודעה</span>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                ))}
+                {waiters.length > 10 && (
+                  <div className="p-3 text-center">
+                    <Link href="/waiting-list" className="text-xs text-primary-600 hover:text-primary-800">
+                      + {waiters.length - 10} נוספים
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

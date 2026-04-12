@@ -25,15 +25,7 @@ const navItems: NavItem[] = [
       { href: "/tickets", label: "כרטיסים", icon: "🎫" },
     ],
   },
-  {
-    href: "/orders",
-    label: "הזמנות",
-    icon: "📋",
-    children: [
-      { href: "/orders", label: "רשימת הזמנות", icon: "📋" },
-      { href: "/waiting-list", label: "רשימת המתנה", icon: "⏳" },
-    ],
-  },
+  { href: "/orders", label: "הזמנות", icon: "📋" },
   { href: "/financial", label: "כלכלי", icon: "💰" },
   {
     href: "/settings",
