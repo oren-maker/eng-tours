@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("orders")
-    .select("*, events(name)")
+    .select("*, events(name, end_date, start_date)")
     .order("created_at", { ascending: false });
 
   if (eventId) {
@@ -28,13 +28,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const orders = (data || []).map((order) => ({
-    ...order,
-    event_name: (order.events as { name: string } | null)?.name || null,
-    events: undefined,
-  }));
-
-  return NextResponse.json({ orders });
+  // Return as array directly for frontend compatibility
+  return NextResponse.json(data || []);
 }
 
 // POST /api/orders - Create order from public booking form

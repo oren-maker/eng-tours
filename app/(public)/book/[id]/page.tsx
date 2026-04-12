@@ -150,11 +150,36 @@ function BookingContent() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "linear-gradient(135deg, #FFF8ED 0%, #FFEFD4 100%)" }}>
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center">
           <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-primary-900 mb-2">הזמנתך התקבלה!</h2>
-          <p className="text-gray-600 mb-4">תודה שבחרת ב-ENG Tours. אנו ניצור איתך קשר בקרוב.</p>
-          {orderId && <p className="text-xs text-gray-400 font-mono">מספר הזמנה: {orderId.slice(0, 8)}</p>}
+          <h2 className="text-3xl font-bold text-primary-900 mb-3">הזמנתך התקבלה!</h2>
+          <p className="text-gray-600 mb-6">תודה שבחרת ב-ENG Tours. אנו ניצור איתך קשר בקרוב.</p>
+
+          {orderId && (
+            <div className="bg-gradient-to-l from-primary-50 to-orange-50 border-2 border-primary-200 rounded-xl p-5 mb-6">
+              <p className="text-sm text-gray-600 mb-2">מספר ההזמנה שלך</p>
+              <div className="text-2xl font-bold font-mono text-primary-800 tracking-wider select-all" dir="ltr">
+                #{orderId.toUpperCase()}
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(orderId);
+                  alert("מספר ההזמנה הועתק!");
+                }}
+                className="mt-3 text-xs text-primary-700 hover:text-primary-900 underline"
+              >
+                📋 העתק מספר הזמנה
+              </button>
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-sm text-blue-800">
+            💡 שמור את מספר ההזמנה - תצטרך אותו כדי לבדוק את סטטוס ההזמנה או לפנות אלינו
+          </div>
+
+          <div className="text-xs text-gray-400 mt-4">
+            אישור הזמנה נשלח למייל שציינת
+          </div>
         </div>
       </div>
     );
