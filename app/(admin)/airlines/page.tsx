@@ -5,16 +5,31 @@ import { useEffect, useState } from "react";
 
 export default function AirlinesPage() {
   const [airlines, setAirlines] = useState<any[]>([]);
+  const [flights, setFlights] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const today = new Date().toISOString().split("T")[0];
+
   useEffect(() => {
-    fetch("/api/airlines")
-      .then((r) => r.json())
-      .then((data) => Array.isArray(data) ? setAirlines(data) : setError(data.error || "שגיאה"))
+    Promise.all([
+      fetch("/api/airlines").then((r) => r.json()),
+      fetch("/api/flights").then((r) => r.json()),
+    ])
+      .then(([airlinesData, flightsData]) => {
+        if (Array.isArray(airlinesData)) setAirlines(airlinesData);
+        else setError(airlinesData.error || "שגיאה");
+        if (Array.isArray(flightsData)) setFlights(flightsData);
+      })
       .catch(() => setError("שגיאה בטעינה"))
       .finally(() => setLoading(false));
   }, []);
+
+  function activeFlightsCount(airlineId: string) {
+    return flights.filter(
+      (f) => f.airline_id === airlineId && (!f.arrival_time || f.arrival_time.split("T")[0] >= today)
+    ).length;
+  }
 
   return (
     <div>
@@ -46,26 +61,37 @@ export default function AirlinesPage() {
                   <th className="text-right px-4 py-3 font-medium">שם</th>
                   <th className="text-right px-4 py-3 font-medium">מדינה</th>
                   <th className="text-right px-4 py-3 font-medium">קוד IATA</th>
+                  <th className="text-right px-4 py-3 font-medium">טיסות פעילות</th>
                   <th className="text-right px-4 py-3 font-medium">איש קשר</th>
                   <th className="text-right px-4 py-3 font-medium">טלפון</th>
                   <th className="text-right px-4 py-3 font-medium">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {airlines.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">{a.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.country || "—"}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{a.iata_code || "—"}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.contact_name || "—"}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs" dir="ltr">{a.contact_phone || "—"}</td>
-                    <td className="px-4 py-3">
-                      <Link href={`/airlines/${a.id}/flights`} className="text-primary-600 hover:text-primary-800 text-xs px-2 py-1 rounded hover:bg-primary-50">
-                        ✈️ נהל טיסות
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {airlines.map((a) => {
+                  const count = activeFlightsCount(a.id);
+                  return (
+                    <tr key={a.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-800">{a.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{a.country || "—"}</td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">{a.iata_code || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          count > 0 ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                        }`}>
+                          {count} טיסות
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{a.contact_name || "—"}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs" dir="ltr">{a.contact_phone || "—"}</td>
+                      <td className="px-4 py-3">
+                        <Link href={`/airlines/${a.id}/flights`} className="text-primary-700 hover:text-primary-900 text-xs px-3 py-1 rounded border border-primary-200 hover:bg-primary-50 font-medium">
+                          נהל טיסות
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
