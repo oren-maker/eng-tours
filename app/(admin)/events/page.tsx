@@ -111,10 +111,9 @@ export default function EventsPage() {
                       <EventActions eventId={event.id} status={event.status} />
                       <Link
                         href={`/coupons?event=${event.id}`}
-                        className="text-xs text-primary-600 hover:text-primary-800 px-2 py-1 rounded hover:bg-primary-50"
-                        title="צור קופון לאירוע"
+                        className="text-xs text-primary-700 hover:text-primary-900 px-3 py-1 rounded border border-primary-200 hover:bg-primary-50 font-medium"
                       >
-                        🏷️
+                        צור קופון
                       </Link>
                     </td>
                   </tr>

@@ -123,7 +123,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Link href={`/financial?event=${ev.id}`} className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors">
+                      <Link href={`/events/${ev.id}/dashboard`} className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors">
                         📊 צפה בנתונים
                       </Link>
                       <Link href={`/events/${ev.id}`} className="border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
