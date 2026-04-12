@@ -17,6 +17,14 @@ const roomTypes = [
   { value: "family", label: "משפחתי" },
 ];
 
+const currencyOptions = [
+  { value: "ILS", label: "₪ שקל" },
+  { value: "USD", label: "$ דולר" },
+  { value: "EUR", label: "€ יורו" },
+];
+
+function currencySymbol(c: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
+
 export default function RoomForm({ hotelId, events, room, onDone }: RoomFormProps) {
   const isEdit = !!room;
   const [loading, setLoading] = useState(false);
@@ -29,6 +37,7 @@ export default function RoomForm({ hotelId, events, room, onDone }: RoomFormProp
     check_out: "",
     price_customer: "",
     price_company: "",
+    currency: "ILS",
     capacity: "",
     total_rooms: "",
   });
@@ -42,6 +51,7 @@ export default function RoomForm({ hotelId, events, room, onDone }: RoomFormProp
         check_out: room.check_out ? room.check_out.split("T")[0] : "",
         price_customer: room.price_customer?.toString() || "",
         price_company: room.price_company?.toString() || "",
+        currency: room.currency || "ILS",
         capacity: room.capacity?.toString() || "",
         total_rooms: room.total_rooms?.toString() || "",
       });
@@ -82,6 +92,7 @@ export default function RoomForm({ hotelId, events, room, onDone }: RoomFormProp
         check_out: form.check_out || null,
         price_customer: form.price_customer ? Number(form.price_customer) : null,
         price_company: form.price_company ? Number(form.price_company) : null,
+        currency: form.currency || "ILS",
         capacity: form.capacity ? Number(form.capacity) : null,
         total_rooms: form.total_rooms ? Number(form.total_rooms) : null,
       };
@@ -159,15 +170,31 @@ export default function RoomForm({ hotelId, events, room, onDone }: RoomFormProp
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">עלות שלנו לאדם (₪)</label>
-          <input type="number" name="price_company" value={form.price_company} onChange={handleChange} min={0} step="0.01"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
+          <label className="block text-sm font-medium text-gray-700 mb-1">עלות שלנו לאדם ({currencySymbol(form.currency)})</label>
+          <div className="flex gap-2">
+            <input type="number" name="price_company" value={form.price_company} onChange={handleChange} min={0} step="0.01"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
+            <select name="currency" value={form.currency} onChange={handleChange}
+              className="w-24 border border-gray-200 rounded-lg px-2 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none">
+              {currencyOptions.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר לצרכן לאדם (₪)</label>
-          <input type="number" name="price_customer" value={form.price_customer} onChange={handleChange} min={0} step="0.01"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
+          <label className="block text-sm font-medium text-gray-700 mb-1">מחיר לצרכן לאדם ({currencySymbol(form.currency)})</label>
+          <div className="flex gap-2">
+            <input type="number" name="price_customer" value={form.price_customer} onChange={handleChange} min={0} step="0.01"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none" />
+            <select name="currency" value={form.currency} onChange={handleChange}
+              className="w-24 border border-gray-200 rounded-lg px-2 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none">
+              {currencyOptions.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div>
@@ -180,7 +207,7 @@ export default function RoomForm({ hotelId, events, room, onDone }: RoomFormProp
       {/* Live profit preview */}
       {(Number(form.price_customer) > 0 || Number(form.price_company) > 0) && (
         <div className="mt-3 p-3 bg-gray-50 rounded-lg flex gap-6 text-sm">
-          <span className="text-gray-500">רווח לאדם: <span className={`font-bold ${profit > 0 ? "text-green-600" : "text-red-600"}`}>₪{profit}</span></span>
+          <span className="text-gray-500">רווח לאדם: <span className={`font-bold ${profit > 0 ? "text-green-600" : "text-red-600"}`}>{currencySymbol(form.currency)}{profit}</span></span>
           <span className="text-gray-500">אחוז רווח: <span className="font-bold text-primary-700">{profitPct}%</span></span>
         </div>
       )}

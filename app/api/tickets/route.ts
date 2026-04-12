@@ -29,6 +29,7 @@ export async function POST(request: Request) {
       payment_type: body.payment_type || "credit",
       total_qty: body.total_qty ?? null,
       booked_qty: 0,
+      currency: body.currency || "ILS",
     })
     .select()
     .single();

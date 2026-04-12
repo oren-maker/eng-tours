@@ -39,6 +39,7 @@ export async function POST(
       price_customer: body.price_customer ?? null,
       capacity: body.capacity ?? null,
       total_rooms: body.total_rooms ?? null,
+      currency: body.currency || "ILS",
       booked_rooms: 0,
     })
     .select()
@@ -73,6 +74,7 @@ export async function PATCH(
       price_customer: body.price_customer ?? null,
       capacity: body.capacity ?? null,
       total_rooms: body.total_rooms ?? null,
+      currency: body.currency || "ILS",
     })
     .eq("id", body.room_id)
     .select()

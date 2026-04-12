@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import RoomForm from "./room-form";
 
+function currencySymbol(c: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
+
 export default function HotelRoomsPage() {
   const params = useParams();
   const id = params.id as string;
@@ -171,11 +173,11 @@ function RoomsTable({ rooms, onEdit, onDelete, archived }: { rooms: any[]; onEdi
                   {room.check_out ? new Date(room.check_out).toLocaleDateString("he-IL") : "—"}
                 </td>
                 <td className="px-4 py-3 text-gray-600">{room.capacity || "—"}</td>
-                <td className="px-4 py-3 text-gray-600">₪{room.price_company || 0}</td>
-                <td className="px-4 py-3 text-gray-800 font-medium">₪{room.price_customer || 0}</td>
+                <td className="px-4 py-3 text-gray-600">{currencySymbol(room.currency)}{room.price_company || 0}</td>
+                <td className="px-4 py-3 text-gray-800 font-medium">{currencySymbol(room.currency)}{room.price_customer || 0}</td>
                 <td className="px-4 py-3">
                   <span className={`font-medium ${profit > 0 ? "text-green-600" : profit < 0 ? "text-red-600" : "text-gray-400"}`}>
-                    ₪{profit} ({profitPct}%)
+                    {currencySymbol(room.currency)}{profit} ({profitPct}%)
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-600">

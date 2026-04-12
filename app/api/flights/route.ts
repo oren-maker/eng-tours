@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       transfer_company: body.transfer_company || null,
       contact_phone: body.contact_phone || null,
       contact_name: body.contact_name || null,
+      currency: body.currency || "ILS",
     })
     .select()
     .single();
