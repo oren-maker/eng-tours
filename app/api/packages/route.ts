@@ -5,7 +5,7 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("packages")
-    .select("*, events(name), flights(flight_code, airline_name), rooms(room_type), tickets(name)")
+    .select("*, events(name), flights(flight_code, airline_name), rooms(room_type, hotels(name)), tickets(name)")
     .order("name");
 
   if (error) {

@@ -1,4 +1,5 @@
-export const dynamic = "force-dynamic";
+"use client";
+
 import HotelForm from "../hotel-form";
 
 export default function NewHotelPage() {

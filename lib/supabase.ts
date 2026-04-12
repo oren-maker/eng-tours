@@ -3,19 +3,21 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-// Client-side Supabase client (uses anon key, respects RLS)
+// Client-side Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Server-side Supabase client (uses service role key or falls back to anon key)
+// Server-side Supabase client - always uses anon key (RLS is disabled)
 export function createServiceClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
-  if (!supabaseUrl || !serviceRoleKey) {
-    // Return a dummy client during build time
-    return createClient("https://placeholder.supabase.co", "placeholder-key", {
-      auth: { persistSession: false },
-    });
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+  if (!supabaseUrl || !key || key === "placeholder-key") {
+    // Build time fallback
+    return createClient(
+      supabaseUrl || "https://placeholder.supabase.co",
+      key || "placeholder",
+      { auth: { persistSession: false } }
+    );
   }
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, key, {
     auth: { persistSession: false },
   });
 }

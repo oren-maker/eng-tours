@@ -1,6 +1,7 @@
-export const dynamic = "force-dynamic";
+"use client";
+
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
+import { useEffect, useState } from "react";
 
 function StarRating({ stars }: { stars: number }) {
   return (
@@ -11,12 +12,21 @@ function StarRating({ stars }: { stars: number }) {
   );
 }
 
-export default async function HotelsPage() {
-  const supabase = createServiceClient();
-  const { data: hotels, error } = await supabase
-    .from("hotels")
-    .select("*")
-    .order("name");
+export default function HotelsPage() {
+  const [hotels, setHotels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/hotels")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setHotels(data);
+        else setError(data.error || "שגיאה בטעינה");
+      })
+      .catch(() => setError("שגיאה בטעינה"))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div>
@@ -31,11 +41,11 @@ export default async function HotelsPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {error ? (
-          <div className="text-center text-red-500 py-12">
-            שגיאה בטעינת מלונות: {error.message}
-          </div>
-        ) : !hotels || hotels.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-gray-400">טוען...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-12">שגיאה: {error}</div>
+        ) : hotels.length === 0 ? (
           <div className="text-center text-gray-400 py-16">
             <div className="text-5xl mb-4">🏨</div>
             <p className="text-lg font-medium text-gray-500">אין מלונות עדיין</p>

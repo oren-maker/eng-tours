@@ -1,6 +1,7 @@
-export const dynamic = "force-dynamic";
+"use client";
+
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
+import { useEffect, useState } from "react";
 import EventActions from "./event-actions";
 
 const typeBadgeColors: Record<string, string> = {
@@ -12,19 +13,28 @@ const typeBadgeColors: Record<string, string> = {
 };
 
 const typeLabels: Record<string, string> = {
-  RF: "רגיל טיסה",
-  FL: "טיסה בלבד",
-  RL: "קרקעי",
-  IL: "ישראלי",
-  FI: "טיסה פנימית",
+  RF: "מלון בלבד",
+  FL: "טיסות בלבד",
+  RL: "טיסות + מלון בחו\"ל",
+  IL: "מלון בארץ",
+  FI: "מלון + טיסות בארץ",
 };
 
-export default async function EventsPage() {
-  const supabase = createServiceClient();
-  const { data: events, error } = await supabase
-    .from("events")
-    .select("*")
-    .order("created_at", { ascending: false });
+export default function EventsPage() {
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setEvents(data);
+        else setError(data.error || "שגיאה בטעינה");
+      })
+      .catch(() => setError("שגיאה בטעינה"))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div>
@@ -39,18 +49,17 @@ export default async function EventsPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {error ? (
-          <div className="text-center text-red-500 py-12">
-            שגיאה בטעינת אירועים: {error.message}
-          </div>
-        ) : !events || events.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-gray-400">טוען...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-12">שגיאה: {error}</div>
+        ) : events.length === 0 ? (
           <div className="text-center text-gray-400 py-16">
             <div className="text-5xl mb-4">🎪</div>
             <p className="text-lg font-medium text-gray-500">אין אירועים עדיין</p>
-            <p className="text-sm mt-1">צור אירוע חדש כדי להתחיל</p>
             <Link
               href="/events/new"
-              className="inline-block mt-4 bg-primary-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors"
+              className="inline-block mt-4 bg-primary-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium"
             >
               + אירוע חדש
             </Link>
@@ -70,41 +79,23 @@ export default async function EventsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {events.map((event) => (
+                {events.map((event: any) => (
                   <tr key={event.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
-                      {event.id}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-gray-800">
-                      {event.name}
-                    </td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{event.id}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{event.name}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                          typeBadgeColors[event.type_code] || "bg-gray-100 text-gray-600 border-gray-200"
-                        }`}
-                      >
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${typeBadgeColors[event.type_code] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
                         {typeLabels[event.type_code] || event.type_code}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {event.start_date
-                        ? new Date(event.start_date).toLocaleDateString("he-IL")
-                        : "—"}
+                      {event.start_date ? new Date(event.start_date).toLocaleDateString("he-IL") : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {event.mode === "registration" ? "הרשמה" : "תשלום"}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-gray-500">
-                        {event.mode === "registration" ? "הרשמה" : event.mode === "payment" ? "תשלום" : event.mode}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          event.status === "active"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${event.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                         {event.status === "active" ? "פעיל" : "ארכיון"}
                       </span>
                     </td>

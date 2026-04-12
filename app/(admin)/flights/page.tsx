@@ -1,34 +1,48 @@
-export const dynamic = "force-dynamic";
+"use client";
+
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
-import FlightsFilter from "./flights-filter";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default async function FlightsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ event_id?: string }>;
-}) {
-  const { event_id } = await searchParams;
-  const supabase = createServiceClient();
+export default function FlightsPage() {
+  const [flights, setFlights] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("event_id") || "";
 
-  // Load events for filter dropdown
-  const { data: events } = await supabase
-    .from("events")
-    .select("id, name")
-    .eq("status", "active")
-    .order("name");
+  useEffect(() => {
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setEvents(data);
+      })
+      .catch(() => {});
+  }, []);
 
-  // Load flights, optionally filtered by event
-  let query = supabase
-    .from("flights")
-    .select("*, events(name)")
-    .order("departure_time", { ascending: true });
+  useEffect(() => {
+    setLoading(true);
+    const url = eventId ? `/api/flights?event_id=${eventId}` : "/api/flights";
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setFlights(data);
+        else setError(data.error || "שגיאה בטעינה");
+      })
+      .catch(() => setError("שגיאה בטעינה"))
+      .finally(() => setLoading(false));
+  }, [eventId]);
 
-  if (event_id) {
-    query = query.eq("event_id", event_id);
+  function handleFilterChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value;
+    if (val) {
+      window.history.pushState(null, "", `/flights?event_id=${val}`);
+      window.location.href = `/flights?event_id=${val}`;
+    } else {
+      window.location.href = "/flights";
+    }
   }
-
-  const { data: flights, error } = await query;
 
   return (
     <div>
@@ -43,15 +57,29 @@ export default async function FlightsPage({
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
-        <FlightsFilter events={events || []} selectedEventId={event_id} />
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-gray-700">סינון לפי אירוע:</label>
+          <select
+            value={eventId}
+            onChange={handleFilterChange}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none min-w-[200px]"
+          >
+            <option value="">כל האירועים</option>
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.name} ({ev.id})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {error ? (
-          <div className="text-center text-red-500 py-12">
-            שגיאה בטעינת טיסות: {error.message}
-          </div>
-        ) : !flights || flights.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-gray-400">טוען...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-12">שגיאה: {error}</div>
+        ) : flights.length === 0 ? (
           <div className="text-center text-gray-400 py-16">
             <div className="text-5xl mb-4">✈️</div>
             <p className="text-lg font-medium text-gray-500">אין טיסות עדיין</p>

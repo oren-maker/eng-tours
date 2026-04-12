@@ -1,13 +1,23 @@
-export const dynamic = "force-dynamic";
-import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
+"use client";
 
-export default async function TicketsPage() {
-  const supabase = createServiceClient();
-  const { data: tickets, error } = await supabase
-    .from("tickets")
-    .select("*, events(name)")
-    .order("created_at", { ascending: false });
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+export default function TicketsPage() {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/tickets")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setTickets(data);
+        else setError(data.error || "שגיאה בטעינה");
+      })
+      .catch(() => setError("שגיאה בטעינה"))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div>
@@ -22,11 +32,11 @@ export default async function TicketsPage() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        {error ? (
-          <div className="text-center text-red-500 py-12">
-            שגיאה בטעינת כרטיסים: {error.message}
-          </div>
-        ) : !tickets || tickets.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-gray-400">טוען...</div>
+        ) : error ? (
+          <div className="text-center text-red-500 py-12">שגיאה: {error}</div>
+        ) : tickets.length === 0 ? (
           <div className="text-center text-gray-400 py-16">
             <div className="text-5xl mb-4">🎫</div>
             <p className="text-lg font-medium text-gray-500">אין כרטיסים עדיין</p>

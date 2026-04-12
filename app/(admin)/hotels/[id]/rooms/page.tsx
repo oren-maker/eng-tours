@@ -1,34 +1,44 @@
-export const dynamic = "force-dynamic";
+"use client";
+
 import Link from "next/link";
-import { createServiceClient } from "@/lib/supabase";
-import { notFound } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import RoomForm from "./room-form";
 
-export default async function HotelRoomsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const supabase = createServiceClient();
+export default function HotelRoomsPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const [hotel, setHotel] = useState<any>(null);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const { data: hotel, error: hotelError } = await supabase
-    .from("hotels")
-    .select("*")
-    .eq("id", id)
-    .single();
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/hotels/${id}`).then((r) => {
+        if (!r.ok) throw new Error("מלון לא נמצא");
+        return r.json();
+      }),
+      fetch(`/api/hotels/${id}/rooms`).then((r) => r.json()),
+      fetch("/api/events").then((r) => r.json()),
+    ])
+      .then(([hotelData, roomsData, eventsData]) => {
+        if (hotelData.error) {
+          setError(hotelData.error);
+          return;
+        }
+        setHotel(hotelData);
+        if (Array.isArray(roomsData)) setRooms(roomsData);
+        if (Array.isArray(eventsData)) setEvents(eventsData);
+      })
+      .catch(() => setError("שגיאה בטעינה"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  if (hotelError || !hotel) {
-    notFound();
-  }
-
-  const { data: rooms, error: roomsError } = await supabase
-    .from("rooms")
-    .select("*, events(name)")
-    .eq("hotel_id", id)
-    .order("check_in");
-
-  const { data: events } = await supabase
-    .from("events")
-    .select("id, name")
-    .eq("status", "active")
-    .order("name");
+  if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
+  if (error) return <div className="text-center text-red-500 py-12">שגיאה: {error}</div>;
+  if (!hotel) return <div className="text-center text-red-500 py-12">מלון לא נמצא</div>;
 
   return (
     <div>
@@ -50,7 +60,7 @@ export default async function HotelRoomsPage({ params }: { params: Promise<{ id:
       {/* Add room form */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">הוספת חדר חדש</h3>
-        <RoomForm hotelId={id} events={events || []} />
+        <RoomForm hotelId={id} events={events} />
       </div>
 
       {/* Rooms list */}
@@ -58,11 +68,7 @@ export default async function HotelRoomsPage({ params }: { params: Promise<{ id:
         <h3 className="text-lg font-semibold text-gray-800 p-4 border-b border-gray-100">
           רשימת חדרים
         </h3>
-        {roomsError ? (
-          <div className="text-center text-red-500 py-12">
-            שגיאה: {roomsError.message}
-          </div>
-        ) : !rooms || rooms.length === 0 ? (
+        {rooms.length === 0 ? (
           <div className="text-center text-gray-400 py-12">
             <p className="text-sm">אין חדרים עדיין למלון זה</p>
           </div>
