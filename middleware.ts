@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
-// Admin-only routes
-const adminRoutes = [
+// Routes that require admin login (pages only, not API)
+const adminPages = [
   "/dashboard",
   "/events",
   "/flights",
@@ -18,79 +18,69 @@ const adminRoutes = [
   "/users",
   "/whatsapp",
   "/settings",
+  "/audit-log",
 ];
 
-// Supplier portal routes
-const supplierRoutes = ["/portal"];
-
-// Public routes (no auth required)
-const publicRoutes = ["/", "/login", "/api/auth"];
-
-function isPublicRoute(pathname: string): boolean {
-  if (publicRoutes.includes(pathname)) return true;
-  if (pathname.startsWith("/api/auth")) return true;
-  if (pathname.startsWith("/events/")) return true; // Public booking pages
-  if (pathname.startsWith("/pay/")) return true; // Payment pages
-  if (pathname.startsWith("/_next")) return true;
-  if (pathname.startsWith("/favicon")) return true;
-  if (pathname.includes(".")) return true; // Static files
-  return false;
-}
-
-function isAdminRoute(pathname: string): boolean {
-  return adminRoutes.some(
+function isAdminPage(pathname: string): boolean {
+  return adminPages.some(
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 }
 
-function isSupplierRoute(pathname: string): boolean {
-  return supplierRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
+function isSupplierPage(pathname: string): boolean {
+  return pathname === "/portal" || pathname.startsWith("/portal/");
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes
-  if (isPublicRoute(pathname)) {
+  // Allow ALL API routes, static files, auth routes, and public pages
+  if (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/book/") ||
+    pathname.startsWith("/pay/") ||
+    pathname.includes(".")
+  ) {
     return NextResponse.next();
   }
 
-  // Get the token
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  // Protected admin pages - require admin login
+  if (isAdminPage(pathname)) {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-  // No token = redirect to login
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+    if (!token) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (token.role !== "admin") {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
   }
 
-  // Admin routes require admin role
-  if (isAdminRoute(pathname) && token.role !== "admin") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
+  // Supplier portal - require supplier login
+  if (isSupplierPage(pathname)) {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
 
-  // Supplier routes require supplier role
-  if (isSupplierRoute(pathname) && token.role !== "supplier") {
-    return NextResponse.redirect(new URL("/login", request.url));
+    if (!token || token.role !== "supplier") {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
