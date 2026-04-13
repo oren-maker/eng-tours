@@ -532,6 +532,47 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {/* Payments */}
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          💰 תשלומים ({(order as any).payments?.length || 0})
+        </h3>
+        {(order as any).payments?.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">משלם</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">סכום</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">אמצעי</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">4 ספרות</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">אישור עסקה</th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">תאריך</th>
+                </tr>
+              </thead>
+              <tbody>
+                {((order as any).payments as any[]).map((pm) => {
+                  const payer = order.participants?.find((p: any) => p.id === pm.participant_id) as any;
+                  const methodLabels: Record<string, string> = { credit: "💳 אשראי", transfer: "🏦 העברה", cash: "💵 מזומן", check: "📝 צ'ק" };
+                  return (
+                    <tr key={pm.id} className="border-b last:border-0">
+                      <td className="px-3 py-2 font-medium">{payer ? `${payer.first_name_en} ${payer.last_name_en}` : "— כללי —"}</td>
+                      <td className="px-3 py-2 font-semibold">{formatPrice(pm.amount)}</td>
+                      <td className="px-3 py-2">{methodLabels[pm.method] || pm.method || "-"}</td>
+                      <td className="px-3 py-2 font-mono text-xs" dir="ltr">{pm.card_last4 ? `**** ${pm.card_last4}` : "-"}</td>
+                      <td className="px-3 py-2 font-mono text-xs" dir="ltr">{pm.confirmation || "-"}</td>
+                      <td className="px-3 py-2 text-xs text-gray-500">{pm.payment_date ? new Date(pm.payment_date).toLocaleDateString("he-IL") : formatDate(pm.created_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-gray-400 text-center py-4 text-sm">אין תשלומים רשומים</p>
+        )}
+      </div>
+
       {/* Participants */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">

@@ -46,6 +46,12 @@ export async function GET(
 
   if (scErr) console.error("Supplier confirmations error:", scErr);
 
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("order_id", id)
+    .order("created_at", { ascending: false });
+
   // Collect IDs to query audit log: order + its supplier_confirmations
   const confIds = (supplierConfirmations || []).map((c: any) => c.id);
   const allEntityIds = [id, ...confIds];
@@ -80,6 +86,7 @@ export async function GET(
     events: undefined,
     participants: participants || [],
     supplier_confirmations: supplierConfirmations || [],
+    payments: payments || [],
     audit_log: enrichedLog,
   };
 
