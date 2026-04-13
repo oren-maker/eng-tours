@@ -144,29 +144,28 @@ export default function OrderDetailPage() {
   };
 
   const handleCancel = async () => {
-    const isCompleted = order?.status === "completed" || order?.status === "confirmed";
     let fee = 0;
 
-    if (isCompleted) {
-      const feeInput = prompt(
-        "הזמנה הושלמה. הזן אחוז דמי ביטול (0, 5, 10, 15... 100):",
-        "0"
-      );
-      if (feeInput === null) return; // cancelled
-      const parsed = parseInt(feeInput.replace(/[^0-9]/g, ""), 10);
-      if (isNaN(parsed) || parsed < 0 || parsed > 100) {
-        alert("ערך לא תקין. יש להזין מספר בין 0 ל-100 בקפיצות של 5.");
-        return;
-      }
-      // Round to nearest 5
-      fee = Math.round(parsed / 5) * 5;
-
-      const total = Number(order?.total_price) || 0;
-      const feeAmount = (total * fee) / 100;
-      if (!confirm(`דמי ביטול: ${fee}% (₪${feeAmount.toFixed(0)})\nהאם לבטל את ההזמנה?`)) return;
-    } else {
-      if (!confirm("האם אתה בטוח שברצונך לבטל את ההזמנה?")) return;
+    // Always ask for cancellation fee (user can enter 0)
+    const feeInput = prompt(
+      "הזן אחוז דמי ביטול (0-100 בקפיצות של 5). הזן 0 לביטול ללא דמי ביטול:",
+      "0"
+    );
+    if (feeInput === null) return; // user cancelled prompt
+    const parsed = parseInt(feeInput.replace(/[^0-9]/g, ""), 10);
+    if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+      alert("ערך לא תקין. יש להזין מספר בין 0 ל-100 בקפיצות של 5.");
+      return;
     }
+    // Round to nearest 5
+    fee = Math.round(parsed / 5) * 5;
+
+    const total = Number(order?.total_price) || 0;
+    const feeAmount = (total * fee) / 100;
+    const msg = fee > 0
+      ? `דמי ביטול: ${fee}% (₪${feeAmount.toFixed(0)})\nהאם לבטל את ההזמנה?`
+      : "לבטל את ההזמנה ללא דמי ביטול?";
+    if (!confirm(msg)) return;
 
     try {
       const res = await fetch(`/api/orders/${orderId}/cancel`, {
@@ -175,6 +174,9 @@ export default function OrderDetailPage() {
         body: JSON.stringify({ cancellation_fee_percent: fee }),
       });
       if (res.ok) {
+        const result = await res.json();
+        const feeInfo = fee > 0 ? `\n\nדמי ביטול: ₪${(result.fee_amount || 0).toFixed(0)}\nהחזר: ₪${(result.refund_amount || 0).toFixed(0)}` : "";
+        alert(`✓ ההזמנה בוטלה${feeInfo}`);
         fetchOrder();
       } else {
         const data = await res.json();
