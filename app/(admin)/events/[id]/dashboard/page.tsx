@@ -37,6 +37,7 @@ export default function EventDashboardPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -221,27 +222,69 @@ export default function EventDashboardPage() {
             )}
           </div>
 
-          {/* Status Breakdown */}
+          {/* Status Breakdown - clickable */}
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">פילוח סטטוסים</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-green-50 p-3 rounded-lg">
-                <div className="text-2xl font-bold text-green-700">{confirmedOrders}</div>
-                <div className="text-xs text-green-600">מאושרות</div>
-              </div>
-              <div className="bg-yellow-50 p-3 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-700">{pendingOrders}</div>
-                <div className="text-xs text-yellow-600">ממתינות</div>
-              </div>
-              <div className="bg-red-50 p-3 rounded-lg">
-                <div className="text-2xl font-bold text-red-700">{cancelledOrders}</div>
-                <div className="text-xs text-red-600">מבוטלות</div>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <div className="text-2xl font-bold text-blue-700">{totalOrders - confirmedOrders - pendingOrders - cancelledOrders}</div>
-                <div className="text-xs text-blue-600">אחר</div>
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">פילוח סטטוסים</h3>
+              {statusFilter && (
+                <button onClick={() => setStatusFilter(null)} className="text-xs text-gray-500 hover:text-primary-700">
+                  ✕ נקה סינון
+                </button>
+              )}
             </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { key: "confirmed", label: "מאושרות", count: confirmedOrders, bg: "bg-green-50", bgActive: "bg-green-100 ring-2 ring-green-400", text: "text-green-700", textLabel: "text-green-600" },
+                { key: "pending", label: "ממתינות", count: pendingOrders, bg: "bg-yellow-50", bgActive: "bg-yellow-100 ring-2 ring-yellow-400", text: "text-yellow-700", textLabel: "text-yellow-600" },
+                { key: "cancelled", label: "מבוטלות", count: cancelledOrders, bg: "bg-red-50", bgActive: "bg-red-100 ring-2 ring-red-400", text: "text-red-700", textLabel: "text-red-600" },
+                { key: "other", label: "אחר", count: totalOrders - confirmedOrders - pendingOrders - cancelledOrders, bg: "bg-blue-50", bgActive: "bg-blue-100 ring-2 ring-blue-400", text: "text-blue-700", textLabel: "text-blue-600" },
+              ].map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => setStatusFilter(statusFilter === s.key ? null : s.key)}
+                  className={`p-3 rounded-lg text-right transition-all cursor-pointer ${
+                    statusFilter === s.key ? s.bgActive : `${s.bg} hover:brightness-95`
+                  }`}
+                >
+                  <div className={`text-2xl font-bold ${s.text}`}>{s.count}</div>
+                  <div className={`text-xs ${s.textLabel}`}>{s.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Filtered list */}
+            {statusFilter && (() => {
+              const filtered = orders.filter((o) => {
+                if (statusFilter === "confirmed") return o.status === "confirmed" || o.status === "completed";
+                if (statusFilter === "pending") return o.status === "pending_payment" || o.status === "draft";
+                if (statusFilter === "cancelled") return o.status === "cancelled";
+                if (statusFilter === "other") return !["confirmed", "completed", "pending_payment", "draft", "cancelled"].includes(o.status);
+                return false;
+              });
+              return (
+                <div className="mt-4 border-t border-gray-100 pt-3">
+                  <div className="text-sm text-gray-600 mb-2">{filtered.length} הזמנות:</div>
+                  <div className="max-h-80 overflow-y-auto space-y-1">
+                    {filtered.length === 0 ? (
+                      <p className="text-center text-gray-400 py-4 text-sm">אין הזמנות בסטטוס זה</p>
+                    ) : (
+                      filtered.map((o) => (
+                        <Link
+                          key={o.id}
+                          href={`/orders/${o.id}`}
+                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded text-sm border-r-2 border-gray-200"
+                        >
+                          <span className="font-mono text-xs text-primary-600">#{o.id.slice(0, 8)}</span>
+                          <span className="text-gray-700 text-xs">{STATUS_LABELS[o.status] || o.status}</span>
+                          <span className="font-medium text-gray-800">₪{Number(o.total_price || 0).toLocaleString("he-IL")}</span>
+                          <span className="text-gray-400 text-xs">{new Date(o.created_at).toLocaleDateString("he-IL")}</span>
+                        </Link>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
