@@ -381,18 +381,23 @@ export default function OrderDetailPage() {
               return null;
             })()}
             {(() => {
-              const parts = order.participants || [];
-              if (parts.length < 2) return null;
-              const payers = new Set(parts.map((p: any) => p.payer_participant_id || p.id).filter(Boolean));
-              const distinctPayers = parts.filter((p: any) => Number(p.amount_paid) > 0).length;
-              if (distinctPayers === 0) return null;
-              const unified = distinctPayers === 1;
+              const pmts = ((order as any).payments || []) as any[];
+              if (pmts.length === 0) return null;
+              const uniquePayers = new Set(pmts.map((pm) => pm.participant_id || "general"));
               return (
-                <div className="flex justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                  <span className="text-blue-700">אופן תשלום:</span>
-                  <span className="text-blue-700 font-bold">
-                    {unified ? "💳 תשלום אחד לכל ההזמנה" : `📊 ${distinctPayers} משלמים נפרדים`}
-                  </span>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 space-y-0.5">
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">מספר תשלומים:</span>
+                    <span className="text-blue-700 font-bold">
+                      {pmts.length === 1 ? "💳 תשלום אחד (במכה)" : `📊 ${pmts.length} תשלומים`}
+                    </span>
+                  </div>
+                  {uniquePayers.size > 1 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-blue-600">משלמים נפרדים:</span>
+                      <span className="text-blue-600 font-semibold">{uniquePayers.size}</span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
