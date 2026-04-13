@@ -3,39 +3,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { getToken } from "next-auth/jwt";
 
-// POST /api/orders/[id]/cancel - Cancel order (primary admin only)
+// POST /api/orders/[id]/cancel - Cancel order
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = createServiceClient();
-  const { id } = params;
+  const { id } = await params;
 
-  // Verify primary admin
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-
-  if (!token || token.role !== "admin") {
-    return NextResponse.json(
-      { error: "אין הרשאה" },
-      { status: 403 }
-    );
-  }
-
-  // Check if user is primary admin
-  if (token.email) {
-    const { data: user } = await supabase
-      .from("users")
-      .select("is_primary_admin")
-      .eq("email", token.email)
-      .single();
-
-    if (!user?.is_primary_admin) {
-      return NextResponse.json(
-        { error: "רק אדמין ראשי יכול לבטל הזמנות" },
-        { status: 403 }
-      );
+  // Parse body for optional cancellation fee
+  let cancellation_fee_percent = 0;
+  try {
+    const body = await request.json();
+    if (typeof body?.cancellation_fee_percent === "number") {
+      cancellation_fee_percent = body.cancellation_fee_percent;
     }
-  }
+  } catch { /* no body */ }
+
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
   // Fetch current order
   const { data: currentOrder, error: fetchError } = await supabase
@@ -45,38 +30,40 @@ export async function POST(
     .single();
 
   if (fetchError || !currentOrder) {
-    return NextResponse.json(
-      { error: "הזמנה לא נמצאה" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "הזמנה לא נמצאה" }, { status: 404 });
   }
 
   if (currentOrder.status === "cancelled") {
-    return NextResponse.json(
-      { error: "ההזמנה כבר מבוטלת" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "ההזמנה כבר מבוטלת" }, { status: 400 });
   }
+
+  // Calculate cancellation fee amount
+  const feeAmount = (Number(currentOrder.total_price) || 0) * (cancellation_fee_percent / 100);
+  const refundAmount = (Number(currentOrder.amount_paid) || 0) - feeAmount;
+
+  // Build internal_notes entry
+  const feeNote = cancellation_fee_percent > 0
+    ? `\n[${new Date().toLocaleString("he-IL")}] בוטל עם דמי ביטול ${cancellation_fee_percent}% (₪${feeAmount.toFixed(0)}). החזר: ₪${refundAmount.toFixed(0)}`
+    : `\n[${new Date().toLocaleString("he-IL")}] בוטל ללא דמי ביטול`;
 
   // Cancel the order
   const { data: updatedOrder, error: updateError } = await supabase
     .from("orders")
     .update({
       status: "cancelled",
-      cancelled_by: token.sub || null,
+      cancelled_by: token?.sub || null,
+      internal_notes: (currentOrder.internal_notes || "") + feeNote,
     })
     .eq("id", id)
     .select()
     .single();
 
   if (updateError) {
-    return NextResponse.json(
-      { error: "שגיאה בביטול ההזמנה" },
-      { status: 500 }
-    );
+    console.error("Cancel error:", updateError);
+    return NextResponse.json({ error: updateError.message || "שגיאה בביטול ההזמנה" }, { status: 500 });
   }
 
-  // Restore stock: get participants and reverse their bookings
+  // Restore stock
   const { data: participants } = await supabase
     .from("participants")
     .select("flight_id, room_id, ticket_id")
@@ -126,15 +113,14 @@ export async function POST(
     }
   }
 
-  // Audit log
   await supabase.from("audit_log").insert({
     action: "order_cancelled",
     entity_type: "order",
     entity_id: id,
-    user_id: token.sub || null,
+    user_id: token?.sub || null,
     before_data: { status: currentOrder.status },
-    after_data: { status: "cancelled" },
+    after_data: { status: "cancelled", cancellation_fee_percent, refund_amount: refundAmount },
   });
 
-  return NextResponse.json({ order: updatedOrder });
+  return NextResponse.json({ order: updatedOrder, cancellation_fee_percent, fee_amount: feeAmount, refund_amount: refundAmount });
 }

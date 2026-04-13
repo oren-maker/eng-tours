@@ -141,10 +141,35 @@ export default function OrderDetailPage() {
   };
 
   const handleCancel = async () => {
-    if (!confirm("האם אתה בטוח שברצונך לבטל את ההזמנה?")) return;
+    const isCompleted = order?.status === "completed" || order?.status === "confirmed";
+    let fee = 0;
+
+    if (isCompleted) {
+      const feeInput = prompt(
+        "הזמנה הושלמה. הזן אחוז דמי ביטול (0, 5, 10, 15... 100):",
+        "0"
+      );
+      if (feeInput === null) return; // cancelled
+      const parsed = parseInt(feeInput.replace(/[^0-9]/g, ""), 10);
+      if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+        alert("ערך לא תקין. יש להזין מספר בין 0 ל-100 בקפיצות של 5.");
+        return;
+      }
+      // Round to nearest 5
+      fee = Math.round(parsed / 5) * 5;
+
+      const total = Number(order?.total_price) || 0;
+      const feeAmount = (total * fee) / 100;
+      if (!confirm(`דמי ביטול: ${fee}% (₪${feeAmount.toFixed(0)})\nהאם לבטל את ההזמנה?`)) return;
+    } else {
+      if (!confirm("האם אתה בטוח שברצונך לבטל את ההזמנה?")) return;
+    }
+
     try {
       const res = await fetch(`/api/orders/${orderId}/cancel`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cancellation_fee_percent: fee }),
       });
       if (res.ok) {
         fetchOrder();
@@ -193,12 +218,13 @@ export default function OrderDetailPage() {
     });
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | string | null | undefined) => {
+    const num = Number(price) || 0;
     return new Intl.NumberFormat("he-IL", {
       style: "currency",
       currency: "ILS",
       minimumFractionDigits: 0,
-    }).format(price || 0);
+    }).format(num);
   };
 
   if (loading) {
