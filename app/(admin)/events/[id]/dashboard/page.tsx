@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { cachedFetch } from "@/lib/cached-fetch";
+import { cachedFetch, invalidateCache } from "@/lib/cached-fetch";
 
 function currencySymbol(c?: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
 
@@ -39,7 +39,16 @@ export default function EventDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadData(fresh = false) {
+    if (fresh) {
+      invalidateCache(`/api/events/${eventId}`);
+      invalidateCache("/api/orders");
+      invalidateCache(`/api/flights`);
+      invalidateCache("/api/rooms");
+      invalidateCache("/api/tickets");
+      invalidateCache("/api/packages");
+    }
+    setLoading(true);
     Promise.all([
       cachedFetch<any>(`/api/events/${eventId}`),
       cachedFetch<any>(`/api/orders`),
@@ -57,7 +66,9 @@ export default function EventDashboardPage() {
         if (Array.isArray(packagesData)) setPackages(packagesData.filter((p: any) => p.event_id === eventId));
       })
       .finally(() => setLoading(false));
-  }, [eventId]);
+  }
+
+  useEffect(() => { loadData(); }, [eventId]);
 
   if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
   if (!event || event.error) return <div className="text-center text-red-500 py-12">אירוע לא נמצא</div>;
@@ -137,6 +148,13 @@ export default function EventDashboardPage() {
             {event.description && <p className="text-sm text-gray-500 mt-2 max-w-2xl">{event.description}</p>}
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => loadData(true)}
+              className="border border-primary-300 text-primary-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-50 transition-colors"
+              title="רענן נתונים"
+            >
+              🔄 רענן
+            </button>
             <Link href={`/events/${eventId}`} className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors">
               ✏️ ערוך אירוע
             </Link>
