@@ -365,15 +365,37 @@ export default function OrderDetailPage() {
               const remaining = total - paid;
               if (remaining > 0 && order.status !== "cancelled") {
                 return (
-                  <div className="flex justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                    <span className="text-orange-700">נותר לתשלום:</span>
-                    <span className="text-orange-700 font-bold">
-                      {formatPrice(remaining)}
-                    </span>
+                  <div className="bg-orange-50 border-2 border-orange-300 rounded-lg px-3 py-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-orange-700 font-semibold">⏰ נותר לתשלום:</span>
+                      <span className="text-orange-700 font-bold">
+                        {formatPrice(remaining)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-orange-600">
+                      ⚠️ יש לגבות {formatPrice(remaining)} לסיום ההזמנה
+                    </div>
                   </div>
                 );
               }
               return null;
+            })()}
+            {(() => {
+              const confs = order.supplier_confirmations || [];
+              if (confs.length < 2) return null;
+              const withPay = confs.filter((c: any) => c.payment_confirmation);
+              const uniqueConf = new Set(withPay.map((c: any) => c.payment_confirmation));
+              const hasAny = confs.some((c: any) => c.payment_amount != null);
+              if (!hasAny) return null;
+              const unified = uniqueConf.size === 1 && withPay.length === confs.length;
+              return (
+                <div className="flex justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  <span className="text-blue-700">אופן תשלום לספקים:</span>
+                  <span className="text-blue-700 font-bold">
+                    {unified ? "💳 תשלום אחד לכל ההזמנה" : "📊 מפוצל לפי פריטים"}
+                  </span>
+                </div>
+              );
             })()}
             {Number(order.cancellation_fee_amount) > 0 && (
               <div className="flex justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2">
