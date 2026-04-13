@@ -46,13 +46,30 @@ export async function GET(
 
   if (scErr) console.error("Supplier confirmations error:", scErr);
 
-  // Fetch audit log entries for this order
+  // Fetch audit log entries for this order (including related confirmations)
   const { data: auditLog } = await supabase
     .from("audit_log")
     .select("*")
-    .eq("entity_type", "order")
-    .eq("entity_id", id)
-    .order("created_at", { ascending: false });
+    .or(`and(entity_type.eq.order,entity_id.eq.${id}),entity_type.eq.supplier_confirmation`)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  // Enrich with user display names
+  const userIds = [...new Set((auditLog || []).map((a: any) => a.user_id).filter(Boolean))];
+  const userMap: Record<string, string> = {};
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from("users")
+      .select("id, display_name, email")
+      .in("id", userIds);
+    for (const u of users || []) {
+      userMap[u.id] = u.display_name || u.email || "משתמש";
+    }
+  }
+  const enrichedLog = (auditLog || []).map((a: any) => ({
+    ...a,
+    user_display_name: a.user_id ? userMap[a.user_id] || "משתמש" : "מערכת",
+  }));
 
   const result = {
     ...order,
@@ -60,7 +77,7 @@ export async function GET(
     events: undefined,
     participants: participants || [],
     supplier_confirmations: supplierConfirmations || [],
-    audit_log: auditLog || [],
+    audit_log: enrichedLog,
   };
 
   return NextResponse.json({ order: result });
