@@ -66,6 +66,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Min age validation
+    if (event.min_age) {
+      const today = new Date();
+      for (const p of participants) {
+        if (!p.birth_date) continue;
+        const birth = new Date(p.birth_date as string);
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        if (age < event.min_age) {
+          return NextResponse.json(
+            { error: `הגיל המינימלי לאירוע הוא ${event.min_age}. נמצא משתתף בן ${age}.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Calculate total price from participant selections
     let totalPrice = 0;
     const participantPrices: number[] = [];
@@ -142,6 +160,15 @@ export async function POST(request: NextRequest) {
     }
 
     totalPrice = Math.max(0, totalPrice - discount);
+
+    // Require at least one service selected
+    const hasAnySelection = participants.some((p: any) => p.flight_id || p.return_flight_id || p.room_id || p.ticket_id || p.package_id);
+    if (!hasAnySelection || totalPrice <= 0) {
+      return NextResponse.json(
+        { error: "יש לבחור לפחות שירות אחד (טיסה / חדר / כרטיס) לפני ביצוע ההזמנה" },
+        { status: 400 }
+      );
+    }
 
     // Stock check - verify availability before creating order
     for (const p of participants) {

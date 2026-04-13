@@ -187,9 +187,23 @@ function BookingContent() {
       if (availableFlights.length > 0) required.push("outbound", "return");
       if (availableRooms.length > 0) required.push("room");
       if (availableTickets.length > 0) required.push("ticket");
-      return required.every((k) => decided.has(k));
+      const allDecided = required.every((k) => decided.has(k));
+      const hasAnySelection = !!(outboundFlight || returnFlight || selectedRoom || selectedTicket);
+      return allDecided && hasAnySelection;
     }
-    if (step === 3) return passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.passport_expiry && p.birth_date) && contactEmail && contactPhone;
+    if (step === 3) {
+      const basicValid = passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.passport_expiry && p.birth_date) && contactEmail && contactPhone;
+      if (!basicValid) return false;
+      // Min age check
+      const minAge = (event as any)?.min_age;
+      if (minAge) {
+        for (const p of passengers) {
+          const age = computeAge(p.birth_date);
+          if (age !== null && age < minAge) return false;
+        }
+      }
+      return true;
+    }
     return true;
   }
 
@@ -541,7 +555,7 @@ function BookingContent() {
 
                 <div className="space-y-4">
                   {passengers.map((p, i) => (
-                    <PassengerCard key={i} passenger={p} index={i} onChange={(field, val) => updatePassenger(i, field, val)} phonePrefixes={phonePrefixes} />
+                    <PassengerCard key={i} passenger={p} index={i} onChange={(field, val) => updatePassenger(i, field, val)} phonePrefixes={phonePrefixes} minAge={(event as any)?.min_age} />
                   ))}
                 </div>
               </div>
@@ -653,11 +667,12 @@ function BookingContent() {
   );
 }
 
-function PassengerCard({ passenger, index, onChange, phonePrefixes }: {
+function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
   passenger: Passenger;
   index: number;
   onChange: (field: keyof Passenger, value: string) => void;
   phonePrefixes: { value: string; label: string }[];
+  minAge?: number | null;
 }) {
   const [showContact, setShowContact] = useState(false);
   // First passenger doesn't need extra contact (already has main contact)
@@ -690,9 +705,14 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes }: {
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">
             תאריך לידה *
-            {passenger.birth_date && computeAge(passenger.birth_date) !== null && (
-              <span className="text-primary-700 mr-2">· גיל: {computeAge(passenger.birth_date)}</span>
-            )}
+            {passenger.birth_date && computeAge(passenger.birth_date) !== null && (() => {
+              const age = computeAge(passenger.birth_date)!;
+              const min = minAge;
+              if (min && age < min) {
+                return <span className="text-red-600 mr-2 font-bold">· גיל: {age} ⚠ מתחת למינימום ({min})</span>;
+              }
+              return <span className="text-primary-700 mr-2">· גיל: {age}</span>;
+            })()}
           </label>
           <input type="date" value={passenger.birth_date} onChange={(e) => onChange("birth_date", e.target.value)} required
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
