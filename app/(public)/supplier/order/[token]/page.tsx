@@ -57,6 +57,7 @@ export default function SupplierOrderPage() {
   const [order, setOrder] = useState<any>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [orderPayment, setOrderPayment] = useState({ ...EMPTY_PAYMENT });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -156,6 +157,19 @@ export default function SupplierOrderPage() {
           }
         }
         setItems(allItems);
+
+        // Aggregate order-level payment from existing items
+        const totalAmt = allItems.reduce((s, it) => s + (Number(it.payment_amount) || 0), 0);
+        const first = allItems.find((it: any) => it.existing) as any;
+        setOrderPayment({
+          payment_amount: totalAmt > 0 ? String(totalAmt) : "",
+          payment_currency: first?.payment_currency || "ILS",
+          payment_method: first?.payment_method || "",
+          payment_installments: first?.payment_installments || "1",
+          payment_confirmation: first?.payment_confirmation || "",
+          payment_date: first?.payment_date || "",
+          payment_due_date: first?.payment_due_date || "",
+        });
       })
       .catch(() => setError("שגיאה בטעינת ההזמנה"))
       .finally(() => setLoading(false));
@@ -184,6 +198,22 @@ export default function SupplierOrderPage() {
 
   function updateItem(idx: number, field: keyof Item, value: any) {
     setItems((prev) => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
+  }
+
+  function applyPaymentToAll() {
+    const count = items.length || 1;
+    const totalAmt = Number(orderPayment.payment_amount) || 0;
+    const perItem = totalAmt > 0 ? (totalAmt / count).toFixed(2) : "";
+    setItems((prev) => prev.map((it) => ({
+      ...it,
+      payment_amount: perItem,
+      payment_currency: orderPayment.payment_currency,
+      payment_method: orderPayment.payment_method,
+      payment_installments: orderPayment.payment_installments,
+      payment_confirmation: orderPayment.payment_confirmation,
+      payment_date: orderPayment.payment_date,
+      payment_due_date: orderPayment.payment_due_date,
+    })));
   }
 
   async function handleSubmit() {
@@ -316,6 +346,75 @@ export default function SupplierOrderPage() {
 
         {error && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
 
+        {/* Order-level payment block */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-4 border-2 border-primary-100">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="text-lg font-semibold text-gray-800">💰 פרטי תשלום להזמנה</h2>
+            <button onClick={applyPaymentToAll}
+              className="bg-primary-700 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-primary-800">
+              ✓ החל על כל הפריטים
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">סכום כולל</label>
+              <input type="number" step="0.01" value={orderPayment.payment_amount}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_amount: e.target.value })}
+                dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">מטבע</label>
+              <select value={orderPayment.payment_currency}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_currency: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                <option value="ILS">₪ שקל</option>
+                <option value="USD">$ דולר</option>
+                <option value="EUR">€ אירו</option>
+                <option value="GBP">£ פאונד</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">אמצעי תשלום</label>
+              <select value={orderPayment.payment_method}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_method: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                <option value="">בחר...</option>
+                <option value="credit">כרטיס אשראי</option>
+                <option value="transfer">העברה בנקאית</option>
+                <option value="cash">מזומן</option>
+                <option value="check">צ&apos;ק</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">תשלומים</label>
+              <input type="number" min="1" value={orderPayment.payment_installments}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_installments: e.target.value })}
+                dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-600 mb-1">מספר אישור עסקה</label>
+              <input type="text" value={orderPayment.payment_confirmation}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_confirmation: e.target.value })}
+                dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">תאריך תשלום</label>
+              <input type="date" value={orderPayment.payment_date}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_date: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">תאריך לחיוב</label>
+              <input type="date" value={orderPayment.payment_due_date}
+                onChange={(e) => setOrderPayment({ ...orderPayment, payment_due_date: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-500 mt-2">
+            💡 לחץ &quot;החל על כל הפריטים&quot; כדי לחלק את הסכום בין הפריטים ולהעתיק את שאר הפרטים
+          </p>
+        </div>
+
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400">
@@ -335,11 +434,19 @@ export default function SupplierOrderPage() {
                       <p className="text-xs text-primary-700 mt-1">עבור: {item.participants.join(", ")}</p>
                     </div>
                   </div>
-                  {(item as any).existing && (
-                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
-                      ✓ כבר אושר
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end gap-1">
+                    {(item as any).existing && (
+                      <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                        ✓ כבר אושר
+                      </span>
+                    )}
+                    {item.payment_amount && Number(item.payment_amount) > 0 && (
+                      <span className="text-xs text-gray-600">
+                        💰 {(() => { const s: any = { ILS: "₪", USD: "$", EUR: "€", GBP: "£" }; return s[item.payment_currency || "ILS"] || ""; })()}
+                        {Number(item.payment_amount).toLocaleString("he-IL")}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -353,65 +460,6 @@ export default function SupplierOrderPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">הערות</label>
                     <input type="text" value={item.notes} onChange={(e) => updateItem(idx, "notes", e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-2">💰 פרטי תשלום</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div>
-                      <label className="block text-[11px] text-gray-500 mb-0.5">סכום</label>
-                      <input type="number" step="0.01" value={item.payment_amount}
-                        onChange={(e) => updateItem(idx, "payment_amount", e.target.value)}
-                        dir="ltr" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-gray-500 mb-0.5">מטבע</label>
-                      <select value={item.payment_currency}
-                        onChange={(e) => updateItem(idx, "payment_currency", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none">
-                        <option value="ILS">₪ שקל</option>
-                        <option value="USD">$ דולר</option>
-                        <option value="EUR">€ אירו</option>
-                        <option value="GBP">£ פאונד</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-gray-500 mb-0.5">אמצעי תשלום</label>
-                      <select value={item.payment_method}
-                        onChange={(e) => updateItem(idx, "payment_method", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none">
-                        <option value="">בחר...</option>
-                        <option value="credit">כרטיס אשראי</option>
-                        <option value="transfer">העברה בנקאית</option>
-                        <option value="cash">מזומן</option>
-                        <option value="check">צ&apos;ק</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-gray-500 mb-0.5">תשלומים</label>
-                      <input type="number" min="1" value={item.payment_installments}
-                        onChange={(e) => updateItem(idx, "payment_installments", e.target.value)}
-                        dir="ltr" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-[11px] text-gray-500 mb-0.5">מספר אישור עסקה</label>
-                      <input type="text" value={item.payment_confirmation}
-                        onChange={(e) => updateItem(idx, "payment_confirmation", e.target.value)}
-                        dir="ltr" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-gray-500 mb-0.5">תאריך תשלום</label>
-                      <input type="date" value={item.payment_date}
-                        onChange={(e) => updateItem(idx, "payment_date", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-gray-500 mb-0.5">תאריך לחיוב</label>
-                      <input type="date" value={item.payment_due_date}
-                        onChange={(e) => updateItem(idx, "payment_due_date", e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
-                    </div>
                   </div>
                 </div>
 
