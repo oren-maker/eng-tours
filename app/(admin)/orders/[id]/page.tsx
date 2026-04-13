@@ -313,11 +313,47 @@ export default function OrderDetailPage() {
                 <span>{formatDate(order.confirmed_at)}</span>
               </div>
             )}
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-gray-500">טוקן שיתוף:</span>
-              <span className="font-mono text-xs">
-                {order.share_token?.slice(0, 12)}...
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="font-mono text-xs">{order.share_token?.slice(0, 12)}...</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(order.share_token || "");
+                    alert("הטוקן הועתק!");
+                  }}
+                  className="text-primary-600 hover:text-primary-800 text-xs px-1.5 py-0.5 rounded hover:bg-primary-50"
+                  title="העתק טוקן"
+                >
+                  📋
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Supplier link */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="bg-primary-50 border border-primary-200 rounded-lg p-3">
+              <h4 className="text-sm font-semibold text-primary-900 mb-2">🔗 קישור לספקים</h4>
+              <p className="text-xs text-gray-600 mb-2">שלח את הקישור לספקים כדי שיוכלו להזין מספרי אישור</p>
+              <div className="flex gap-1">
+                <input
+                  readOnly
+                  value={typeof window !== "undefined" ? `${window.location.origin}/supplier/order/${order.share_token}` : ""}
+                  className="flex-1 text-xs font-mono bg-white border border-gray-200 rounded px-2 py-1"
+                  dir="ltr"
+                />
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/supplier/order/${order.share_token}`;
+                    navigator.clipboard.writeText(url);
+                    alert("הקישור הועתק!");
+                  }}
+                  className="bg-primary-700 text-white px-3 py-1 rounded text-xs hover:bg-primary-800"
+                >
+                  העתק
+                </button>
+              </div>
             </div>
           </div>
         </div>

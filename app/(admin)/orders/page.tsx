@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { cachedFetch } from "@/lib/cached-fetch";
 
 interface Order {
   id: string;
@@ -10,7 +11,9 @@ interface Order {
   status: string;
   total_price: number;
   amount_paid: number;
+  payment_method?: string;
   created_at: string;
+  participants?: { first_name_en: string; last_name_en: string; phone: string; passport_number: string }[];
 }
 
 interface Waiter {
@@ -48,19 +51,23 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "מבוטל",
 };
 
+const PAGE_SIZE = 20;
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"active" | "archive">("active");
   const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/orders").then((r) => r.json()),
-      fetch("/api/waiting-list").then((r) => r.json()),
+      cachedFetch<any>("/api/orders"),
+      cachedFetch<any>("/api/waiting-list"),
     ])
       .then(([ordersData, waitersData]) => {
         if (Array.isArray(ordersData)) setOrders(ordersData);
@@ -69,19 +76,44 @@ export default function OrdersPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Split orders by event end_date
+  // Split by archive (event_end_date < today) OR cancelled orders → archive
   const activeOrders = orders.filter((o) => {
+    if (o.status === "cancelled") return false;
     const endDate = o.events?.end_date;
     return !endDate || endDate.split("T")[0] >= today;
   });
   const archivedOrders = orders.filter((o) => {
+    if (o.status === "cancelled") return true;
     const endDate = o.events?.end_date;
     return endDate && endDate.split("T")[0] < today;
   });
 
-  const filteredOrders = (view === "active" ? activeOrders : archivedOrders).filter(
-    (o) => !statusFilter || o.status === statusFilter
-  );
+  // Apply filters: status + search
+  const searchLower = search.trim().toLowerCase();
+  const filteredOrders = (view === "active" ? activeOrders : archivedOrders)
+    .filter((o) => !statusFilter || o.status === statusFilter)
+    .filter((o) => {
+      if (!searchLower) return true;
+      // Search in order ID
+      if (o.id.toLowerCase().includes(searchLower)) return true;
+      // Search in participants
+      if (o.participants && Array.isArray(o.participants)) {
+        return o.participants.some((p) =>
+          p.first_name_en?.toLowerCase().includes(searchLower) ||
+          p.last_name_en?.toLowerCase().includes(searchLower) ||
+          p.phone?.includes(searchLower) ||
+          p.passport_number?.includes(searchLower)
+        );
+      }
+      return false;
+    });
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const displayedOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [view, statusFilter, search]);
 
   return (
     <div>
@@ -90,9 +122,8 @@ export default function OrdersPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT: Orders list (2/3 width) */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Toggle active/archive */}
+          {/* Toggle */}
           <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1">
             <button
               onClick={() => setView("active")}
@@ -100,7 +131,7 @@ export default function OrdersPage() {
                 view === "active" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"
               }`}
             >
-              הזמנות פעילות ({activeOrders.length})
+              פעילות ({activeOrders.length})
             </button>
             <button
               onClick={() => setView("archive")}
@@ -112,8 +143,15 @@ export default function OrdersPage() {
             </button>
           </div>
 
-          {/* Status filter */}
-          <div className="bg-white rounded-xl shadow-sm p-3">
+          {/* Search + filter */}
+          <div className="bg-white rounded-xl shadow-sm p-3 space-y-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="🔍 חפש: שם, טלפון, דרכון, מספר הזמנה..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none"
+            />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -126,7 +164,7 @@ export default function OrdersPage() {
             </select>
           </div>
 
-          {/* Orders list */}
+          {/* Table */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">
@@ -137,53 +175,101 @@ export default function OrdersPage() {
 
             {loading ? (
               <div className="text-center py-12 text-gray-400">טוען...</div>
-            ) : filteredOrders.length === 0 ? (
+            ) : displayedOrders.length === 0 ? (
               <div className="text-center py-16 text-gray-400">
                 <div className="text-4xl mb-2">📋</div>
                 <p className="text-sm">אין הזמנות להצגה</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 text-gray-600">
-                      <th className="text-right px-4 py-3 font-medium">מספר</th>
-                      <th className="text-right px-4 py-3 font-medium">אירוע</th>
-                      <th className="text-right px-4 py-3 font-medium">סטטוס</th>
-                      <th className="text-right px-4 py-3 font-medium">סכום</th>
-                      <th className="text-right px-4 py-3 font-medium">שולם</th>
-                      <th className="text-right px-4 py-3 font-medium">תאריך</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <Link href={`/orders/${order.id}`} className="font-mono text-xs text-primary-600 hover:text-primary-800">
-                            #{order.id.slice(0, 8)}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{order.events?.name || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[order.status]}`}>
-                            {STATUS_LABELS[order.status] || order.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-800 font-medium">₪{order.total_price || 0}</td>
-                        <td className="px-4 py-3 text-gray-600">₪{order.amount_paid || 0}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">
-                          {new Date(order.created_at).toLocaleDateString("he-IL")}
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-600">
+                        <th className="text-right px-4 py-3 font-medium">מספר</th>
+                        <th className="text-right px-4 py-3 font-medium">אירוע</th>
+                        <th className="text-right px-4 py-3 font-medium">סטטוס</th>
+                        <th className="text-right px-4 py-3 font-medium">סכום</th>
+                        <th className="text-right px-4 py-3 font-medium">שולם</th>
+                        <th className="text-right px-4 py-3 font-medium">תאריך</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {displayedOrders.map((order) => (
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <Link href={`/orders/${order.id}`} className="font-mono text-xs text-primary-600 hover:text-primary-800">
+                              #{order.id.slice(0, 8)}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">{order.events?.name || "—"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[order.status]}`}>
+                              {STATUS_LABELS[order.status] || order.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-800 font-medium">₪{Number(order.total_price || 0).toLocaleString("he-IL")}</td>
+                          <td className="px-4 py-3 text-gray-600">
+                            ₪{Number(order.amount_paid || 0).toLocaleString("he-IL")}
+                            {order.amount_paid > 0 && order.payment_method && (
+                              <div className="text-[10px] text-gray-400">{order.payment_method}</div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 text-xs">
+                            {new Date(order.created_at).toLocaleDateString("he-IL")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between p-4 border-t border-gray-100">
+                    <div className="text-sm text-gray-500">
+                      עמוד {page} מתוך {totalPages} ({filteredOrders.length} תוצאות)
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setPage(Math.max(1, page - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1 rounded text-sm border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        קודם
+                      </button>
+                      {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                        const pageNum = page <= 3 ? i + 1 : page - 2 + i;
+                        if (pageNum > totalPages) return null;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`px-3 py-1 rounded text-sm ${
+                              page === pageNum
+                                ? "bg-primary-700 text-white"
+                                : "border border-gray-200 hover:bg-gray-50"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => setPage(Math.min(totalPages, page + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1 rounded text-sm border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        הבא
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* RIGHT: Waiting list + status (1/3 width) */}
         <div className="space-y-4">
           {/* Quick stats */}
           <div className="bg-white rounded-xl shadow-sm p-4">
@@ -193,12 +279,16 @@ export default function OrdersPage() {
                 const count = orders.filter((o) => o.status === key).length;
                 if (count === 0) return null;
                 return (
-                  <div key={key} className="flex items-center justify-between py-1">
+                  <button
+                    key={key}
+                    onClick={() => setStatusFilter(statusFilter === key ? "" : key)}
+                    className="w-full flex items-center justify-between py-1 hover:bg-gray-50 rounded px-2 transition-colors"
+                  >
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[key]}`}>
                       {label}
                     </span>
                     <span className="text-sm font-bold text-gray-700">{count}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -235,22 +325,10 @@ export default function OrdersPage() {
                         <span className="bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full text-xs font-bold">
                           #{w.position || "—"}
                         </span>
-                        {w.notified_at ? (
-                          <span className="text-[10px] text-green-600">✓ הודעה נשלחה</span>
-                        ) : (
-                          <span className="text-[10px] text-gray-400">לא יודעה</span>
-                        )}
                       </div>
                     </div>
                   </div>
                 ))}
-                {waiters.length > 10 && (
-                  <div className="p-3 text-center">
-                    <Link href="/waiting-list" className="text-xs text-primary-600 hover:text-primary-800">
-                      + {waiters.length - 10} נוספים
-                    </Link>
-                  </div>
-                )}
               </div>
             )}
           </div>

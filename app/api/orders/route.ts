@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("orders")
-    .select("*, events(name, end_date, start_date)")
+    .select("*, events(name, end_date, start_date), participants(first_name_en, last_name_en, phone, passport_number)")
     .order("created_at", { ascending: false });
 
   if (eventId) {
