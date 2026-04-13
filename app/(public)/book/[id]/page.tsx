@@ -735,15 +735,11 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes }: {
                   <div className="flex gap-1" dir="ltr">
                     <input
                       type="text"
-                      list={`phone-prefixes-p${index}`}
                       value={currentPrefix}
                       onChange={(e) => updatePhone(e.target.value, currentNumber)}
                       placeholder="+972"
                       className="w-24 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-primary-500 outline-none"
                     />
-                    <datalist id={`phone-prefixes-p${index}`}>
-                      {phonePrefixes.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </datalist>
                     <input
                       type="tel"
                       value={currentNumber}
