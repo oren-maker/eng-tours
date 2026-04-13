@@ -44,6 +44,10 @@ export async function POST(request: Request) {
         diffs.has_issue = { from: prev.has_issue, to: item.has_issue };
       }
 
+      if (prev.issue_description !== item.issue_description) {
+        diffs.issue_description = { from: prev.issue_description, to: item.issue_description };
+      }
+
       if (Object.keys(diffs).length > 0) {
         await supabase
           .from("supplier_confirmations")
@@ -51,6 +55,7 @@ export async function POST(request: Request) {
             confirmation_number: item.confirmation_number || null,
             notes: item.notes || null,
             has_issue: !!item.has_issue,
+            issue_description: item.issue_description || null,
           })
           .eq("id", prev.id);
 
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
         confirmation_number: item.confirmation_number || null,
         notes: item.notes || null,
         has_issue: !!item.has_issue,
+        issue_description: item.issue_description || null,
       });
       changes.push({
         type: item.item_type,

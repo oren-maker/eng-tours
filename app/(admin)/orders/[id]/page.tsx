@@ -51,6 +51,8 @@ interface OrderDetail {
   mode: string;
   total_price: number;
   amount_paid: number;
+  cancellation_fee_percent?: number;
+  cancellation_fee_amount?: number;
   internal_notes: string;
   created_at: string;
   confirmed_at: string | null;
@@ -188,22 +190,27 @@ export default function OrderDetailPage() {
   };
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() || !order) return;
     setSavingNote(true);
     try {
+      const newNotesContent = order.internal_notes
+        ? `${order.internal_notes}\n---\n[${new Date().toLocaleString("he-IL")}]: ${newNote}`
+        : `[${new Date().toLocaleString("he-IL")}]: ${newNote}`;
+
       const res = await fetch(`/api/orders/${orderId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: order?.status,
-          internal_notes: order?.internal_notes
-            ? `${order.internal_notes}\n---\n${new Date().toLocaleString("he-IL")}: ${newNote}`
-            : `${new Date().toLocaleString("he-IL")}: ${newNote}`,
+          status: order.status,
+          internal_notes: newNotesContent,
         }),
       });
       if (res.ok) {
         setNewNote("");
-        fetchOrder();
+        await fetchOrder();
+      } else {
+        const data = await res.json();
+        alert("שגיאה בשמירת הערה: " + (data.error || "לא ידוע"));
       }
     } catch {
       alert("שגיאה בשמירת הערה");
@@ -260,8 +267,18 @@ export default function OrderDetailPage() {
           >
             &larr; חזרה להזמנות
           </button>
-          <h2 className="text-2xl font-bold text-primary-900">
-            הזמנה #{order.id.slice(0, 8)}
+          <h2 className="text-2xl font-bold text-primary-900 flex items-center gap-2">
+            <span>הזמנה #{order.id.slice(0, 8)}</span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(order.id);
+                alert("מספר ההזמנה הועתק: " + order.id);
+              }}
+              className="text-sm text-gray-400 hover:text-primary-700 p-1 rounded hover:bg-gray-100"
+              title="העתק מספר הזמנה מלא"
+            >
+              📋
+            </button>
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -342,6 +359,30 @@ export default function OrderDetailPage() {
                 {formatPrice(order.amount_paid)}
               </span>
             </div>
+            {(() => {
+              const total = Number(order.total_price) || 0;
+              const paid = Number(order.amount_paid) || 0;
+              const remaining = total - paid;
+              if (remaining > 0 && order.status !== "cancelled") {
+                return (
+                  <div className="flex justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                    <span className="text-orange-700">נותר לתשלום:</span>
+                    <span className="text-orange-700 font-bold">
+                      {formatPrice(remaining)}
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            {Number(order.cancellation_fee_amount) > 0 && (
+              <div className="flex justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <span className="text-red-700">דמי ביטול ({order.cancellation_fee_percent}%):</span>
+                <span className="text-red-700 font-bold">
+                  {formatPrice(order.cancellation_fee_amount)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-500">נוצר:</span>
               <span>{formatDate(order.created_at)}</span>
@@ -408,9 +449,50 @@ export default function OrderDetailPage() {
 
         {/* Supplier Confirmations - editable */}
         <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            אישורי ספקים
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">אישורי ספקים</h3>
+            {(() => {
+              const issueCount = (order.supplier_confirmations || []).filter((c: any) => c.has_issue).length;
+              if (issueCount > 0) {
+                return (
+                  <span className="bg-red-100 border border-red-300 text-red-700 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                    🚨 {issueCount} בעיות
+                  </span>
+                );
+              }
+              return null;
+            })()}
+          </div>
+
+          {/* Issues summary at top - BOLD */}
+          {(() => {
+            const issues = (order.supplier_confirmations || []).filter((c: any) => c.has_issue);
+            if (issues.length === 0) return null;
+            return (
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🚨</span>
+                  <h4 className="text-sm font-bold text-red-800">בעיות שדווחו על ידי ספקים:</h4>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  {issues.map((issue: any) => {
+                    const icon = issue.item_type === "flight" ? "✈️" : issue.item_type === "room" ? "🏨" : "🎫";
+                    const label = issue.item_type === "flight" ? "טיסה" : issue.item_type === "room" ? "חדר" : "כרטיס";
+                    return (
+                      <li key={issue.id} className="text-red-900">
+                        <span className="font-medium">{icon} {label}:</span>{" "}
+                        {issue.issue_description || issue.notes || "בעיה דווחה ללא תיאור"}
+                        {issue.confirmation_number && (
+                          <span className="text-xs text-gray-600 mr-2" dir="ltr">#{issue.confirmation_number}</span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })()}
+
           {order.supplier_confirmations?.length > 0 ? (
             <div className="space-y-3">
               {order.supplier_confirmations.map((conf) => (
@@ -630,6 +712,7 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
     confirmation_number: conf.confirmation_number || "",
     notes: conf.notes || "",
     has_issue: !!conf.has_issue,
+    issue_description: conf.issue_description || "",
   });
 
   async function handleSave() {
@@ -691,26 +774,63 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
           </div>
           <label className="flex items-center gap-2 text-xs">
             <input type="checkbox" checked={form.has_issue} onChange={(e) => setForm({ ...form, has_issue: e.target.checked })} />
-            <span>יש בעיה</span>
+            <span className="font-medium text-red-600">⚠️ יש בעיה</span>
           </label>
+          {form.has_issue && (
+            <div>
+              <label className="block text-xs text-red-700 mb-0.5 font-medium">תיאור הבעיה</label>
+              <textarea value={form.issue_description} onChange={(e) => setForm({ ...form, issue_description: e.target.value })}
+                placeholder="תאר את הבעיה..."
+                rows={2}
+                className="w-full border border-red-200 rounded px-2 py-1 text-xs focus:border-red-500 outline-none resize-none" />
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`p-3 rounded-lg border text-sm ${conf.has_issue ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}>
+    <div className={`p-3 rounded-lg border-2 text-sm ${conf.has_issue ? "border-red-400 bg-red-50" : "border-green-200 bg-green-50"}`}>
       <div className="flex justify-between items-center">
         <span className="font-medium">{typeIcon} {typeLabel}</span>
         <div className="flex items-center gap-2">
-          <span className="text-xs">{conf.has_issue ? "⚠️ בעיה" : "✓ אושר"}</span>
+          <span className={`text-xs font-semibold ${conf.has_issue ? "text-red-700" : "text-green-700"}`}>
+            {conf.has_issue ? "⚠️ יש בעיה" : "✓ אושר"}
+          </span>
           <button onClick={() => setEditing(true)} className="text-xs text-primary-700 hover:text-primary-900">✏️ ערוך</button>
           <button onClick={handleDelete} className="text-xs text-red-500 hover:text-red-700">🗑️</button>
         </div>
       </div>
+
+      {/* Issue description - prominent display */}
+      {conf.has_issue && (
+        <div className="mt-2 bg-red-100 border border-red-300 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <span className="text-lg">🚨</span>
+            <div className="flex-1">
+              <div className="text-xs font-bold text-red-800 mb-1">תיאור הבעיה:</div>
+              <div className="text-sm text-red-900">
+                {conf.issue_description || conf.notes || "הספק סימן שיש בעיה אך לא ציין פרטים"}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {conf.confirmation_number && (
-        <div className="text-xs text-gray-600 mt-1">
-          <span className="font-medium">מספר אישור:</span> <span dir="ltr">{conf.confirmation_number}</span>
+        <div className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+          <span className="font-medium">מספר אישור:</span>
+          <span dir="ltr" className="font-mono">{conf.confirmation_number}</span>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(conf.confirmation_number);
+              alert("מספר האישור הועתק: " + conf.confirmation_number);
+            }}
+            className="text-gray-400 hover:text-primary-700 p-0.5 rounded hover:bg-white"
+            title="העתק מספר אישור"
+          >
+            📋
+          </button>
         </div>
       )}
       {conf.notes && (

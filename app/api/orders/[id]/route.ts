@@ -46,11 +46,14 @@ export async function GET(
 
   if (scErr) console.error("Supplier confirmations error:", scErr);
 
-  // Fetch audit log entries for this order (including related confirmations)
+  // Collect IDs to query audit log: order + its supplier_confirmations
+  const confIds = (supplierConfirmations || []).map((c: any) => c.id);
+  const allEntityIds = [id, ...confIds];
+
   const { data: auditLog } = await supabase
     .from("audit_log")
     .select("*")
-    .or(`and(entity_type.eq.order,entity_id.eq.${id}),entity_type.eq.supplier_confirmation`)
+    .in("entity_id", allEntityIds)
     .order("created_at", { ascending: false })
     .limit(200);
 

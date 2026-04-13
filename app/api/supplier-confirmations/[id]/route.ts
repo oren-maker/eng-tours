@@ -38,6 +38,10 @@ export async function PATCH(
     updates.has_issue = !!body.has_issue;
     changes.has_issue = { from: existing.has_issue, to: body.has_issue };
   }
+  if (body.issue_description !== undefined && body.issue_description !== existing.issue_description) {
+    updates.issue_description = body.issue_description;
+    changes.issue_description = { from: existing.issue_description, to: body.issue_description };
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ success: true, message: "אין שינויים" });
