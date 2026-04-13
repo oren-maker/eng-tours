@@ -45,20 +45,49 @@ export async function POST(request: Request) {
     if (!text) return NextResponse.json({ error: "תוכן ההודעה ריק" }, { status: 400 });
 
     const to = normalizePhone(number);
-    const r = await wasender.sendText({ to, text, sessionId });
 
+    // Find the session to use (first connected session if none specified)
+    const sessionsRes = await wasender.listSessions();
+    if (!sessionsRes.ok) {
+      return NextResponse.json({ success: false, error: sessionsRes.error || "Cannot list sessions" }, { status: 500 });
+    }
+    const allSessions: any[] = Array.isArray(sessionsRes.data) ? sessionsRes.data : ((sessionsRes.data as any)?.data || []);
+    const targetSession = sessionId
+      ? allSessions.find((s) => String(s.id) === String(sessionId))
+      : allSessions.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase())) || allSessions[0];
+
+    if (!targetSession) {
+      return NextResponse.json({ success: false, error: "אין חשבון WhatsApp מחובר. חבר חשבון תחילה." }, { status: 400 });
+    }
+    if (!targetSession.api_key) {
+      return NextResponse.json({ success: false, error: "לא נמצא API key לסשן" }, { status: 400 });
+    }
+    if (!["connected", "ready"].includes((targetSession.status || "").toLowerCase())) {
+      return NextResponse.json({ success: false, error: `החשבון לא מחובר (סטטוס: ${targetSession.status}). יש לסרוק QR מחדש.` }, { status: 400 });
+    }
+
+    const r = await wasender.sendTextWithSessionKey(targetSession.api_key, { to, text });
+
+    const supabase = createServiceClient();
     if (!r.ok) {
+      await supabase.from("whatsapp_log").insert({
+        direction: "outgoing",
+        recipient: to.replace("+", ""),
+        message_body: text,
+        template_name: templateName || null,
+        status: "failed",
+        error_message: r.error,
+      });
       return NextResponse.json({ success: false, error: r.error }, { status: r.status || 500 });
     }
 
-    // Log to whatsapp_log
-    const supabase = createServiceClient();
     await supabase.from("whatsapp_log").insert({
       direction: "outgoing",
       recipient: to.replace("+", ""),
       message_body: text,
       template_name: templateName || null,
       status: "sent",
+      external_id: (r.data as any)?.data?.msgId?.toString() || null,
     });
 
     return NextResponse.json({ success: true });

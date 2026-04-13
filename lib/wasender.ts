@@ -62,6 +62,30 @@ export const wasender = {
     request<{ status?: string }>("GET", `/whatsapp-sessions/${id}/status`),
   sendText: (payload: { to: string; text: string; sessionId?: string | number }) =>
     request<{ msgId?: string }>("POST", "/send-message", payload),
+
+  // Send using a per-session API key (required for /send-message)
+  sendTextWithSessionKey: async (sessionApiKey: string, payload: { to: string; text: string }) => {
+    if (!sessionApiKey) return { ok: false, status: 0, error: "Session API key missing" };
+    try {
+      const res = await fetch(`${BASE}/send-message`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${sessionApiKey}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      });
+      const text = await res.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      if (!res.ok) return { ok: false, status: res.status, error: data?.message || `HTTP ${res.status}`, data };
+      return { ok: true, status: res.status, data };
+    } catch (err: any) {
+      return { ok: false, status: 0, error: err.message || "Network error" };
+    }
+  },
 };
 
 export function isConfigured() {

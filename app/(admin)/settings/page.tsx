@@ -112,6 +112,32 @@ const SECTIONS: SettingSection[] = [
       },
     ],
   },
+  {
+    title: "אירועים",
+    icon: "🎫",
+    keys: [
+      {
+        key: "auto_activate_events",
+        label: "הפעלה אוטומטית של אירועים",
+        type: "toggle",
+      },
+      {
+        key: "auto_activate_on_creation",
+        label: "הפעל אירועים בעת יצירה",
+        type: "toggle",
+      },
+      {
+        key: "auto_archive_past_events",
+        label: "ארכבה אוטומטית של אירועים שעברו",
+        type: "toggle",
+      },
+      {
+        key: "auto_send_reminders",
+        label: "שלח תזכורות אוטומטיות",
+        type: "toggle",
+      },
+    ],
+  },
 ];
 
 export default function SettingsPage() {
