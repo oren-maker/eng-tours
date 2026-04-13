@@ -420,10 +420,17 @@ function BookingContent() {
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">טלפון *</label>
                       <div className="flex gap-1" dir="ltr">
-                        <select value={phonePrefix} onChange={(e) => setPhonePrefix(e.target.value)}
-                          className="w-28 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-primary-500 outline-none">
+                        <input
+                          type="text"
+                          list="phone-prefixes"
+                          value={phonePrefix}
+                          onChange={(e) => setPhonePrefix(e.target.value)}
+                          placeholder="+972"
+                          className="w-24 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-primary-500 outline-none"
+                        />
+                        <datalist id="phone-prefixes">
                           {phonePrefixes.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                        </select>
+                        </datalist>
                         <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required placeholder="524802830"
                           className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
                       </div>
