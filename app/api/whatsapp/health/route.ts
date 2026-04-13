@@ -1,23 +1,22 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { checkHealth } from "@/lib/wesender";
+import { wasender, isConfigured } from "@/lib/wasender";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!isConfigured()) {
+      return NextResponse.json({ online: false, error: "Not configured" });
     }
-
-    const health = await checkHealth();
-    return NextResponse.json(health);
-  } catch (err) {
-    console.error("WhatsApp health check error:", err);
-    return NextResponse.json(
-      { online: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    const r = await wasender.listSessions();
+    if (!r.ok) return NextResponse.json({ online: false, error: r.error });
+    const data: any = r.data;
+    const sessions = Array.isArray(data) ? data : (data?.data || []);
+    const connected = sessions.some((s: any) => {
+      const st = (s.status || "").toLowerCase();
+      return st === "connected" || st === "ready";
+    });
+    return NextResponse.json({ online: connected, sessions: sessions.length });
+  } catch (err: any) {
+    return NextResponse.json({ online: false, error: err.message || "Internal error" });
   }
 }

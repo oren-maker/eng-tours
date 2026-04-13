@@ -43,6 +43,7 @@ export default function WhatsAppAdminPage() {
   // Send state
   const [sendNumber, setSendNumber] = useState("");
   const [sendTemplate, setSendTemplate] = useState("");
+  const [sendMessage, setSendMessage] = useState("");
   const [sendVars, setSendVars] = useState("");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ success: boolean; error?: string } | null>(null);
@@ -119,11 +120,11 @@ export default function WhatsAppAdminPage() {
       setSending(true);
       setSendResult(null);
       let variables: Record<string, string> = {};
-      if (sendVars.trim()) {
+      if (sendTemplate && sendVars.trim()) {
         try {
           variables = JSON.parse(sendVars);
         } catch {
-          setSendResult({ success: false, error: "JSON variables format invalid" });
+          setSendResult({ success: false, error: "פורמט המשתנים אינו JSON תקין" });
           return;
         }
       }
@@ -132,6 +133,7 @@ export default function WhatsAppAdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           number: sendNumber,
+          message: sendTemplate ? undefined : sendMessage,
           templateName: sendTemplate || undefined,
           variables,
         }),
@@ -140,6 +142,7 @@ export default function WhatsAppAdminPage() {
       setSendResult(data);
       if (data.success) {
         setSendNumber("");
+        setSendMessage("");
         setSendTemplate("");
         setSendVars("");
         fetchLog();
@@ -424,19 +427,34 @@ export default function WhatsAppAdminPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                משתנים (JSON)
-              </label>
-              <textarea
-                value={sendVars}
-                onChange={(e) => setSendVars(e.target.value)}
-                placeholder='{"name": "אורן", "order": "123"}'
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
-                dir="ltr"
-              />
-            </div>
+            {sendTemplate ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  משתנים לתבנית (JSON)
+                </label>
+                <textarea
+                  value={sendVars}
+                  onChange={(e) => setSendVars(e.target.value)}
+                  placeholder='{"name": "אורן", "order": "123"}'
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  dir="ltr"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  תוכן ההודעה
+                </label>
+                <textarea
+                  value={sendMessage}
+                  onChange={(e) => setSendMessage(e.target.value)}
+                  placeholder="שלום, מה שלומך?"
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            )}
             <button
               onClick={handleSend}
               disabled={!sendNumber.trim() || sending}
@@ -712,14 +730,6 @@ function WaSenderConnect() {
         )}
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-        <div className="font-semibold mb-1">🔑 הגדרת המפתח</div>
-        <div className="text-xs">
-          הוסף ב-Vercel תחת Environment Variables:
-          <code className="bg-white px-2 py-0.5 rounded mx-1" dir="ltr">WASENDER_API_KEY</code>
-          (מתוך wasenderapi.com Settings → API Keys). לאחר שמירה - בצע redeploy.
-        </div>
-      </div>
     </div>
   );
 }
