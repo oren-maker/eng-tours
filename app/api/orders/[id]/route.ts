@@ -24,19 +24,27 @@ export async function GET(
     );
   }
 
-  // Fetch participants
-  const { data: participants } = await supabase
+  // Fetch participants with joined flight/room/ticket data
+  const { data: participants, error: pErr } = await supabase
     .from("participants")
-    .select("*")
-    .eq("order_id", id)
-    .order("created_at" as never, { ascending: true });
+    .select(`
+      *,
+      flights(airline_name, flight_code, origin_iata, dest_iata, departure_time),
+      rooms(room_type, check_in, check_out, hotels(name)),
+      tickets(name)
+    `)
+    .eq("order_id", id);
+
+  if (pErr) console.error("Participants fetch error:", pErr);
 
   // Fetch supplier confirmations
-  const { data: supplierConfirmations } = await supabase
+  const { data: supplierConfirmations, error: scErr } = await supabase
     .from("supplier_confirmations")
     .select("*")
     .eq("order_id", id)
     .order("created_at", { ascending: false });
+
+  if (scErr) console.error("Supplier confirmations error:", scErr);
 
   // Fetch audit log entries for this order
   const { data: auditLog } = await supabase

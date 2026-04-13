@@ -108,7 +108,8 @@ export default function OrderDetailPage() {
       const res = await fetch(`/api/orders/${orderId}`);
       if (res.ok) {
         const data = await res.json();
-        setOrder(data.order);
+        // API returns { order: {...} }
+        setOrder(data.order || data);
       }
     } catch (err) {
       console.error("Failed to fetch order:", err);
@@ -233,6 +234,13 @@ export default function OrderDetailPage() {
           </h2>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={fetchOrder}
+            className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800"
+            title="רענן נתונים"
+          >
+            🔄 רענן
+          </button>
           {order.status !== "cancelled" && (
             <>
               <select
