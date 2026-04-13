@@ -381,18 +381,17 @@ export default function OrderDetailPage() {
               return null;
             })()}
             {(() => {
-              const confs = order.supplier_confirmations || [];
-              if (confs.length < 2) return null;
-              const withPay = confs.filter((c: any) => c.payment_confirmation);
-              const uniqueConf = new Set(withPay.map((c: any) => c.payment_confirmation));
-              const hasAny = confs.some((c: any) => c.payment_amount != null);
-              if (!hasAny) return null;
-              const unified = uniqueConf.size === 1 && withPay.length === confs.length;
+              const parts = order.participants || [];
+              if (parts.length < 2) return null;
+              const payers = new Set(parts.map((p: any) => p.payer_participant_id || p.id).filter(Boolean));
+              const distinctPayers = parts.filter((p: any) => Number(p.amount_paid) > 0).length;
+              if (distinctPayers === 0) return null;
+              const unified = distinctPayers === 1;
               return (
                 <div className="flex justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-                  <span className="text-blue-700">אופן תשלום לספקים:</span>
+                  <span className="text-blue-700">אופן תשלום:</span>
                   <span className="text-blue-700 font-bold">
-                    {unified ? "💳 תשלום אחד לכל ההזמנה" : "📊 מפוצל לפי פריטים"}
+                    {unified ? "💳 תשלום אחד לכל ההזמנה" : `📊 ${distinctPayers} משלמים נפרדים`}
                   </span>
                 </div>
               );
@@ -567,6 +566,9 @@ export default function OrderDetailPage() {
                   <th className="text-right px-3 py-2 font-medium text-gray-600">
                     שולם
                   </th>
+                  <th className="text-right px-3 py-2 font-medium text-gray-600">
+                    אמצעי תשלום
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -589,6 +591,25 @@ export default function OrderDetailPage() {
                     <td className="px-3 py-2 text-xs">{p.email || "-"}</td>
                     <td className="px-3 py-2">
                       {formatPrice(p.amount_paid)}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {(() => {
+                        const pp = p as any;
+                        if (Number(pp.amount_paid) <= 0) {
+                          const payer = order.participants?.find((x: any) => x.id === pp.payer_participant_id) as any;
+                          return payer && payer.id !== pp.id ? (
+                            <span className="text-gray-400">משולם ע״י {payer.first_name_en}</span>
+                          ) : <span className="text-gray-400">-</span>;
+                        }
+                        const methodLabels: Record<string, string> = { credit: "💳 אשראי", transfer: "🏦 העברה", cash: "💵 מזומן", check: "📝 צ'ק" };
+                        return (
+                          <div className="space-y-0.5">
+                            <div className="font-medium text-gray-700">{methodLabels[pp.payment_method] || pp.payment_method || "-"}</div>
+                            {pp.payment_card_last4 && <div className="text-gray-500" dir="ltr">**** {pp.payment_card_last4}</div>}
+                            {pp.payment_confirmation && <div className="text-gray-400 font-mono" dir="ltr">{pp.payment_confirmation}</div>}
+                          </div>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}

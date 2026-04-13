@@ -107,10 +107,14 @@ export default function SupplierOrderPage() {
               name: p.flights ? `${p.flights.airline_name || ""} ${p.flights.flight_code || ""}`.trim() : "טיסה",
               details: p.flights ? `${p.flights.origin_iata || ""} → ${p.flights.dest_iata || ""} · ${p.flights.departure_time ? new Date(p.flights.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" }) : ""}` : "",
               participants: [fullName],
+              unitPrice: Number(p.flights?.price_customer) || 0,
+              itemCost: Number(p.flights?.price_customer) || 0,
               confirmation_number: "", notes: "", has_issue: false, issue_description: "", ...EMPTY_PAYMENT,
             });
           } else if (p.flight_id) {
-            flightMap.get(p.flight_id).participants.push(fullName);
+            const it = flightMap.get(p.flight_id);
+            it.participants.push(fullName);
+            it.itemCost += it.unitPrice;
           }
           if (p.room_id && !roomMap.has(p.room_id)) {
             roomMap.set(p.room_id, {
@@ -118,10 +122,14 @@ export default function SupplierOrderPage() {
               name: p.rooms ? `${p.rooms.hotels?.name || "מלון"} · ${p.rooms.room_type || ""}` : "חדר",
               details: p.rooms ? `${p.rooms.check_in ? new Date(p.rooms.check_in).toLocaleDateString("he-IL") : ""} ← ${p.rooms.check_out ? new Date(p.rooms.check_out).toLocaleDateString("he-IL") : ""}` : "",
               participants: [fullName],
+              unitPrice: Number(p.rooms?.price_customer) || 0,
+              itemCost: Number(p.rooms?.price_customer) || 0,
               confirmation_number: "", notes: "", has_issue: false, issue_description: "", ...EMPTY_PAYMENT,
             });
           } else if (p.room_id) {
-            roomMap.get(p.room_id).participants.push(fullName);
+            const it = roomMap.get(p.room_id);
+            it.participants.push(fullName);
+            it.itemCost += it.unitPrice;
           }
           if (p.ticket_id && !ticketMap.has(p.ticket_id)) {
             ticketMap.set(p.ticket_id, {
@@ -129,10 +137,14 @@ export default function SupplierOrderPage() {
               name: p.tickets?.name || "כרטיס",
               details: "",
               participants: [fullName],
+              unitPrice: Number(p.tickets?.price_customer) || 0,
+              itemCost: Number(p.tickets?.price_customer) || 0,
               confirmation_number: "", notes: "", has_issue: false, issue_description: "", ...EMPTY_PAYMENT,
             });
           } else if (p.ticket_id) {
-            ticketMap.get(p.ticket_id).participants.push(fullName);
+            const it = ticketMap.get(p.ticket_id);
+            it.participants.push(fullName);
+            it.itemCost += it.unitPrice;
           }
         }
         // Pre-fill existing supplier confirmations
@@ -346,75 +358,6 @@ export default function SupplierOrderPage() {
 
         {error && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
 
-        {/* Order-level payment block */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-4 border-2 border-primary-100">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 className="text-lg font-semibold text-gray-800">💰 פרטי תשלום להזמנה</h2>
-            <button onClick={applyPaymentToAll}
-              className="bg-primary-700 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-primary-800">
-              ✓ החל על כל הפריטים
-            </button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">סכום כולל</label>
-              <input type="number" step="0.01" value={orderPayment.payment_amount}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_amount: e.target.value })}
-                dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">מטבע</label>
-              <select value={orderPayment.payment_currency}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_currency: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
-                <option value="ILS">₪ שקל</option>
-                <option value="USD">$ דולר</option>
-                <option value="EUR">€ אירו</option>
-                <option value="GBP">£ פאונד</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">אמצעי תשלום</label>
-              <select value={orderPayment.payment_method}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_method: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
-                <option value="">בחר...</option>
-                <option value="credit">כרטיס אשראי</option>
-                <option value="transfer">העברה בנקאית</option>
-                <option value="cash">מזומן</option>
-                <option value="check">צ&apos;ק</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">תשלומים</label>
-              <input type="number" min="1" value={orderPayment.payment_installments}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_installments: e.target.value })}
-                dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs text-gray-600 mb-1">מספר אישור עסקה</label>
-              <input type="text" value={orderPayment.payment_confirmation}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_confirmation: e.target.value })}
-                dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">תאריך תשלום</label>
-              <input type="date" value={orderPayment.payment_date}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_date: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">תאריך לחיוב</label>
-              <input type="date" value={orderPayment.payment_due_date}
-                onChange={(e) => setOrderPayment({ ...orderPayment, payment_due_date: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-            </div>
-          </div>
-          <p className="text-[11px] text-gray-500 mt-2">
-            💡 לחץ &quot;החל על כל הפריטים&quot; כדי לחלק את הסכום בין הפריטים ולהעתיק את שאר הפרטים
-          </p>
-        </div>
-
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400">
@@ -440,10 +383,9 @@ export default function SupplierOrderPage() {
                         ✓ כבר אושר
                       </span>
                     )}
-                    {item.payment_amount && Number(item.payment_amount) > 0 && (
+                    {(item as any).itemCost > 0 && (
                       <span className="text-xs text-gray-600">
-                        💰 {(() => { const s: any = { ILS: "₪", USD: "$", EUR: "€", GBP: "£" }; return s[item.payment_currency || "ILS"] || ""; })()}
-                        {Number(item.payment_amount).toLocaleString("he-IL")}
+                        💰 עלות: ₪{Number((item as any).itemCost).toLocaleString("he-IL")}
                       </span>
                     )}
                   </div>

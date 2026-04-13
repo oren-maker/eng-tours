@@ -26,9 +26,9 @@ export async function GET(
     .select(`
       id, first_name_en, last_name_en, phone, email, passport_number,
       flight_id, room_id, ticket_id, package_id, amount_paid,
-      flights(airline_name, flight_code, origin_iata, dest_iata, departure_time),
-      rooms(room_type, check_in, check_out, hotels(name)),
-      tickets(name)
+      flights(airline_name, flight_code, origin_iata, dest_iata, departure_time, price_customer),
+      rooms(room_type, check_in, check_out, price_customer, hotels(name)),
+      tickets(name, price_customer)
     `)
     .eq("order_id", order.id);
 
