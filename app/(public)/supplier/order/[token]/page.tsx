@@ -327,12 +327,45 @@ export default function SupplierOrderPage() {
   if (error && !order) return <div className="min-h-screen flex items-center justify-center" style={{ background: "#FFF8ED" }}><div className="text-red-500">{error}</div></div>;
 
   if (success) {
+    const totalPrice = Number(order?.total_price || 0);
+    const paid = Number(order?.amount_paid || 0);
+    const remaining = Math.max(0, totalPrice - paid);
     return (
       <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "linear-gradient(135deg, #FFF8ED 0%, #FFEFD4 100%)" }}>
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-primary-900 mb-2">תודה!</h2>
-          <p className="text-gray-600">האישורים נשלחו למערכת בהצלחה.</p>
+          <p className="text-gray-600 mb-6">האישורים נשלחו למערכת בהצלחה.</p>
+
+          {remaining > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 text-sm">
+              <span className="text-orange-800">נותר לתשלום: </span>
+              <span className="font-bold text-orange-700">₪{remaining.toLocaleString("he-IL")}</span>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            {remaining > 0 && (
+              <button
+                onClick={() => { setSuccess(false); setActiveTab("payments"); }}
+                className="bg-primary-700 hover:bg-primary-800 text-white px-5 py-3 rounded-lg text-sm font-medium"
+              >
+                💰 מעבר לתשלום
+              </button>
+            )}
+            <button
+              onClick={() => { setSuccess(false); setActiveTab("order"); }}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-3 rounded-lg text-sm font-medium"
+            >
+              ← חזרה לפרטי הזמנה
+            </button>
+            <a
+              href="/portal"
+              className="text-xs text-gray-500 hover:text-primary-700 pt-2"
+            >
+              לעמוד הראשי של הספק
+            </a>
+          </div>
         </div>
       </div>
     );
