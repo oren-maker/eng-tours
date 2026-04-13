@@ -8,46 +8,52 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { share_token, participant_id, amount, method, card_last4, confirmation, date } = body;
 
-  if (!share_token || !participant_id || !amount) {
+  if (!share_token || !amount || Number(amount) <= 0) {
     return NextResponse.json({ error: "חסרים שדות" }, { status: 400 });
   }
 
   const { data: order } = await supabase.from("orders").select("id, amount_paid, total_price").eq("share_token", share_token).single();
   if (!order) return NextResponse.json({ error: "הזמנה לא נמצאה" }, { status: 404 });
 
-  const { data: existing } = await supabase
-    .from("participants")
-    .select("id, order_id, amount_paid")
-    .eq("id", participant_id)
-    .eq("order_id", order.id)
-    .single();
+  const total = Number(order.total_price || 0);
+  const paid = Number(order.amount_paid || 0);
+  const remaining = total - paid;
+  if (remaining <= 0) {
+    return NextResponse.json({ error: "ההזמנה שולמה במלואה" }, { status: 400 });
+  }
 
-  if (!existing) return NextResponse.json({ error: "משתתף לא נמצא" }, { status: 404 });
+  const amt = Math.min(Number(amount), remaining);
 
-  const newAmount = Number(existing.amount_paid || 0) + Number(amount);
-  const { error } = await supabase
-    .from("participants")
-    .update({
-      amount_paid: newAmount,
+  await supabase.from("payments").insert({
+    order_id: order.id,
+    participant_id: participant_id || null,
+    amount: amt,
+    method: method || null,
+    card_last4: card_last4 || null,
+    confirmation: confirmation || null,
+    payment_date: date || null,
+  });
+
+  if (participant_id) {
+    const { data: p } = await supabase.from("participants").select("amount_paid").eq("id", participant_id).single();
+    await supabase.from("participants").update({
+      amount_paid: Number(p?.amount_paid || 0) + amt,
       payment_method: method || null,
       payment_card_last4: card_last4 || null,
       payment_confirmation: confirmation || null,
       payment_date: date || null,
-      payer_participant_id: participant_id,
-    })
-    .eq("id", participant_id);
+    }).eq("id", participant_id);
+  }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-  const newOrderPaid = Number(order.amount_paid || 0) + Number(amount);
-  const orderUpdate: any = { amount_paid: newOrderPaid };
-  if (newOrderPaid >= Number(order.total_price || 0)) orderUpdate.status = "completed";
-  else if (newOrderPaid > 0) orderUpdate.status = "partial";
+  const newPaid = paid + amt;
+  const orderUpdate: any = { amount_paid: newPaid };
+  if (newPaid >= total) orderUpdate.status = "completed";
+  else if (newPaid > 0) orderUpdate.status = "partial";
   await supabase.from("orders").update(orderUpdate).eq("id", order.id);
 
   await audit("payment_added", "order", order.id, {
-    after: { participant_id, amount, method, card_last4, confirmation, date, total_paid: newOrderPaid },
+    after: { participant_id: participant_id || null, amount: amt, method, card_last4, confirmation, date, total_paid: newPaid, remaining_after: total - newPaid },
   }, request);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, amount_paid: amt, remaining: total - newPaid });
 }

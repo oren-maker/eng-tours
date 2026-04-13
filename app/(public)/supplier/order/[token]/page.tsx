@@ -216,8 +216,8 @@ export default function SupplierOrderPage() {
   }
 
   async function handleAddPayment() {
-    if (!newPayment.participant_id || !newPayment.amount) {
-      alert("יש למלא לפחות משתתף וסכום");
+    if (!newPayment.amount || Number(newPayment.amount) <= 0) {
+      alert("יש להזין סכום");
       return;
     }
     setSavingPayment(true);
@@ -353,6 +353,25 @@ export default function SupplierOrderPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {(() => {
+          const totalPrice = Number(order?.total_price || 0);
+          const paid = Number(order?.amount_paid || 0);
+          const remaining = totalPrice - paid;
+          if (remaining <= 0 || !totalPrice) return null;
+          return (
+            <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-4 mb-4 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">⏰</span>
+                <div>
+                  <div className="text-sm font-semibold text-orange-900">נותר לתשלום</div>
+                  <div className="text-xs text-orange-700">מתוך ₪{totalPrice.toLocaleString("he-IL")} · שולם ₪{paid.toLocaleString("he-IL")}</div>
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-orange-700">₪{remaining.toLocaleString("he-IL")}</div>
+            </div>
+          );
+        })()}
+
         <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
           <h2 className="text-lg font-semibold text-gray-800 mb-3">פרטי הזמנה</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -415,17 +434,69 @@ export default function SupplierOrderPage() {
           </button>
         </div>
 
-        {activeTab === "payments" && (
+        {activeTab === "payments" && (() => {
+          const totalPrice = Number(order?.total_price || 0);
+          const paid = Number(order?.amount_paid || 0);
+          const remaining = Math.max(0, totalPrice - paid);
+          const fullyPaid = remaining <= 0;
+          return (
           <div className="space-y-4">
+            {/* Summary */}
+            <div className={`rounded-xl shadow-sm p-5 border-2 ${fullyPaid ? "bg-green-50 border-green-300" : "bg-orange-50 border-orange-300"}`}>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-xs text-gray-600">סכום כולל</div>
+                  <div className="text-xl font-bold text-gray-800">₪{totalPrice.toLocaleString("he-IL")}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600">שולם</div>
+                  <div className="text-xl font-bold text-green-700">₪{paid.toLocaleString("he-IL")}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600">{fullyPaid ? "✓ שולם במלואו" : "נותר לתשלום"}</div>
+                  <div className={`text-xl font-bold ${fullyPaid ? "text-green-700" : "text-orange-700"}`}>
+                    {fullyPaid ? "✓" : `₪${remaining.toLocaleString("he-IL")}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Existing payments */}
             <div className="bg-white rounded-xl shadow-sm p-5">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">תשלומים שבוצעו</h3>
               {(() => {
-                const payers = participants.filter((p: any) => Number(p.amount_paid) > 0);
-                if (payers.length === 0) {
+                const pmts = (order?.payments || []) as any[];
+                const perParticipant = participants
+                  .filter((p: any) => Number(p.amount_paid) > 0)
+                  .map((p: any) => ({
+                    _kind: "participant",
+                    key: "p-" + p.id,
+                    payer: `${p.first_name_en} ${p.last_name_en}`,
+                    amount: p.amount_paid,
+                    method: p.payment_method,
+                    card_last4: p.payment_card_last4,
+                    confirmation: p.payment_confirmation,
+                    date: p.payment_date,
+                  }));
+                const extra = pmts.map((pm: any) => {
+                  const payer = participants.find((pt: any) => pt.id === pm.participant_id) as any;
+                  return {
+                    _kind: "payment",
+                    key: "x-" + pm.id,
+                    payer: payer ? `${payer.first_name_en} ${payer.last_name_en}` : "— כללי —",
+                    amount: pm.amount,
+                    method: pm.method,
+                    card_last4: pm.card_last4,
+                    confirmation: pm.confirmation,
+                    date: pm.payment_date,
+                  };
+                });
+                const rows = [...perParticipant, ...extra];
+                if (rows.length === 0) {
                   return <p className="text-sm text-gray-400 text-center py-4">לא נרשמו תשלומים עדיין</p>;
                 }
                 const methodLabels: Record<string, string> = { credit: "💳 כרטיס אשראי", transfer: "🏦 העברה בנקאית", cash: "💵 מזומן", check: "📝 צ'ק" };
+                const totalSum = rows.reduce((s, r) => s + Number(r.amount), 0);
                 return (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -440,21 +511,21 @@ export default function SupplierOrderPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {payers.map((p: any) => (
-                          <tr key={p.id}>
-                            <td className="px-3 py-2 font-medium">{p.first_name_en} {p.last_name_en}</td>
-                            <td className="px-3 py-2 font-semibold">₪{Number(p.amount_paid).toLocaleString("he-IL")}</td>
-                            <td className="px-3 py-2">{methodLabels[p.payment_method] || p.payment_method || "-"}</td>
-                            <td className="px-3 py-2 font-mono text-xs" dir="ltr">{p.payment_card_last4 ? `**** ${p.payment_card_last4}` : "-"}</td>
-                            <td className="px-3 py-2 font-mono text-xs" dir="ltr">{p.payment_confirmation || "-"}</td>
-                            <td className="px-3 py-2 text-xs text-gray-500">{p.payment_date ? new Date(p.payment_date).toLocaleDateString("he-IL") : "-"}</td>
+                        {rows.map((r: any) => (
+                          <tr key={r.key}>
+                            <td className="px-3 py-2 font-medium">{r.payer}</td>
+                            <td className="px-3 py-2 font-semibold">₪{Number(r.amount).toLocaleString("he-IL")}</td>
+                            <td className="px-3 py-2">{methodLabels[r.method] || r.method || "-"}</td>
+                            <td className="px-3 py-2 font-mono text-xs" dir="ltr">{r.card_last4 ? `**** ${r.card_last4}` : "-"}</td>
+                            <td className="px-3 py-2 font-mono text-xs" dir="ltr">{r.confirmation || "-"}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500">{r.date ? new Date(r.date).toLocaleDateString("he-IL") : "-"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                     <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm">
                       <span className="text-gray-600">סה״כ שולם:</span>
-                      <span className="font-bold text-green-700">₪{payers.reduce((s: number, p: any) => s + Number(p.amount_paid), 0).toLocaleString("he-IL")}</span>
+                      <span className="font-bold text-green-700">₪{totalSum.toLocaleString("he-IL")}</span>
                     </div>
                   </div>
                 );
@@ -462,23 +533,32 @@ export default function SupplierOrderPage() {
             </div>
 
             {/* Add payment form */}
+            {fullyPaid ? (
+              <div className="bg-green-50 border-2 border-green-300 rounded-xl p-5 text-center">
+                <div className="text-4xl mb-2">✓</div>
+                <h3 className="text-lg font-semibold text-green-800">ההזמנה שולמה במלואה</h3>
+                <p className="text-sm text-green-700 mt-1">לא ניתן להוסיף תשלומים נוספים</p>
+              </div>
+            ) : (
             <div className="bg-white rounded-xl shadow-sm p-5 border-2 border-primary-100">
               <h3 className="text-lg font-semibold text-gray-800 mb-3">➕ הוסף תשלום</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">משלם</label>
+                  <label className="block text-xs text-gray-600 mb-1">משלם (אופציונלי)</label>
                   <select value={newPayment.participant_id}
                     onChange={(e) => setNewPayment({ ...newPayment, participant_id: e.target.value })}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
-                    <option value="">בחר משתתף...</option>
+                    <option value="">— ללא שיוך / כללי —</option>
                     {participants.map((p) => (
                       <option key={p.id} value={p.id}>{p.first_name_en} {p.last_name_en}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">סכום</label>
-                  <input type="number" step="0.01" value={newPayment.amount}
+                  <label className="block text-xs text-gray-600 mb-1">
+                    סכום <span className="text-gray-400">(מקסימום ₪{remaining.toLocaleString("he-IL")})</span>
+                  </label>
+                  <input type="number" step="0.01" max={remaining} value={newPayment.amount}
                     onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
                     dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
                 </div>
@@ -519,8 +599,10 @@ export default function SupplierOrderPage() {
                 {savingPayment ? "שומר..." : "💾 שמור תשלום"}
               </button>
             </div>
+            )}
           </div>
-        )}
+          );
+        })()}
 
         {activeTab === "order" && (<>
         <div className="space-y-3">

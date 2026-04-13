@@ -39,6 +39,12 @@ export async function GET(
     .eq("order_id", order.id)
     .order("created_at", { ascending: false });
 
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("order_id", order.id)
+    .order("created_at", { ascending: false });
+
   return NextResponse.json({
     id: order.id,
     event_id: order.event_id,
@@ -50,5 +56,6 @@ export async function GET(
     created_at: order.created_at,
     participants: participants || [],
     supplier_confirmations: supplierConfirmations || [],
+    payments: payments || [],
   });
 }
