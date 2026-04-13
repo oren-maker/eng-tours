@@ -1,307 +1,173 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { cachedFetch } from "@/lib/cached-fetch";
 
-interface EventOption {
-  id: string;
-  name: string;
-}
+const typeBadgeColors: Record<string, string> = {
+  RF: "bg-purple-100 text-purple-700",
+  FL: "bg-blue-100 text-blue-700",
+  RL: "bg-green-100 text-green-700",
+  IL: "bg-orange-100 text-orange-700",
+  FI: "bg-red-100 text-red-700",
+};
 
-interface ItemBreakdown {
-  item_name: string;
-  item_type: string;
-  cost_price: number;
-  sell_price: number;
-  quantity: number;
-  revenue: number;
-  cost: number;
-  profit: number;
-}
-
-interface FinancialSummary {
-  totalRevenue: number;
-  totalCost: number;
-  grossProfit: number;
-  profitMargin: number;
-  confirmedOrders: number;
-  avgRevenue: number;
-}
+const typeLabels: Record<string, string> = {
+  RF: "מלון בלבד",
+  FL: "טיסות בלבד",
+  RL: "טיסות + מלון חו\"ל",
+  IL: "מלון בארץ",
+  FI: "מלון + טיסות בארץ",
+};
 
 export default function FinancialPage() {
-  const [events, setEvents] = useState<EventOption[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState("");
-  const [items, setItems] = useState<ItemBreakdown[]>([]);
-  const [summary, setSummary] = useState<FinancialSummary>({
-    totalRevenue: 0,
-    totalCost: 0,
-    grossProfit: 0,
-    profitMargin: 0,
-    confirmedOrders: 0,
-    avgRevenue: 0,
-  });
-  const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState<"active" | "archive">("active");
+
+  const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    fetchEvents();
+    Promise.all([
+      cachedFetch<any[]>("/api/events"),
+      cachedFetch<any[]>("/api/orders"),
+    ])
+      .then(([evData, orData]) => {
+        if (Array.isArray(evData)) setEvents(evData);
+        if (Array.isArray(orData)) setOrders(orData);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const fetchEvents = async () => {
-    try {
-      const res = await fetch("/api/events");
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(Array.isArray(data) ? data : data.events || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch events:", err);
-    }
-  };
+  function eventRevenue(eventId: string) {
+    return orders
+      .filter((o) => o.event_id === eventId && o.status !== "cancelled" && o.status !== "draft")
+      .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+  }
 
-  const fetchFinancialData = useCallback(async () => {
-    if (!selectedEvent) {
-      setItems([]);
-      setSummary({
-        totalRevenue: 0,
-        totalCost: 0,
-        grossProfit: 0,
-        profitMargin: 0,
-        confirmedOrders: 0,
-        avgRevenue: 0,
-      });
-      return;
-    }
+  function eventOrderCount(eventId: string) {
+    return orders.filter((o) => o.event_id === eventId).length;
+  }
 
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/orders?event_id=${selectedEvent}&status=confirmed`);
-      if (res.ok) {
-        const data = await res.json();
-        const orders = data.orders || [];
+  const activeEvents = events.filter(
+    (e) => e.status === "active" && (!e.end_date || e.end_date.split("T")[0] >= today)
+  );
+  const archivedEvents = events.filter(
+    (e) => e.status === "archived" || (e.end_date && e.end_date.split("T")[0] < today)
+  );
 
-        // Calculate summary from orders
-        const totalRevenue = orders.reduce(
-          (sum: number, o: { total_price: number }) => sum + (o.total_price || 0),
-          0
-        );
-        const confirmedOrders = orders.length;
-        const avgRevenue = confirmedOrders > 0 ? totalRevenue / confirmedOrders : 0;
-
-        // Placeholder cost calculation (70% of revenue as estimate)
-        const totalCost = totalRevenue * 0.7;
-        const grossProfit = totalRevenue - totalCost;
-        const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-
-        setSummary({
-          totalRevenue,
-          totalCost,
-          grossProfit,
-          profitMargin,
-          confirmedOrders,
-          avgRevenue,
-        });
-
-        // Placeholder items - will be populated when item data is available
-        setItems([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch financial data:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedEvent]);
-
-  useEffect(() => {
-    fetchFinancialData();
-  }, [fetchFinancialData]);
-
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("he-IL", {
-      style: "currency",
-      currency: "ILS",
-      minimumFractionDigits: 0,
-    }).format(price || 0);
-
-  const handleExport = (type: "excel" | "pdf" | "passengers") => {
-    alert(`ייצוא ${type === "excel" ? "Excel" : type === "pdf" ? "PDF" : "רשימת נוסעים"} - בפיתוח`);
-  };
+  const searchLower = search.trim().toLowerCase();
+  const displayedEvents = (view === "active" ? activeEvents : archivedEvents)
+    .filter((e) => !searchLower ||
+      e.name?.toLowerCase().includes(searchLower) ||
+      e.id?.toLowerCase().includes(searchLower) ||
+      e.destination_country?.toLowerCase().includes(searchLower)
+    );
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-primary-900">סקירה כלכלית</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleExport("excel")}
-            className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            ייצוא Excel
-          </button>
-          <button
-            onClick={() => handleExport("pdf")}
-            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            ייצוא PDF
-          </button>
-          <button
-            onClick={() => handleExport("passengers")}
-            className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            רשימת נוסעים
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+        <h2 className="text-2xl font-bold text-primary-900">💰 כלכלי</h2>
+        <p className="text-sm text-gray-500">בחר אירוע כדי לצפות בנתונים הכלכליים המלאים</p>
       </div>
 
-      {/* Event Selector */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1">בחר אירוע</label>
-        <select
-          value={selectedEvent}
-          onChange={(e) => setSelectedEvent(e.target.value)}
-          className="w-full sm:w-80 rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      {/* Toggle */}
+      <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4">
+        <button
+          onClick={() => setView("active")}
+          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            view === "active" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"
+          }`}
         >
-          <option value="">-- בחר אירוע --</option>
-          {events.map((ev) => (
-            <option key={ev.id} value={ev.id}>
-              {ev.name}
-            </option>
-          ))}
-        </select>
+          אירועים פעילים ({activeEvents.length})
+        </button>
+        <button
+          onClick={() => setView("archive")}
+          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            view === "archive" ? "bg-gray-700 text-white" : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          📦 ארכיון ({archivedEvents.length})
+        </button>
       </div>
 
-      {loading && (
-        <div className="text-center py-12 text-gray-400">טוען נתונים כלכליים...</div>
-      )}
+      {/* Search */}
+      <div className="bg-white rounded-xl shadow-sm p-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 חפש אירוע לפי שם, מזהה או יעד..."
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none"
+        />
+      </div>
 
-      {!loading && selectedEvent && (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-green-400">
-              <div className="text-sm text-gray-500">סה"כ הכנסות</div>
-              <div className="text-2xl font-bold text-gray-800 mt-1">
-                {formatPrice(summary.totalRevenue)}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-red-400">
-              <div className="text-sm text-gray-500">סה"כ עלות</div>
-              <div className="text-2xl font-bold text-gray-800 mt-1">
-                {formatPrice(summary.totalCost)}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-blue-400">
-              <div className="text-sm text-gray-500">רווח גולמי</div>
-              <div className="text-2xl font-bold text-gray-800 mt-1">
-                {formatPrice(summary.grossProfit)}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-purple-400">
-              <div className="text-sm text-gray-500">שיעור רווח</div>
-              <div className="text-2xl font-bold text-gray-800 mt-1">
-                {summary.profitMargin.toFixed(1)}%
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-yellow-400">
-              <div className="text-sm text-gray-500">הזמנות מאושרות</div>
-              <div className="text-2xl font-bold text-gray-800 mt-1">
-                {summary.confirmedOrders}
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-cyan-400">
-              <div className="text-sm text-gray-500">הכנסה ממוצעת</div>
-              <div className="text-2xl font-bold text-gray-800 mt-1">
-                {formatPrice(summary.avgRevenue)}
-              </div>
-            </div>
-          </div>
+      {/* Events list */}
+      {loading ? (
+        <div className="bg-white rounded-xl shadow-sm text-center py-12 text-gray-400">טוען...</div>
+      ) : displayedEvents.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm text-center py-16 text-gray-400">
+          <div className="text-5xl mb-4">💰</div>
+          <p className="text-lg font-medium text-gray-500">
+            {search ? "לא נמצאו תוצאות" : view === "active" ? "אין אירועים פעילים" : "אין אירועים בארכיון"}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {displayedEvents.map((ev) => {
+            const revenue = eventRevenue(ev.id);
+            const orderCount = eventOrderCount(ev.id);
+            return (
+              <Link
+                key={ev.id}
+                href={`/events/${ev.id}/dashboard`}
+                className="bg-white rounded-xl shadow-sm p-5 hover:shadow-md transition-all border-2 border-transparent hover:border-primary-200"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-800 truncate">{ev.name}</h3>
+                    {ev.destination_country && (
+                      <p className="text-xs text-gray-500 mt-1">📍 {ev.destination_country}</p>
+                    )}
+                  </div>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${typeBadgeColors[ev.type_code] || "bg-gray-100 text-gray-700"}`}>
+                    {typeLabels[ev.type_code] || ev.type_code}
+                  </span>
+                </div>
 
-          {/* Chart Placeholders */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                הכנסות vs הוצאות
-              </h3>
-              <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                <div className="text-center text-gray-400">
-                  <div className="text-3xl mb-2">📊</div>
-                  <div className="text-sm">גרף עמודות - Recharts</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                התפלגות הכנסות
-              </h3>
-              <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                <div className="text-center text-gray-400">
-                  <div className="text-3xl mb-2">🥧</div>
-                  <div className="text-sm">גרף עוגה - Recharts</div>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                הזמנות לאורך זמן
-              </h3>
-              <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                <div className="text-center text-gray-400">
-                  <div className="text-3xl mb-2">📈</div>
-                  <div className="text-sm">גרף קווי - Recharts</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Item Breakdown Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-800">פירוט פריטים</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">פריט</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">עלות לחברה</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">מחיר ללקוח</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">כמות</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">הכנסה</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">עלות</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">רווח</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-12 text-gray-400">
-                        {selectedEvent
-                          ? "אין נתוני פריטים לאירוע זה"
-                          : "בחר אירוע לצפייה בנתונים"}
-                      </td>
-                    </tr>
-                  ) : (
-                    items.map((item, idx) => (
-                      <tr key={idx} className="border-b last:border-0 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium">{item.item_name}</td>
-                        <td className="px-4 py-3">{formatPrice(item.cost_price)}</td>
-                        <td className="px-4 py-3">{formatPrice(item.sell_price)}</td>
-                        <td className="px-4 py-3">{item.quantity}</td>
-                        <td className="px-4 py-3 text-green-700">{formatPrice(item.revenue)}</td>
-                        <td className="px-4 py-3 text-red-700">{formatPrice(item.cost)}</td>
-                        <td className="px-4 py-3 font-semibold">{formatPrice(item.profit)}</td>
-                      </tr>
-                    ))
+                <div className="space-y-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <span>🆔</span>
+                    <span className="font-mono">{ev.id}</span>
+                  </div>
+                  {ev.start_date && (
+                    <div className="flex items-center gap-2">
+                      <span>📅</span>
+                      <span>{new Date(ev.start_date).toLocaleDateString("he-IL")}</span>
+                      {ev.end_date && <span>← {new Date(ev.end_date).toLocaleDateString("he-IL")}</span>}
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
+                </div>
 
-      {!loading && !selectedEvent && (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-400">
-          <div className="text-4xl mb-3">💰</div>
-          <div className="text-lg">בחר אירוע כדי לצפות בנתונים הכלכליים</div>
+                <div className="pt-3 mt-3 border-t border-gray-100 grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-gray-500">הזמנות</div>
+                    <div className="text-lg font-bold text-gray-800">{orderCount}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">הכנסות</div>
+                    <div className="text-lg font-bold text-green-600">₪{revenue.toLocaleString("he-IL")}</div>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-xs text-primary-700 font-medium text-center">
+                  📊 צפה בנתונים כלכליים מלאים →
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

@@ -5,6 +5,15 @@ import { audit } from "@/lib/audit";
 
 export async function GET() {
   const supabase = createServiceClient();
+
+  // Auto-archive events whose end_date has passed
+  const today = new Date().toISOString().split("T")[0];
+  await supabase
+    .from("events")
+    .update({ status: "archived" })
+    .eq("status", "active")
+    .lt("end_date", today);
+
   const { data, error } = await supabase
     .from("events")
     .select("*")
