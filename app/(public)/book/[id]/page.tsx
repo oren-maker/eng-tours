@@ -9,9 +9,21 @@ interface Passenger {
   first_name_en: string;
   last_name_en: string;
   passport_number: string;
+  passport_expiry: string;
   birth_date: string;
   phone?: string;
   email?: string;
+}
+
+function computeAge(birthDate: string): number | null {
+  if (!birthDate) return null;
+  const b = new Date(birthDate);
+  if (isNaN(b.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
+  return age;
 }
 
 export default function PublicBookingPage() {
@@ -91,7 +103,7 @@ function BookingContent() {
     setPassengers((prev) => {
       const next = [...prev];
       while (next.length < peopleCount) {
-        next.push({ first_name_en: "", last_name_en: "", passport_number: "", birth_date: "", phone: "", email: "" });
+        next.push({ first_name_en: "", last_name_en: "", passport_number: "", passport_expiry: "", birth_date: "", phone: "", email: "" });
       }
       return next.slice(0, peopleCount);
     });
@@ -133,10 +145,15 @@ function BookingContent() {
     }
     setSubmitting(true);
     try {
+      const fullContactPhone = phonePrefix + contactPhone;
       const payload = {
         event_id: event?.id || eventId,
-        participants: passengers.map((p) => ({
+        participants: passengers.map((p, idx) => ({
           ...p,
+          age_at_event: computeAge(p.birth_date),
+          // Fallback to main contact if not set (passenger #1 always uses main)
+          phone: p.phone || (idx === 0 ? fullContactPhone : fullContactPhone),
+          email: p.email || (idx === 0 ? contactEmail : contactEmail),
           flight_id: outboundFlight || null,
           return_flight_id: returnFlight || null,
           room_id: selectedRoom || null,
@@ -145,7 +162,7 @@ function BookingContent() {
         total_price: totalPrice,
         mode: event?.mode || "registration",
         contact_email: contactEmail,
-        contact_phone: phonePrefix + contactPhone,
+        contact_phone: fullContactPhone,
       };
       const res = await fetch("/api/orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -172,7 +189,7 @@ function BookingContent() {
       if (availableTickets.length > 0) required.push("ticket");
       return required.every((k) => decided.has(k));
     }
-    if (step === 3) return passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.birth_date) && contactEmail && contactPhone;
+    if (step === 3) return passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.passport_expiry && p.birth_date) && contactEmail && contactPhone;
     return true;
   }
 
@@ -666,7 +683,17 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes }: {
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">תאריך לידה *</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">תוקף דרכון *</label>
+          <input type="date" value={passenger.passport_expiry} onChange={(e) => onChange("passport_expiry", e.target.value)} required
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            תאריך לידה *
+            {passenger.birth_date && computeAge(passenger.birth_date) !== null && (
+              <span className="text-primary-700 mr-2">· גיל: {computeAge(passenger.birth_date)}</span>
+            )}
+          </label>
           <input type="date" value={passenger.birth_date} onChange={(e) => onChange("birth_date", e.target.value)} required
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
         </div>
