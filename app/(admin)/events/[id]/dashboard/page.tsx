@@ -196,6 +196,54 @@ export default function EventDashboardPage() {
         </div>
       </div>
 
+      {/* Inventory Summary */}
+      {(() => {
+        const totalTickets = tickets.reduce((s: number, t: any) => s + (t.total_qty || 0), 0);
+        const bookedTickets = tickets.reduce((s: number, t: any) => s + (t.booked_qty || 0), 0);
+        const inventory = [
+          { icon: "✈️", label: "טיסות", count: flights.length, booked: bookedSeats, total: totalSeats, unit: "מקומות", color: "blue" },
+          { icon: "🏨", label: "חדרים", count: rooms.length, booked: bookedRooms, total: totalRooms, unit: "חדרים", color: "purple" },
+          { icon: "🎫", label: "כרטיסים", count: tickets.length, booked: bookedTickets, total: totalTickets, unit: "כרטיסים", color: "pink" },
+        ];
+        const colorMap: Record<string, { bar: string; text: string; bg: string }> = {
+          blue: { bar: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50" },
+          purple: { bar: "bg-purple-500", text: "text-purple-700", bg: "bg-purple-50" },
+          pink: { bar: "bg-pink-500", text: "text-pink-700", bg: "bg-pink-50" },
+        };
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {inventory.map((inv) => {
+              const pct = inv.total > 0 ? Math.round((inv.booked / inv.total) * 100) : 0;
+              const c = colorMap[inv.color];
+              return (
+                <div key={inv.label} className={`rounded-xl p-5 shadow-sm ${c.bg}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{inv.icon}</span>
+                      <span className="font-semibold text-gray-800">{inv.label}</span>
+                      <span className="text-xs text-gray-500">({inv.count})</span>
+                    </div>
+                    <span className={`text-xs font-bold ${c.text}`}>{pct}%</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mb-2">
+                    <span className="text-2xl font-bold text-gray-800">{inv.booked}</span>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-500">{inv.total}</span>
+                    <span className="text-xs text-gray-500 mr-1">{inv.unit} בשימוש</span>
+                  </div>
+                  <div className="w-full bg-white/60 rounded-full h-2 overflow-hidden">
+                    <div className={`h-full ${c.bar} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {inv.total - inv.booked > 0 ? `${inv.total - inv.booked} פנויים` : "תפוס במלואו"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Orders (2/3) */}
