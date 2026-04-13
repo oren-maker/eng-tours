@@ -42,9 +42,21 @@ export default function CancellationsPage() {
         ← חזרה לדשבורד אירוע
       </Link>
 
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-primary-900">💸 דמי ביטול - {event.name}</h2>
-        <p className="text-sm text-gray-500 mt-1">פירוט כל ההזמנות המבוטלות עם דמי ביטול</p>
+      <div className="mb-6 flex justify-between items-start flex-wrap gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-primary-900">💸 דמי ביטול - {event.name}</h2>
+          <p className="text-sm text-gray-500 mt-1">פירוט כל ההזמנות המבוטלות עם דמי ביטול</p>
+        </div>
+        <div className="flex gap-2">
+          <a href={`/events/${id}/cancellations/print`} target="_blank" rel="noopener noreferrer"
+            className="text-sm bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800">
+            📥 הורד PDF
+          </a>
+          <a href={`/api/events/${id}/cancellations/export`}
+            className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+            📊 ייצא לאקסל
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
