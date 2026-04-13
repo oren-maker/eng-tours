@@ -243,7 +243,11 @@ export default function WhatsAppAdminPage() {
       {activeTab === "log" && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           {/* Filters */}
-          <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3">
+          <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3 items-center">
+            <button onClick={fetchLog}
+              className="bg-primary-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-primary-800">
+              🔄 רענן
+            </button>
             <select
               value={filterDirection}
               onChange={(e) => setFilterDirection(e.target.value)}
@@ -252,6 +256,7 @@ export default function WhatsAppAdminPage() {
               <option value="">כיוון: הכל</option>
               <option value="outgoing">יוצאות</option>
               <option value="incoming">נכנסות</option>
+              <option value="system">מערכת</option>
             </select>
             <select
               value={filterStatus}
@@ -308,9 +313,9 @@ export default function WhatsAppAdminPage() {
                         {new Date(msg.created_at).toLocaleString("he-IL")}
                       </td>
                       <td className="p-3">
-                        {msg.direction === "outgoing" ? "יוצאת" : "נכנסת"}
+                        {msg.direction === "outgoing" ? "↗ יוצאת" : msg.direction === "incoming" ? "↙ נכנסת" : "⚙ מערכת"}
                       </td>
-                      <td className="p-3 font-mono text-xs">{msg.recipient}</td>
+                      <td className="p-3 font-mono text-xs">{msg.recipient || (msg as any).recipient_number || "-"}</td>
                       <td className="p-3 text-gray-500">{msg.template_name || "-"}</td>
                       <td className="p-3">
                         <span
