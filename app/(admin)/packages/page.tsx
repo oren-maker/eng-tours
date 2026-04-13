@@ -147,7 +147,7 @@ export default function PackagesPage() {
                           {hasAny ? (
                             <>
                               <a
-                                href={`/book/${ev.id}`}
+                                href={`/book/${ev.share_token || ev.id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs bg-primary-700 text-white px-3 py-1 rounded font-medium hover:bg-primary-800"
@@ -155,7 +155,7 @@ export default function PackagesPage() {
                                 🛒 בצע הזמנה
                               </a>
                               <a
-                                href={`/book/${ev.id}?preview=1`}
+                                href={`/book/${ev.share_token || ev.id}?preview=1`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-50"
@@ -164,7 +164,7 @@ export default function PackagesPage() {
                               </a>
                               <button
                                 onClick={() => {
-                                  const url = `${window.location.origin}/book/${ev.id}`;
+                                  const url = `${window.location.origin}/book/${ev.share_token || ev.id}`;
                                   navigator.clipboard.writeText(url);
                                   alert("הקישור הועתק!\n\n" + url);
                                 }}

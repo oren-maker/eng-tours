@@ -8,7 +8,9 @@ export async function GET(
 ) {
   const { id } = await params;
   const supabase = createServiceClient();
-  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  const column = isUuid ? "share_token" : "id";
+  const { data, error } = await supabase.from("events").select("*").eq(column, id).single();
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
   return NextResponse.json(data);
 }

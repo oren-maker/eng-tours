@@ -37,6 +37,7 @@ function BookingContent() {
   const [success, setSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
   const [openFaq, setOpenFaq] = useState<string | null>(null);
+  const [faqOpen, setFaqOpen] = useState(false);
 
   const [peopleCount, setPeopleCount] = useState(1);
   const [outboundFlight, setOutboundFlight] = useState<string>("");
@@ -50,18 +51,20 @@ function BookingContent() {
   const [contactPhone, setContactPhone] = useState("");
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/events/${eventId}`).then((r) => r.json()),
-      fetch(`/api/flights?event_id=${eventId}`).then((r) => r.json()),
-      fetch(`/api/rooms`).then((r) => r.json()),
-      fetch(`/api/tickets`).then((r) => r.json()),
-      fetch(`/api/faq`).then((r) => r.json()).catch(() => []),
-    ])
-      .then(([evData, flightsData, roomsData, ticketsData, faqData]) => {
+    fetch(`/api/events/${eventId}`)
+      .then((r) => r.json())
+      .then(async (evData) => {
         setEvent(evData);
+        const realEventId = evData?.id || eventId;
+        const [flightsData, roomsData, ticketsData, faqData] = await Promise.all([
+          fetch(`/api/flights?event_id=${realEventId}`).then((r) => r.json()),
+          fetch(`/api/rooms`).then((r) => r.json()),
+          fetch(`/api/tickets`).then((r) => r.json()),
+          fetch(`/api/faq`).then((r) => r.json()).catch(() => []),
+        ]);
         if (Array.isArray(flightsData)) setFlights(flightsData);
-        if (Array.isArray(roomsData)) setRooms(roomsData.filter((r: any) => r.event_id === eventId));
-        if (Array.isArray(ticketsData)) setTickets(ticketsData.filter((t: any) => t.event_id === eventId));
+        if (Array.isArray(roomsData)) setRooms(roomsData.filter((r: any) => r.event_id === realEventId));
+        if (Array.isArray(ticketsData)) setTickets(ticketsData.filter((t: any) => t.event_id === realEventId));
         const faqArr = Array.isArray(faqData) ? faqData : (faqData?.faqs || []);
         setFaqs(faqArr.filter((f: any) => f.is_active !== false));
       })
@@ -128,7 +131,7 @@ function BookingContent() {
     setSubmitting(true);
     try {
       const payload = {
-        event_id: eventId,
+        event_id: event?.id || eventId,
         participants: passengers.map((p) => ({
           ...p,
           flight_id: outboundFlight || null,
@@ -597,30 +600,39 @@ function BookingContent() {
       {/* FAQ Section */}
       {faqs.length > 0 && (
         <section className="max-w-5xl mx-auto px-4 pb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-xl font-bold text-primary-900 mb-4">❓ שאלות ותשובות</h3>
-            <div className="space-y-2">
-              {faqs.map((faq) => {
-                const isOpen = openFaq === faq.id;
-                return (
-                  <div key={faq.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setOpenFaq(isOpen ? null : faq.id)}
-                      className="w-full p-3 text-right cursor-pointer hover:bg-gray-50 flex items-center justify-between text-sm font-medium text-gray-800"
-                    >
-                      <span>{faq.question}</span>
-                      <span className={`text-primary-500 text-xs transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
-                    </button>
-                    {isOpen && (
-                      <div className="p-3 pt-0 text-sm text-gray-600 leading-relaxed border-t border-gray-100">
-                        {faq.answer}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setFaqOpen(!faqOpen)}
+              className="w-full p-6 flex items-center justify-between hover:bg-gray-50"
+            >
+              <h3 className="text-xl font-bold text-primary-900">❓ שאלות ותשובות <span className="text-sm font-normal text-gray-500 mr-2">({faqs.length})</span></h3>
+              <span className={`text-primary-500 text-lg transition-transform ${faqOpen ? "rotate-180" : ""}`}>▼</span>
+            </button>
+            {faqOpen && (
+              <div className="px-6 pb-6 space-y-2 border-t border-gray-100 pt-4">
+                {faqs.map((faq) => {
+                  const isOpen = openFaq === faq.id;
+                  return (
+                    <div key={faq.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaq(isOpen ? null : faq.id)}
+                        className="w-full p-3 text-right cursor-pointer hover:bg-gray-50 flex items-center justify-between text-sm font-medium text-gray-800"
+                      >
+                        <span>{faq.question}</span>
+                        <span className={`text-primary-500 text-xs transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
+                      </button>
+                      {isOpen && (
+                        <div className="p-3 pt-0 text-sm text-gray-600 leading-relaxed border-t border-gray-100">
+                          {faq.answer}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       )}
