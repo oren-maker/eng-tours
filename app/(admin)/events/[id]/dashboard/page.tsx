@@ -196,12 +196,16 @@ export default function EventDashboardPage() {
         </div>
       </div>
 
-      {/* Event PDF button */}
+      {/* Event PDF / Excel buttons */}
       <div className="bg-white rounded-xl shadow-sm p-3 mb-4 flex items-center gap-2 flex-wrap">
         <span className="text-sm font-medium text-gray-700">📄 דוחות:</span>
         <a href={`/events/${event?.id}/print`} target="_blank" rel="noopener noreferrer"
           className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800">
           📥 דוח PDF - כל הרוכשים
+        </a>
+        <a href={`/api/events/${event?.id}/export-excel`}
+          className="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700">
+          📊 ייצא לאקסל (CSV)
         </a>
       </div>
 
