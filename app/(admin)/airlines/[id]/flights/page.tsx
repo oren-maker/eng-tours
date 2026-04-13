@@ -16,6 +16,7 @@ export default function AirlineFlightsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<any>(null);
+  const [search, setSearch] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -49,8 +50,21 @@ export default function AirlineFlightsPage() {
   function startEdit(f: any) { setEditingFlight(f); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
   function handleFormDone() { setShowForm(false); setEditingFlight(null); loadData(); }
 
-  const activeFlights = flights.filter((f) => !f.arrival_time || f.arrival_time.split("T")[0] >= today);
-  const archivedFlights = flights.filter((f) => f.arrival_time && f.arrival_time.split("T")[0] < today);
+  const searchLower = search.trim().toLowerCase();
+  const matchesSearch = (f: any) => {
+    if (!searchLower) return true;
+    return (
+      f.flight_code?.toLowerCase().includes(searchLower) ||
+      f.origin_city?.toLowerCase().includes(searchLower) ||
+      f.origin_iata?.toLowerCase().includes(searchLower) ||
+      f.dest_city?.toLowerCase().includes(searchLower) ||
+      f.dest_iata?.toLowerCase().includes(searchLower) ||
+      f.events?.name?.toLowerCase().includes(searchLower)
+    );
+  };
+
+  const activeFlights = flights.filter((f) => (!f.arrival_time || f.arrival_time.split("T")[0] >= today) && matchesSearch(f));
+  const archivedFlights = flights.filter((f) => f.arrival_time && f.arrival_time.split("T")[0] < today && matchesSearch(f));
 
   if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
   if (!airline) return <div className="text-center text-red-500 py-12">חברה לא נמצאה</div>;
@@ -79,6 +93,17 @@ export default function AirlineFlightsPage() {
             חזרה לחברות תעופה
           </Link>
         </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="bg-white rounded-xl shadow-sm p-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 חפש טיסה: קוד, מסלול (TLV, LCA), אירוע..."
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none"
+        />
       </div>
 
       {showForm && (

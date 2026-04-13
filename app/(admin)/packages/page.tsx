@@ -118,18 +118,16 @@ export default function PackagesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <Link
-                            href={`/packages/wizard/${ev.id}`}
-                            className={`text-xs px-3 py-1 rounded font-medium ${
-                              hasAny
-                                ? "bg-primary-700 text-white hover:bg-primary-800"
-                                : "bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none"
-                            }`}
-                          >
-                            🛒 הזמן
-                          </Link>
-                          {hasAny && (
+                          {hasAny ? (
                             <>
+                              <a
+                                href={`/book/${ev.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs bg-primary-700 text-white px-3 py-1 rounded font-medium hover:bg-primary-800"
+                              >
+                                🛒 בצע הזמנה
+                              </a>
                               <a
                                 href={`/book/${ev.id}?preview=1`}
                                 target="_blank"
@@ -137,14 +135,6 @@ export default function PackagesPage() {
                                 className="text-xs border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-50"
                               >
                                 👁️ תצוגה
-                              </a>
-                              <a
-                                href={`/book/${ev.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs border border-blue-300 text-blue-700 px-3 py-1 rounded hover:bg-blue-50"
-                              >
-                                🔗 פתח
                               </a>
                               <button
                                 onClick={() => {
@@ -157,6 +147,8 @@ export default function PackagesPage() {
                                 📢 העתק
                               </button>
                             </>
+                          ) : (
+                            <span className="text-xs text-gray-400">אין שירותים זמינים</span>
                           )}
                         </div>
                       </td>

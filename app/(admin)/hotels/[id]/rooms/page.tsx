@@ -17,6 +17,7 @@ export default function HotelRoomsPage() {
   const [error, setError] = useState("");
   const [editingRoom, setEditingRoom] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -67,8 +68,18 @@ export default function HotelRoomsPage() {
   }
 
   // Separate active and archived rooms
-  const activeRooms = rooms.filter((r) => !isPast(r.check_out));
-  const archivedRooms = rooms.filter((r) => isPast(r.check_out));
+  const searchLower = search.trim().toLowerCase();
+  const matchesSearch = (r: any) => {
+    if (!searchLower) return true;
+    return (
+      r.room_type?.toLowerCase().includes(searchLower) ||
+      r.events?.name?.toLowerCase().includes(searchLower) ||
+      String(r.price_customer || "").includes(searchLower)
+    );
+  };
+
+  const activeRooms = rooms.filter((r) => !isPast(r.check_out) && matchesSearch(r));
+  const archivedRooms = rooms.filter((r) => isPast(r.check_out) && matchesSearch(r));
 
   if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
   if (error) return <div className="text-center text-red-500 py-12">שגיאה: {error}</div>;
@@ -104,6 +115,17 @@ export default function HotelRoomsPage() {
             חזרה למלונות
           </Link>
         </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="bg-white rounded-xl shadow-sm p-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 חפש חדר: סוג, אירוע, מחיר..."
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none"
+        />
       </div>
 
       {/* Add/Edit room form */}

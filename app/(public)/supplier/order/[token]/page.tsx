@@ -117,7 +117,7 @@ export default function SupplierOrderPage() {
             ticketMap.get(p.ticket_id).participants.push(fullName);
           }
         }
-        setItems([...flightMap.values(), ...roomMap.values(), ...ticketMap.values()]);
+        setItems([...Array.from(flightMap.values()), ...Array.from(roomMap.values()), ...Array.from(ticketMap.values())]);
       })
       .catch(() => setError("שגיאה בטעינת ההזמנה"))
       .finally(() => setLoading(false));

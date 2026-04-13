@@ -181,14 +181,14 @@ export default function EventsPage() {
                     className="bg-yellow-50 hover:bg-yellow-100 p-3 rounded-lg text-center transition-colors"
                   >
                     <div className="text-xl font-bold text-yellow-700">{stats.pending}</div>
-                    <div className="text-xs text-yellow-600">ממתינות</div>
+                    <div className="text-xs text-yellow-600">ממתינות לאישור מערכת</div>
                   </Link>
                   <Link
                     href={`/orders?event=${event.id}&status=supplier_review`}
                     className="bg-purple-50 hover:bg-purple-100 p-3 rounded-lg text-center transition-colors"
                   >
                     <div className="text-xl font-bold text-purple-700">{stats.supplier_review}</div>
-                    <div className="text-xs text-purple-600">מחכות לאישור</div>
+                    <div className="text-xs text-purple-600">מחכות לאישור ספק</div>
                   </Link>
                 </div>
               </div>
