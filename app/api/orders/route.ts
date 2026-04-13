@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
             if (digits.startsWith("0")) digits = "972" + digits.slice(1);
             const to = "+" + digits;
             const link = `${base}/p/${order.share_token}`;
-            const text = `🎉 *ENG Tours*\nההזמנה שלך התקבלה!\n\nאירוע: *${eventName}*\nמספר הזמנה: *#${orderShortId}*\n\nצפייה ופרטים מלאים:\n${link}`;
+            const text = `🎉 *ENG TOURS*\nההזמנה שלך התקבלה!\n\nאירוע: *${eventName}*\nמספר הזמנה: *#${orderShortId}*\n\nצפייה ופרטים מלאים:\n${link}`;
             try {
               await wasender.sendTextWithSessionKey(session.api_key, { to, text });
               await supabase.from("whatsapp_log").insert({

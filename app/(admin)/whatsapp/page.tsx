@@ -638,7 +638,7 @@ function WaSenderConnect() {
             <div>
               <label className="block text-xs text-gray-600 mb-1">שם החשבון</label>
               <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
-                placeholder="ENG Tours Main" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                placeholder="ENG TOURS Main" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">מספר טלפון</label>

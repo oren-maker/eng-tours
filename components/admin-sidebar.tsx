@@ -56,7 +56,7 @@ export default function AdminSidebar() {
       <aside className="hidden md:flex fixed top-0 right-0 bottom-0 w-56 bg-primary-700 text-white flex-col z-50 shadow-lg">
         <div className="p-4 border-b border-white/15 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="ENG Tours" className="h-12 w-auto mx-auto object-contain" />
+          <img src="/logo.png" alt="ENG TOURS" className="h-12 w-auto mx-auto object-contain" />
           <p className="text-[10px] text-white/50 mt-1">מערכת ניהול אירועים</p>
         </div>
 
@@ -122,7 +122,7 @@ export default function AdminSidebar() {
         </nav>
 
         <div className="p-3 border-t border-white/15 text-center">
-          <p className="text-[10px] text-white/40">ENG Tours v1.0</p>
+          <p className="text-[10px] text-white/40">ENG TOURS v1.0</p>
         </div>
       </aside>
 

@@ -98,7 +98,7 @@ export default function PaymentPage() {
       {/* Header */}
       <div className="bg-primary-700 text-white py-6 px-4">
         <div className="max-w-lg mx-auto text-center">
-          <h1 className="text-2xl font-bold">ENG Tours</h1>
+          <h1 className="text-2xl font-bold">ENG TOURS</h1>
           <p className="text-white/80 mt-1">תשלום אישי</p>
         </div>
       </div>
@@ -192,7 +192,7 @@ export default function PaymentPage() {
               תשלום
             </h3>
             <p className="text-gray-500 text-sm mb-6">
-              מערכת התשלום תיפתח בקרוב. לתיאום תשלום, פנו לצוות ENG Tours.
+              מערכת התשלום תיפתח בקרוב. לתיאום תשלום, פנו לצוות ENG TOURS.
             </p>
             {/* Payment gateway placeholder - TBD */}
             <div className="bg-gray-100 rounded-lg p-8 text-gray-400">
@@ -203,7 +203,7 @@ export default function PaymentPage() {
             </div>
             <a
               href={`https://wa.me/?text=${encodeURIComponent(
-                `שלום, אשמח לבצע תשלום עבור הזמנה ב-ENG Tours.\nסכום: ${formatPrice(remaining)}`
+                `שלום, אשמח לבצע תשלום עבור הזמנה ב-ENG TOURS.\nסכום: ${formatPrice(remaining)}`
               )}`}
               target="_blank"
               rel="noopener noreferrer"

@@ -216,7 +216,7 @@ function BookingContent() {
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center">
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-3xl font-bold text-primary-900 mb-3">הזמנתך התקבלה!</h2>
-          <p className="text-gray-600 mb-6">תודה שבחרת ב-ENG Tours. אנו ניצור איתך קשר בקרוב.</p>
+          <p className="text-gray-600 mb-6">תודה שבחרת ב-ENG TOURS. אנו ניצור איתך קשר בקרוב.</p>
 
           {orderId && (
             <div className="bg-gradient-to-l from-primary-50 to-orange-50 border-2 border-primary-200 rounded-xl p-5 mb-6">
@@ -272,7 +272,7 @@ function BookingContent() {
       <header className="bg-gradient-to-l from-primary-800 to-primary-600 text-white py-6 px-4">
         <div className="max-w-5xl mx-auto flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="ENG Tours" className="h-14 w-auto object-contain" />
+          <img src="/logo.png" alt="ENG TOURS" className="h-14 w-auto object-contain" />
           <p className="text-sm text-white/80">טופס הזמנה - {event.name}</p>
         </div>
       </header>
@@ -661,7 +661,7 @@ function BookingContent() {
       )}
 
       <footer className="text-center py-6 text-xs text-gray-500">
-        © ENG Tours - כל הזכויות שמורות
+        © ENG TOURS - כל הזכויות שמורות
       </footer>
     </div>
   );

@@ -2,7 +2,7 @@ import { logAction } from "./audit";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM_EMAIL = "noreply@eng-tours.com";
-const FROM_NAME = "ENG Tours";
+const FROM_NAME = "ENG TOURS";
 
 interface SendEmailResult {
   success: boolean;
@@ -129,7 +129,7 @@ function wrapInLayout(content: string): string {
           <!-- Header -->
           <tr>
             <td style="background-color: #0369A1; padding: 24px; text-align: center;">
-              <span style="color: #ffffff; font-size: 24px; font-weight: 700; font-family: 'Heebo', sans-serif;">ENG Tours</span>
+              <span style="color: #ffffff; font-size: 24px; font-weight: 700; font-family: 'Heebo', sans-serif;">ENG TOURS</span>
             </td>
           </tr>
           <!-- Content -->
@@ -141,7 +141,7 @@ function wrapInLayout(content: string): string {
           <!-- Footer -->
           <tr>
             <td style="padding: 16px 24px; background-color: #f9fafb; text-align: center; font-size: 12px; color: #9ca3af; font-family: 'Heebo', sans-serif;">
-              ENG Tours &copy; ${new Date().getFullYear()} | כל הזכויות שמורות
+              ENG TOURS &copy; ${new Date().getFullYear()} | כל הזכויות שמורות
             </td>
           </tr>
         </table>
@@ -161,7 +161,7 @@ interface EmailTemplate {
 
 const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
   order_confirmation: {
-    subject: "אישור הזמנה #{{order_number}} - ENG Tours",
+    subject: "אישור הזמנה #{{order_number}} - ENG TOURS",
     body: `
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #111827;">אישור הזמנה</h2>
       <p>שלום {{customer_name}},</p>
@@ -173,7 +173,7 @@ const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         <p><strong>סכום:</strong> {{total_amount}}</p>
       </div>
       <p>נעדכן אותך כשההזמנה תאושר סופית.</p>
-      <p>תודה,<br>צוות ENG Tours</p>
+      <p>תודה,<br>צוות ENG TOURS</p>
     `,
   },
 
@@ -189,7 +189,7 @@ const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         </a>
       </div>
       <p style="font-size: 12px; color: #9ca3af;">הקישור תקף ל-48 שעות.</p>
-      <p>תודה,<br>צוות ENG Tours</p>
+      <p>תודה,<br>צוות ENG TOURS</p>
     `,
   },
 
@@ -209,12 +209,12 @@ const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
           כניסה לפורטל ספקים
         </a>
       </div>
-      <p>תודה,<br>צוות ENG Tours</p>
+      <p>תודה,<br>צוות ENG TOURS</p>
     `,
   },
 
   final_confirmation: {
-    subject: "אישור סופי להזמנה #{{order_number}} - ENG Tours",
+    subject: "אישור סופי להזמנה #{{order_number}} - ENG TOURS",
     body: `
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #10B981;">ההזמנה אושרה!</h2>
       <p>שלום {{customer_name}},</p>
@@ -225,7 +225,7 @@ const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         <p><strong>מספר אישור:</strong> {{confirmation_number}}</p>
       </div>
       <p>נתראה באירוע!</p>
-      <p>תודה,<br>צוות ENG Tours</p>
+      <p>תודה,<br>צוות ENG TOURS</p>
     `,
   },
 
@@ -241,12 +241,12 @@ const EMAIL_TEMPLATES: Record<string, EmailTemplate> = {
         <p><strong>מספר הזמנה:</strong> #{{order_number}}</p>
       </div>
       <p>מחכים לראותך!</p>
-      <p>תודה,<br>צוות ENG Tours</p>
+      <p>תודה,<br>צוות ENG TOURS</p>
     `,
   },
 
   "2fa_code": {
-    subject: "קוד אימות - ENG Tours",
+    subject: "קוד אימות - ENG TOURS",
     body: `
       <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 16px; color: #111827;">קוד אימות</h2>
       <p>שלום,</p>

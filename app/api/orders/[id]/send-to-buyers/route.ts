@@ -39,11 +39,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
           method: "POST",
           headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: process.env.EMAIL_FROM || "ENG Tours <noreply@eng-tours.com>",
+            from: process.env.EMAIL_FROM || "ENG TOURS <noreply@eng-tours.com>",
             to: [p.email],
             subject: `פרטי הזמנה - ${eventName}`,
             html: `<div dir="rtl" style="font-family:Arial,sans-serif">
-              <h2 style="color:#DD9933">ENG Tours</h2>
+              <h2 style="color:#DD9933">ENG TOURS</h2>
               <p>שלום ${p.first_name_en || ""},</p>
               <p>מצורפים פרטי ההזמנה שלך לאירוע <b>${eventName}</b>.</p>
               <p><a href="${link}" style="display:inline-block;background:#DD9933;color:white;padding:10px 20px;text-decoration:none;border-radius:6px">📄 הורד PDF</a></p>
@@ -65,7 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       for (const p of participants) {
         if (!p.phone) continue;
         const to = normalizePhone(p.phone);
-        const text = `📋 *ENG Tours*\nשלום ${p.first_name_en || ""}! פרטי הזמנה לאירוע: *${eventName}*\n\nצפייה והורדת PDF:\n${link}`;
+        const text = `📋 *ENG TOURS*\nשלום ${p.first_name_en || ""}! פרטי הזמנה לאירוע: *${eventName}*\n\nצפייה והורדת PDF:\n${link}`;
         const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
         if (r.ok) {
           sentWA++;

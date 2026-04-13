@@ -53,7 +53,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-700">ENG Tours</h1>
+          <h1 className="text-4xl font-bold text-primary-700">ENG TOURS</h1>
           <p className="text-gray-500 mt-2">מערכת ניהול אירועי נסיעות</p>
         </div>
 
@@ -167,7 +167,7 @@ function LoginForm() {
 
         {/* Footer */}
         <p className="text-center text-xs text-gray-400 mt-6">
-          &copy; {new Date().getFullYear()} ENG Tours. כל הזכויות שמורות.
+          &copy; {new Date().getFullYear()} ENG TOURS. כל הזכויות שמורות.
         </p>
       </div>
     </div>

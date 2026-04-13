@@ -80,7 +80,7 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ tok
       `}</style>
 
       <div style={{ borderBottom: "3px solid #DD9933", paddingBottom: "16px", marginBottom: "20px" }}>
-        <h1 style={{ margin: 0, color: "#DD9933", fontSize: "28px" }}>ENG Tours</h1>
+        <h1 style={{ margin: 0, color: "#DD9933", fontSize: "28px" }}>ENG TOURS</h1>
         <div style={{ fontSize: "14px", color: "#6b7280", marginTop: "4px" }}>אישור הזמנה</div>
       </div>
 
@@ -181,7 +181,7 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ tok
       )}
 
       <div style={{ marginTop: "40px", paddingTop: "16px", borderTop: "1px solid #e5e7eb", fontSize: "11px", color: "#9ca3af", textAlign: "center" }}>
-        ENG Tours · מערכת ניהול אירועים · הופק ב-{fmtDateTime(new Date().toISOString())}
+        ENG TOURS · מערכת ניהול אירועים · הופק ב-{fmtDateTime(new Date().toISOString())}
       </div>
     </div>
   );

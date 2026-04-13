@@ -23,11 +23,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         method: "POST",
         headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: process.env.EMAIL_FROM || "ENG Tours <noreply@eng-tours.com>",
+          from: process.env.EMAIL_FROM || "ENG TOURS <noreply@eng-tours.com>",
           to: [email],
           subject: `פרטי הזמנה - ${eventName}`,
           html: `<div dir="rtl" style="font-family:Arial,sans-serif">
-            <h2 style="color:#DD9933">ENG Tours</h2>
+            <h2 style="color:#DD9933">ENG TOURS</h2>
             <p>שלום,</p>
             <p>מצורפים פרטי ההזמנה שלך לאירוע <b>${eventName}</b>.</p>
             <p><a href="${link}" style="display:inline-block;background:#DD9933;color:white;padding:10px 20px;text-decoration:none;border-radius:6px">📄 הורד PDF של פרטי ההזמנה</a></p>

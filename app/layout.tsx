@@ -10,8 +10,8 @@ const heebo = Heebo({
 });
 
 export const metadata: Metadata = {
-  title: "ENG Tours | מערכת ניהול אירועים",
-  description: "פלטפורמת ניהול אירועי נסיעות - ENG Tours",
+  title: "ENG TOURS | מערכת ניהול אירועים",
+  description: "פלטפורמת ניהול אירועי נסיעות - ENG TOURS",
 };
 
 export default function RootLayout({

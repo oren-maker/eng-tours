@@ -53,7 +53,7 @@ export default async function EventPrintPage({ params, searchParams }: { params:
       `}</style>
 
       <div style={{ borderBottom: "3px solid #DD9933", paddingBottom: "16px", marginBottom: "20px" }}>
-        <h1 style={{ margin: 0, color: "#DD9933", fontSize: "26px" }}>ENG Tours</h1>
+        <h1 style={{ margin: 0, color: "#DD9933", fontSize: "26px" }}>ENG TOURS</h1>
         <div style={{ fontSize: "18px", fontWeight: 600, marginTop: "8px" }}>{event.name}</div>
         <div style={{ fontSize: "13px", color: "#6b7280", marginTop: "4px" }}>
           {event.destination_country || ""} · {fmtDate(event.start_date)} - {fmtDate(event.end_date)} · ID: {event.id}
@@ -137,7 +137,7 @@ export default async function EventPrintPage({ params, searchParams }: { params:
       </table>
 
       <div style={{ marginTop: "30px", paddingTop: "16px", borderTop: "1px solid #e5e7eb", fontSize: "11px", color: "#9ca3af", textAlign: "center" }}>
-        ENG Tours · {event.name} · הופק ב-{new Date().toLocaleString("he-IL")}
+        ENG TOURS · {event.name} · הופק ב-{new Date().toLocaleString("he-IL")}
       </div>
     </div>
   );
