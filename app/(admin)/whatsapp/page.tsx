@@ -25,8 +25,6 @@ interface Template {
 
 export default function WhatsAppAdminPage() {
   const [activeTab, setActiveTab] = useState<"log" | "templates" | "send" | "connect">("connect");
-  const [waNumber, setWaNumber] = useState("");
-  const [waLink, setWaLink] = useState("");
   const [health, setHealth] = useState<{ online: boolean; error?: string } | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
 
@@ -224,66 +222,7 @@ export default function WhatsAppAdminPage() {
       </div>
 
       {/* Connect WhatsApp tab */}
-      {activeTab === "connect" && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">חיבור מספר WhatsApp</h3>
-          <p className="text-sm text-gray-500 mb-6">הכנס את מספר ה-WhatsApp של המערכת ליצירת QR Code לחיבור מהיר</p>
-
-          <div className="max-w-md">
-            <label className="block text-sm font-medium text-gray-700 mb-1">מספר WhatsApp</label>
-            <div className="flex gap-2 mb-4">
-              <input
-                type="tel"
-                value={waNumber}
-                onChange={(e) => setWaNumber(e.target.value)}
-                placeholder="972524802830"
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none"
-                dir="ltr"
-              />
-              <button
-                onClick={() => {
-                  if (waNumber) {
-                    const num = waNumber.replace(/[^0-9]/g, "");
-                    setWaLink(`https://wa.me/${num}`);
-                  }
-                }}
-                className="bg-green-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-              >
-                צור QR Code
-              </button>
-            </div>
-          </div>
-
-          {waLink && (
-            <div className="mt-6 flex flex-col items-center">
-              <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
-                <QRCode value={waLink} size={220} />
-              </div>
-              <p className="text-sm text-gray-600 mt-4 font-medium">סרוק את הקוד כדי לפתוח צ׳אט עם המספר</p>
-              <p className="text-xs text-gray-400 mt-1 dir-ltr" dir="ltr">{waLink}</p>
-              <div className="flex gap-2 mt-4">
-                <a
-                  href={waLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors"
-                >
-                  פתח ב-WhatsApp
-                </a>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(waLink);
-                    alert("הקישור הועתק!");
-                  }}
-                  className="border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
-                >
-                  העתק קישור
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {activeTab === "connect" && <WaSenderConnect />}
 
       {/* Log tab */}
       {activeTab === "log" && (
@@ -524,5 +463,261 @@ export default function WhatsAppAdminPage() {
       )}
     </div>
     </>
+  );
+}
+
+// ===================== WaSender Connect Component =====================
+
+interface WaSession {
+  id: string | number;
+  name?: string;
+  phone_number?: string;
+  status?: string;
+  account_protection?: boolean;
+  log_messages?: boolean;
+  webhook_url?: string;
+  webhook_enabled?: boolean;
+}
+
+function WaSenderConnect() {
+  const [sessions, setSessions] = useState<WaSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newWebhook, setNewWebhook] = useState("");
+  const [activeQr, setActiveQr] = useState<{ sessionId: string | number; qr: string } | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+
+  async function loadSessions() {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/whatsapp/sessions", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "שגיאה בטעינת חשבונות"); setSessions([]); }
+      else setSessions(data.sessions || []);
+    } catch (e: any) {
+      setError(e.message || "שגיאה");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadSessions(); }, []);
+
+  async function handleCreate() {
+    if (!newName.trim() || !newPhone.trim()) {
+      alert("נא למלא שם ומספר טלפון");
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await fetch("/api/whatsapp/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newName.trim(),
+          phone_number: newPhone.replace(/[^0-9]/g, ""),
+          webhook_url: newWebhook.trim() || undefined,
+          webhook_enabled: !!newWebhook.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || "שגיאה"); }
+      else {
+        setShowCreate(false); setNewName(""); setNewPhone(""); setNewWebhook("");
+        loadSessions();
+      }
+    } catch (e: any) { alert(e.message); }
+    finally { setCreating(false); }
+  }
+
+  async function handleConnect(s: WaSession) {
+    setQrLoading(true);
+    setActiveQr({ sessionId: s.id, qr: "" });
+    try {
+      const res = await fetch(`/api/whatsapp/sessions/${s.id}/connect`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || "שגיאה"); setActiveQr(null); return; }
+      const qr = data.qrCode || data.qr_code || data.qrcode || "";
+      setActiveQr({ sessionId: s.id, qr });
+      loadSessions();
+    } catch (e: any) { alert(e.message); setActiveQr(null); }
+    finally { setQrLoading(false); }
+  }
+
+  async function handleRefreshQr(sessionId: string | number) {
+    setQrLoading(true);
+    try {
+      const res = await fetch(`/api/whatsapp/sessions/${sessionId}/qr`, { method: "POST" });
+      const data = await res.json();
+      const qr = data.qrCode || data.qr_code || data.qrcode || "";
+      setActiveQr({ sessionId, qr });
+    } catch (e: any) { alert(e.message); }
+    finally { setQrLoading(false); }
+  }
+
+  async function handleDisconnect(s: WaSession) {
+    if (!confirm(`לנתק את ${s.name || s.phone_number}?`)) return;
+    const res = await fetch(`/api/whatsapp/sessions/${s.id}/disconnect`, { method: "POST" });
+    if (res.ok) loadSessions(); else alert("שגיאה");
+  }
+
+  async function handleDelete(s: WaSession) {
+    if (!confirm(`למחוק את חשבון ${s.name || s.phone_number}? לא ניתן לשחזר.`)) return;
+    const res = await fetch(`/api/whatsapp/sessions/${s.id}`, { method: "DELETE" });
+    if (res.ok) loadSessions(); else { const d = await res.json(); alert(d.error || "שגיאה"); }
+  }
+
+  function statusBadge(status?: string) {
+    const s = (status || "").toLowerCase();
+    if (s === "connected" || s === "ready") return { cls: "bg-green-100 text-green-800", label: "✓ מחובר" };
+    if (s === "scanning" || s === "qr" || s === "need_scan") return { cls: "bg-yellow-100 text-yellow-800", label: "⏳ ממתין לסריקה" };
+    if (s === "disconnected" || s === "loggedout") return { cls: "bg-gray-100 text-gray-700", label: "מנותק" };
+    return { cls: "bg-gray-100 text-gray-700", label: status || "—" };
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">חשבונות WhatsApp (WaSender)</h3>
+            <p className="text-xs text-gray-500 mt-1">ניהול חשבונות, חיבור עם QR ושליחת הודעות דרך wasenderapi.com</p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={loadSessions} className="border border-gray-200 px-3 py-2 rounded-lg text-sm hover:bg-gray-50">🔄 רענן</button>
+            <button onClick={() => setShowCreate(!showCreate)} className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800">
+              {showCreate ? "ביטול" : "+ חשבון חדש"}
+            </button>
+          </div>
+        </div>
+
+        {showCreate && (
+          <div className="bg-gray-50 rounded-lg p-4 mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">שם החשבון</label>
+              <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
+                placeholder="ENG Tours Main" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">מספר טלפון</label>
+              <input type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="972524802830" dir="ltr"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Webhook URL (אופציונלי)</label>
+              <input type="url" value={newWebhook} onChange={(e) => setNewWebhook(e.target.value)}
+                placeholder="https://..." dir="ltr"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            </div>
+            <div className="md:col-span-3">
+              <button onClick={handleCreate} disabled={creating}
+                className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+                {creating ? "יוצר..." : "💾 צור חשבון"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 text-sm">
+            {error}
+            {error.includes("not configured") && (
+              <div className="text-xs text-red-600 mt-1">הגדר את <code>WASENDER_API_KEY</code> ב-Vercel Environment Variables</div>
+            )}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-8 text-gray-400">טוען חשבונות...</div>
+        ) : sessions.length === 0 ? (
+          <div className="text-center py-8 text-sm text-gray-400">
+            אין חשבונות. צור חשבון חדש כדי להתחיל.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map((s) => {
+              const sb = statusBadge(s.status);
+              return (
+                <div key={s.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">📱</span>
+                      <div>
+                        <div className="font-semibold text-gray-800">{s.name || "חשבון ללא שם"}</div>
+                        <div className="text-xs text-gray-500 font-mono" dir="ltr">{s.phone_number}</div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sb.cls}`}>{sb.label}</span>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {(!s.status || s.status === "disconnected" || s.status === "qr" || s.status === "scanning" || s.status === "need_scan") && (
+                        <button onClick={() => handleConnect(s)}
+                          className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-green-700">
+                          🔌 חבר (סרוק QR)
+                        </button>
+                      )}
+                      {(s.status === "connected" || s.status === "ready") && (
+                        <button onClick={() => handleDisconnect(s)}
+                          className="bg-yellow-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-yellow-700">
+                          ⏏ נתק
+                        </button>
+                      )}
+                      <button onClick={() => handleDelete(s)}
+                        className="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-lg text-xs hover:bg-red-100">
+                        🗑 מחק
+                      </button>
+                    </div>
+                  </div>
+
+                  {activeQr?.sessionId === s.id && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col items-center">
+                      {qrLoading ? (
+                        <div className="py-8 text-gray-400">טוען QR Code...</div>
+                      ) : activeQr.qr ? (
+                        <>
+                          <div className="bg-white p-4 rounded-2xl shadow-md border border-gray-100">
+                            {activeQr.qr.startsWith("data:image") ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={activeQr.qr} alt="QR" width={220} height={220} />
+                            ) : (
+                              <QRCode value={activeQr.qr} size={220} />
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-3">פתח WhatsApp בטלפון → הגדרות → מכשירים מקושרים → סרוק</p>
+                          <div className="flex gap-2 mt-3">
+                            <button onClick={() => handleRefreshQr(s.id)}
+                              className="text-xs border border-gray-200 px-3 py-1.5 rounded hover:bg-gray-50">🔄 חדש QR</button>
+                            <button onClick={() => { setActiveQr(null); loadSessions(); }}
+                              className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800">
+                              ✓ סרקתי, רענן סטטוס
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="py-4 text-sm text-gray-500">לא התקבל QR. לחץ על &quot;חדש QR&quot;.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+        <div className="font-semibold mb-1">🔑 הגדרת המפתח</div>
+        <div className="text-xs">
+          הוסף ב-Vercel תחת Environment Variables:
+          <code className="bg-white px-2 py-0.5 rounded mx-1" dir="ltr">WASENDER_API_KEY</code>
+          (מתוך wasenderapi.com Settings → API Keys). לאחר שמירה - בצע redeploy.
+        </div>
+      </div>
+    </div>
   );
 }
