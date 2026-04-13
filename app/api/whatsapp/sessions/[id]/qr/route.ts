@@ -6,12 +6,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const r = await wasender.getQr(id);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status || 500 });
-  return NextResponse.json(r.data);
+  return NextResponse.json((r.data as any)?.data || r.data);
 }
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const r = await wasender.regenerateQr(id);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status || 500 });
-  return NextResponse.json(r.data);
+  return NextResponse.json((r.data as any)?.data || r.data);
 }

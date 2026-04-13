@@ -6,5 +6,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const r = await wasender.connectSession(id);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status || 500 });
-  return NextResponse.json(r.data);
+  const inner: any = (r.data as any)?.data || r.data;
+  return NextResponse.json(inner);
 }
