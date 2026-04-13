@@ -515,12 +515,14 @@ function WaSenderConnect() {
     }
     setCreating(true);
     try {
+      const digits = newPhone.replace(/[^0-9]/g, "");
+      const e164 = "+" + digits;
       const res = await fetch("/api/whatsapp/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newName.trim(),
-          phone_number: newPhone.replace(/[^0-9]/g, ""),
+          phone_number: e164,
           webhook_url: newWebhook.trim() || undefined,
           webhook_enabled: !!newWebhook.trim(),
         }),
