@@ -211,16 +211,19 @@ export default function EventDashboardPage() {
 
       {/* Cancellation Fees Card */}
       {cancellationFees > 0 && (
-        <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+        <Link
+          href={`/events/${event?.id}/cancellations`}
+          className="bg-orange-50 border-2 border-orange-200 rounded-xl p-5 mb-6 flex items-center justify-between flex-wrap gap-3 hover:bg-orange-100 transition-colors cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <span className="text-3xl">💸</span>
             <div>
               <div className="text-sm font-semibold text-orange-900">דמי ביטול שהתקבלו</div>
-              <div className="text-xs text-orange-700">{cancelledOrdersList.filter((o: any) => Number(o.cancellation_fee_amount) > 0).length} הזמנות מבוטלות עם דמי ביטול</div>
+              <div className="text-xs text-orange-700">{cancelledOrdersList.filter((o: any) => Number(o.cancellation_fee_amount) > 0).length} הזמנות מבוטלות עם דמי ביטול · לחץ לפירוט</div>
             </div>
           </div>
           <div className="text-3xl font-bold text-orange-700">₪{Math.round(cancellationFees).toLocaleString("he-IL")}</div>
-        </div>
+        </Link>
       )}
 
       {/* Inventory Summary */}
