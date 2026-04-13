@@ -31,6 +31,15 @@ export default function AirlinesPage() {
     ).length;
   }
 
+  function airlineInventory(airlineId: string) {
+    const activeFlights = flights.filter(
+      (f) => f.airline_id === airlineId && (!f.arrival_time || f.arrival_time.split("T")[0] >= today)
+    );
+    const total = activeFlights.reduce((s, f) => s + (f.total_seats || 0), 0);
+    const booked = activeFlights.reduce((s, f) => s + (f.booked_seats || 0), 0);
+    return { total, booked, flights: activeFlights.length };
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -60,8 +69,9 @@ export default function AirlinesPage() {
                 <tr className="bg-gray-50 text-gray-600">
                   <th className="text-right px-4 py-3 font-medium">שם</th>
                   <th className="text-right px-4 py-3 font-medium">מדינה</th>
-                  <th className="text-right px-4 py-3 font-medium">קוד IATA</th>
-                  <th className="text-right px-4 py-3 font-medium">טיסות פעילות</th>
+                  <th className="text-right px-4 py-3 font-medium">IATA</th>
+                  <th className="text-right px-4 py-3 font-medium">טיסות</th>
+                  <th className="text-right px-4 py-3 font-medium">מצב מלאי</th>
                   <th className="text-right px-4 py-3 font-medium">איש קשר</th>
                   <th className="text-right px-4 py-3 font-medium">טלפון</th>
                   <th className="text-right px-4 py-3 font-medium">פעולות</th>
@@ -70,6 +80,8 @@ export default function AirlinesPage() {
               <tbody className="divide-y divide-gray-100">
                 {airlines.map((a) => {
                   const count = activeFlightsCount(a.id);
+                  const inv = airlineInventory(a.id);
+                  const occupancy = inv.total > 0 ? Math.round((inv.booked / inv.total) * 100) : 0;
                   return (
                     <tr key={a.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-800">{a.name}</td>
@@ -81,6 +93,28 @@ export default function AirlinesPage() {
                         }`}>
                           {count} טיסות
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {inv.flights === 0 ? (
+                          <span className="text-xs text-gray-400">אין טיסות</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-600 whitespace-nowrap">
+                              {inv.booked}/{inv.total}
+                            </span>
+                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  occupancy >= 90 ? "bg-red-500" :
+                                  occupancy >= 70 ? "bg-yellow-500" :
+                                  "bg-green-500"
+                                }`}
+                                style={{ width: `${Math.min(occupancy, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500">{occupancy}%</span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{a.contact_name || "—"}</td>
                       <td className="px-4 py-3 text-gray-600 text-xs" dir="ltr">{a.contact_phone || "—"}</td>

@@ -380,6 +380,15 @@ export default function OrderDetailPage() {
                   className="flex-1 text-xs font-mono bg-white border border-gray-200 rounded px-2 py-1"
                   dir="ltr"
                 />
+                <a
+                  href={`/supplier/order/${order.share_token}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                  title="פתח בחלון חדש"
+                >
+                  🔗 פתח
+                </a>
                 <button
                   onClick={() => {
                     const url = `${window.location.origin}/supplier/order/${order.share_token}`;
