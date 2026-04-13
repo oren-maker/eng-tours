@@ -58,6 +58,9 @@ export default function SupplierOrderPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [orderPayment, setOrderPayment] = useState({ ...EMPTY_PAYMENT });
+  const [activeTab, setActiveTab] = useState<"order" | "payments">("order");
+  const [newPayment, setNewPayment] = useState({ participant_id: "", amount: "", method: "credit", card_last4: "", confirmation: "", date: "" });
+  const [savingPayment, setSavingPayment] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -212,6 +215,40 @@ export default function SupplierOrderPage() {
     setItems((prev) => prev.map((it, i) => i === idx ? { ...it, [field]: value } : it));
   }
 
+  async function handleAddPayment() {
+    if (!newPayment.participant_id || !newPayment.amount) {
+      alert("יש למלא לפחות משתתף וסכום");
+      return;
+    }
+    setSavingPayment(true);
+    try {
+      const res = await fetch(`/api/supplier/payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          share_token: token,
+          participant_id: newPayment.participant_id,
+          amount: Number(newPayment.amount),
+          method: newPayment.method,
+          card_last4: newPayment.card_last4 || null,
+          confirmation: newPayment.confirmation || null,
+          date: newPayment.date || null,
+        }),
+      });
+      if (res.ok) {
+        setNewPayment({ participant_id: "", amount: "", method: "credit", card_last4: "", confirmation: "", date: "" });
+        loadOrder();
+      } else {
+        const d = await res.json();
+        alert(d.error || "שגיאה בשמירה");
+      }
+    } catch {
+      alert("שגיאה בשמירה");
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
   function applyPaymentToAll() {
     const count = items.length || 1;
     const totalAmt = Number(orderPayment.payment_amount) || 0;
@@ -358,6 +395,134 @@ export default function SupplierOrderPage() {
 
         {error && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">{error}</div>}
 
+        {/* Tabs */}
+        <div className="flex gap-2 mb-4 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab("order")}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "order" ? "border-b-2 border-primary-700 text-primary-700" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            📋 פרטי הזמנה
+          </button>
+          <button
+            onClick={() => setActiveTab("payments")}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === "payments" ? "border-b-2 border-primary-700 text-primary-700" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            💰 פרטי תשלום
+          </button>
+        </div>
+
+        {activeTab === "payments" && (
+          <div className="space-y-4">
+            {/* Existing payments */}
+            <div className="bg-white rounded-xl shadow-sm p-5">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">תשלומים שבוצעו</h3>
+              {(() => {
+                const payers = participants.filter((p: any) => Number(p.amount_paid) > 0);
+                if (payers.length === 0) {
+                  return <p className="text-sm text-gray-400 text-center py-4">לא נרשמו תשלומים עדיין</p>;
+                }
+                const methodLabels: Record<string, string> = { credit: "💳 כרטיס אשראי", transfer: "🏦 העברה בנקאית", cash: "💵 מזומן", check: "📝 צ'ק" };
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 text-gray-600 text-xs">
+                          <th className="text-right px-3 py-2 font-medium">משלם</th>
+                          <th className="text-right px-3 py-2 font-medium">סכום</th>
+                          <th className="text-right px-3 py-2 font-medium">אמצעי</th>
+                          <th className="text-right px-3 py-2 font-medium">4 ספרות</th>
+                          <th className="text-right px-3 py-2 font-medium">אישור עסקה</th>
+                          <th className="text-right px-3 py-2 font-medium">תאריך</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {payers.map((p: any) => (
+                          <tr key={p.id}>
+                            <td className="px-3 py-2 font-medium">{p.first_name_en} {p.last_name_en}</td>
+                            <td className="px-3 py-2 font-semibold">₪{Number(p.amount_paid).toLocaleString("he-IL")}</td>
+                            <td className="px-3 py-2">{methodLabels[p.payment_method] || p.payment_method || "-"}</td>
+                            <td className="px-3 py-2 font-mono text-xs" dir="ltr">{p.payment_card_last4 ? `**** ${p.payment_card_last4}` : "-"}</td>
+                            <td className="px-3 py-2 font-mono text-xs" dir="ltr">{p.payment_confirmation || "-"}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500">{p.payment_date ? new Date(p.payment_date).toLocaleDateString("he-IL") : "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm">
+                      <span className="text-gray-600">סה״כ שולם:</span>
+                      <span className="font-bold text-green-700">₪{payers.reduce((s: number, p: any) => s + Number(p.amount_paid), 0).toLocaleString("he-IL")}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Add payment form */}
+            <div className="bg-white rounded-xl shadow-sm p-5 border-2 border-primary-100">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">➕ הוסף תשלום</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">משלם</label>
+                  <select value={newPayment.participant_id}
+                    onChange={(e) => setNewPayment({ ...newPayment, participant_id: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                    <option value="">בחר משתתף...</option>
+                    {participants.map((p) => (
+                      <option key={p.id} value={p.id}>{p.first_name_en} {p.last_name_en}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">סכום</label>
+                  <input type="number" step="0.01" value={newPayment.amount}
+                    onChange={(e) => setNewPayment({ ...newPayment, amount: e.target.value })}
+                    dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">אמצעי תשלום</label>
+                  <select value={newPayment.method}
+                    onChange={(e) => setNewPayment({ ...newPayment, method: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none">
+                    <option value="credit">💳 כרטיס אשראי</option>
+                    <option value="transfer">🏦 העברה בנקאית</option>
+                    <option value="cash">💵 מזומן</option>
+                    <option value="check">📝 צ&apos;ק</option>
+                  </select>
+                </div>
+                {newPayment.method === "credit" && (
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">4 ספרות אחרונות</label>
+                    <input type="text" maxLength={4} value={newPayment.card_last4}
+                      onChange={(e) => setNewPayment({ ...newPayment, card_last4: e.target.value.replace(/\D/g, "") })}
+                      dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">מספר אישור עסקה</label>
+                  <input type="text" value={newPayment.confirmation}
+                    onChange={(e) => setNewPayment({ ...newPayment, confirmation: e.target.value })}
+                    dir="ltr" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">תאריך תשלום</label>
+                  <input type="date" value={newPayment.date}
+                    onChange={(e) => setNewPayment({ ...newPayment, date: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                </div>
+              </div>
+              <button onClick={handleAddPayment} disabled={savingPayment}
+                className="mt-4 bg-primary-700 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-primary-800 disabled:opacity-50">
+                {savingPayment ? "שומר..." : "💾 שמור תשלום"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "order" && (<>
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400">
@@ -432,6 +597,8 @@ export default function SupplierOrderPage() {
               {saving ? "שומר..." : items.some((i) => (i as any).existing) ? "💾 שמור שינויים" : "✓ שלח אישורים"}
             </button>
           </div>
+        )}
+        </>
         )}
       </main>
     </div>
