@@ -33,13 +33,16 @@ export async function POST(request: Request) {
     if (item.has_issue) hasAnyIssue = true;
   }
 
-  // Update order status
-  const newStatus = hasAnyIssue ? "supplier_review" : "supplier_approved";
+  // Update order status - supplier confirms → completed
+  const newStatus = hasAnyIssue ? "supplier_review" : "completed";
   const updateData: any = {
     status: newStatus,
     supplier_viewed_at: new Date().toISOString(),
   };
-  if (!hasAnyIssue) updateData.supplier_approved_at = new Date().toISOString();
+  if (!hasAnyIssue) {
+    updateData.supplier_approved_at = new Date().toISOString();
+    updateData.confirmed_at = new Date().toISOString();
+  }
 
   await supabase.from("orders").update(updateData).eq("id", order.id);
 

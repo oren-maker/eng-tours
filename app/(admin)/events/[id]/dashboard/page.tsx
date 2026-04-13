@@ -227,7 +227,7 @@ export default function EventDashboardPage() {
                             {STATUS_LABELS[o.status] || o.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-800">₪{o.total_price || 0}</td>
+                        <td className="px-4 py-3 font-medium text-gray-800">₪{Number(o.total_price || 0).toLocaleString("he-IL")}</td>
                         <td className="px-4 py-3 text-gray-600">₪{o.amount_paid || 0}</td>
                         <td className="px-4 py-3 text-xs text-gray-500">
                           {new Date(o.created_at).toLocaleDateString("he-IL")}

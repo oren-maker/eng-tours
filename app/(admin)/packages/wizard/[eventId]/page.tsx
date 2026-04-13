@@ -25,6 +25,7 @@ export default function PackageWizardPage() {
   const [flights, setFlights] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,12 +43,14 @@ export default function PackageWizardPage() {
       fetch(`/api/flights?event_id=${eventId}`).then((r) => r.json()),
       fetch(`/api/rooms`).then((r) => r.json()),
       fetch(`/api/tickets`).then((r) => r.json()),
+      fetch(`/api/faq`).then((r) => r.json()).catch(() => []),
     ])
-      .then(([evData, flightsData, roomsData, ticketsData]) => {
+      .then(([evData, flightsData, roomsData, ticketsData, faqData]) => {
         setEvent(evData);
         if (Array.isArray(flightsData)) setFlights(flightsData);
         if (Array.isArray(roomsData)) setRooms(roomsData.filter((r: any) => r.event_id === eventId));
         if (Array.isArray(ticketsData)) setTickets(ticketsData.filter((t: any) => t.event_id === eventId));
+        if (Array.isArray(faqData)) setFaqs(faqData.filter((f: any) => f.is_active));
       })
       .finally(() => setLoading(false));
   }, [eventId]);
@@ -470,6 +473,24 @@ export default function PackageWizardPage() {
           </div>
         </div>
       </div>
+
+      {/* FAQ Section */}
+      {faqs.length > 0 && (
+        <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-bold text-primary-900 mb-3">❓ שאלות ותשובות</h3>
+          <div className="space-y-2">
+            {faqs.map((faq) => (
+              <details key={faq.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                <summary className="p-3 cursor-pointer hover:bg-gray-50 flex items-center justify-between text-sm font-medium text-gray-800">
+                  <span>{faq.question}</span>
+                  <span className="text-primary-500 text-xs">▼</span>
+                </summary>
+                <div className="p-3 pt-0 text-sm text-gray-600 leading-relaxed">{faq.answer}</div>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
