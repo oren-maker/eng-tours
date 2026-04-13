@@ -670,6 +670,8 @@ export default function OrderDetailPage() {
                 supplier_confirm: "✓ אישור ספק",
                 email_sent: "📧 מייל נשלח",
                 whatsapp_sent: "💬 WhatsApp נשלח",
+                note_added: "📝 הערה נוספה",
+                payment_added: "💰 תשלום נוסף",
               };
               const afterData = entry.after_data as any;
               const beforeData = entry.before_data as any;
@@ -717,6 +719,24 @@ export default function OrderDetailPage() {
                               ))}
                             </div>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Note added */}
+                      {entry.action === "note_added" && afterData?.added_note && (
+                        <div className="text-xs mt-1 bg-yellow-50 border border-yellow-200 p-2 rounded whitespace-pre-wrap">
+                          {afterData.added_note}
+                        </div>
+                      )}
+
+                      {/* Payment added */}
+                      {entry.action === "payment_added" && afterData && (
+                        <div className="text-xs mt-1 bg-green-50 border border-green-100 p-2 rounded space-y-0.5">
+                          <div>סכום: <span className="font-bold">₪{Number(afterData.amount).toLocaleString("he-IL")}</span></div>
+                          {afterData.method && <div>אמצעי: {afterData.method}</div>}
+                          {afterData.card_last4 && <div>כרטיס: **** {afterData.card_last4}</div>}
+                          {afterData.confirmation && <div dir="ltr">אישור: {afterData.confirmation}</div>}
+                          {afterData.total_paid != null && <div className="text-gray-500">סה״כ שולם: ₪{Number(afterData.total_paid).toLocaleString("he-IL")}</div>}
                         </div>
                       )}
 

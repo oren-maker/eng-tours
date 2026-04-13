@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 
 const VALID_STATUSES = [
   "draft",
@@ -25,7 +26,7 @@ export async function PATCH(
     const body = await request.json();
     const { status, internal_notes } = body;
 
-    if (!status || !VALID_STATUSES.includes(status)) {
+    if (status && !VALID_STATUSES.includes(status)) {
       return NextResponse.json(
         { error: "סטטוס לא תקין" },
         { status: 400 }
@@ -77,17 +78,14 @@ export async function PATCH(
     }
 
     // Build update object
-    const updateData: Record<string, unknown> = { status };
+    const updateData: Record<string, unknown> = {};
+    if (status) updateData.status = status;
+    if (internal_notes !== undefined) updateData.internal_notes = internal_notes;
+    if (status === "confirmed") updateData.confirmed_at = new Date().toISOString();
+    if (status === "supplier_approved") updateData.supplier_approved_at = new Date().toISOString();
 
-    if (internal_notes !== undefined) {
-      updateData.internal_notes = internal_notes;
-    }
-
-    if (status === "confirmed") {
-      updateData.confirmed_at = new Date().toISOString();
-    }
-    if (status === "supplier_approved") {
-      updateData.supplier_approved_at = new Date().toISOString();
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "אין שינויים" }, { status: 400 });
     }
 
     const { data: updatedOrder, error: updateError } = await supabase
@@ -104,14 +102,25 @@ export async function PATCH(
       );
     }
 
-    // Audit log
-    await supabase.from("audit_log").insert({
-      action: "order_status_changed",
-      entity_type: "order",
-      entity_id: id,
-      before_data: { status: currentOrder.status },
-      after_data: { status },
-    });
+    // Audit log: separate entries for status change and note change
+    const statusChanged = status && currentOrder.status !== status;
+    const noteChanged = internal_notes !== undefined && internal_notes !== currentOrder.internal_notes;
+
+    if (statusChanged) {
+      await audit("order_status_changed", "order", id, {
+        before: { status: currentOrder.status },
+        after: { status },
+      }, request);
+    }
+    if (noteChanged) {
+      const prev = currentOrder.internal_notes || "";
+      const next = internal_notes || "";
+      const added = next.length > prev.length ? next.slice(prev.length).replace(/^\n?---\n?/, "") : next;
+      await audit("note_added", "order", id, {
+        before: { internal_notes: prev },
+        after: { internal_notes: next, added_note: added },
+      }, request);
+    }
 
     return NextResponse.json({ order: updatedOrder });
   } catch (err) {
