@@ -669,17 +669,51 @@ export default function OrderDetailPage() {
 
       {/* Internal Notes */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          הערות פנימיות
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          📝 הערות פנימיות
+          {(() => {
+            const noteEntries = (order.audit_log || []).filter((a: any) => a.action === "note_added" && a.after_data?.added_note);
+            return noteEntries.length > 0 && (
+              <span className="text-xs font-normal bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">{noteEntries.length}</span>
+            );
+          })()}
         </h3>
-        {order.internal_notes ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 whitespace-pre-wrap text-sm">
-            {order.internal_notes}
-          </div>
-        ) : (
-          <p className="text-gray-400 text-sm mb-4">אין הערות</p>
-        )}
-        <div className="flex gap-2">
+
+        {(() => {
+          const noteEntries = (order.audit_log || [])
+            .filter((a: any) => a.action === "note_added" && a.after_data?.added_note)
+            .slice()
+            .reverse();
+          if (noteEntries.length === 0 && !order.internal_notes) {
+            return <p className="text-gray-400 text-sm mb-4 text-center py-6">אין הערות עדיין</p>;
+          }
+          return (
+            <div className="space-y-2 mb-4">
+              {noteEntries.map((entry: any) => (
+                <div key={entry.id} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex gap-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-200 flex items-center justify-center text-sm font-bold text-yellow-800">
+                    {(entry.user_display_name || "?").charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline justify-between gap-2 mb-1 flex-wrap">
+                      <span className="text-sm font-semibold text-gray-800">{entry.user_display_name || "מערכת"}</span>
+                      <span className="text-xs text-gray-500">{formatDate(entry.created_at)}</span>
+                    </div>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap break-words">{entry.after_data.added_note}</div>
+                  </div>
+                </div>
+              ))}
+              {order.internal_notes && noteEntries.length === 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 whitespace-pre-wrap text-sm text-gray-700">
+                  <div className="text-xs text-gray-500 mb-1">הערות קודמות (ללא תיעוד משתמש):</div>
+                  {order.internal_notes}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        <div className="flex gap-2 border-t border-gray-100 pt-3">
           <input
             type="text"
             value={newNote}
@@ -693,7 +727,7 @@ export default function OrderDetailPage() {
             disabled={savingNote || !newNote.trim()}
             className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-primary-800 disabled:opacity-50"
           >
-            {savingNote ? "שומר..." : "הוסף"}
+            {savingNote ? "שומר..." : "➕ הוסף"}
           </button>
         </div>
       </div>
