@@ -25,8 +25,9 @@ interface Template {
 
 export default function WhatsAppAdminPage() {
   const [activeTab, setActiveTab] = useState<"log" | "templates" | "send" | "connect">("connect");
-  const [health, setHealth] = useState<{ online: boolean; error?: string } | null>(null);
+  const [health, setHealth] = useState<{ online: boolean; error?: string; sessions?: number; checked_at?: string } | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
+  const [healthChecking, setHealthChecking] = useState(false);
 
   // Log state
   const [messages, setMessages] = useState<LogMessage[]>([]);
@@ -58,16 +59,18 @@ export default function WhatsAppAdminPage() {
     fetchLog();
   }, [filterDirection, filterStatus, filterRecipientType]);
 
-  async function fetchHealth() {
+  async function fetchHealth(manual = false) {
     try {
-      setHealthLoading(true);
-      const res = await fetch("/api/whatsapp/health");
+      if (manual) setHealthChecking(true); else setHealthLoading(true);
+      const res = await fetch(`/api/whatsapp/health${manual ? "?manual=1" : ""}`, { cache: "no-store" });
       const data = await res.json();
       setHealth(data);
+      if (manual) fetchLog();
     } catch {
       setHealth({ online: false, error: "Connection failed" });
     } finally {
       setHealthLoading(false);
+      setHealthChecking(false);
     }
   }
 
@@ -183,26 +186,35 @@ export default function WhatsAppAdminPage() {
         </div>
 
         {/* Health indicator */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           {healthLoading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
           ) : (
             <>
               <div
-                className={`w-3 h-3 rounded-full ${
-                  health?.online ? "bg-green-500" : "bg-red-500"
-                }`}
+                className={`w-3 h-3 rounded-full ${health?.online ? "bg-green-500" : "bg-red-500"} ${health?.online ? "animate-pulse" : ""}`}
               />
-              <span className="text-sm text-gray-600">
-                SIM {health?.online ? "מחובר" : "מנותק"}
-              </span>
+              <div className="text-sm">
+                <div className="text-gray-700 font-medium">
+                  WhatsApp {health?.online ? "מחובר" : "מנותק"}
+                  {typeof health?.sessions === "number" && (
+                    <span className="text-xs text-gray-500 mr-1">({health.sessions} חשבונות)</span>
+                  )}
+                </div>
+                {health?.checked_at && (
+                  <div className="text-[10px] text-gray-400">
+                    נבדק: {new Date(health.checked_at).toLocaleString("he-IL")}
+                  </div>
+                )}
+              </div>
             </>
           )}
           <button
-            onClick={fetchHealth}
-            className="text-xs text-primary hover:underline mr-2"
+            onClick={() => fetchHealth(true)}
+            disabled={healthChecking}
+            className="text-xs bg-primary-50 border border-primary-200 text-primary-700 hover:bg-primary-100 px-3 py-1.5 rounded disabled:opacity-50"
           >
-            רענן
+            {healthChecking ? "בודק..." : "🩺 בדיקת בריאות"}
           </button>
         </div>
       </div>
