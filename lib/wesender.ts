@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase";
+import { logAction } from "@/lib/audit";
 
 const WESENDER_API_URL = process.env.WESENDER_API_URL || "https://api.wesender.co.il/v2";
 const WESENDER_API_KEY = process.env.WESENDER_API_KEY || "";
@@ -16,9 +17,11 @@ interface SendWhatsAppResult {
 export async function sendWhatsApp(
   number: string,
   templateName: string,
-  variables: Record<string, string> = {}
+  variables: Record<string, string> = {},
+  options: { order_id?: string; recipient_type?: "customer" | "admin" | "supplier" } = {}
 ): Promise<SendWhatsAppResult> {
   const supabase = createServiceClient();
+  const startTime = new Date().toISOString();
 
   // Fetch template from DB
   const { data: template } = await supabase
@@ -52,11 +55,11 @@ export async function sendWhatsApp(
 
     const data = await response.json();
 
-    // Log the message
+    // Log the message to whatsapp_log
     await logMessage({
       direction: "outgoing",
       recipient: normalizedNumber,
-      recipient_type: "customer",
+      recipient_type: options.recipient_type || "customer",
       template_name: templateName,
       message_body: messageBody,
       status: response.ok ? "sent" : "failed",
@@ -64,12 +67,23 @@ export async function sendWhatsApp(
       error_message: response.ok ? null : (data?.error || "Unknown error"),
     });
 
+    // Also log to audit_log for comprehensive tracking on order
+    try {
+      await logAction(null, "whatsapp_sent", options.order_id ? "order" : "whatsapp", options.order_id, undefined, {
+        recipient: normalizedNumber,
+        recipient_type: options.recipient_type || "customer",
+        template: templateName,
+        message_body: messageBody,
+        variables,
+        status: response.ok ? "sent" : "failed",
+        message_id: data?.id || null,
+        error: response.ok ? null : (data?.error || "Unknown error"),
+        sent_at: startTime,
+      });
+    } catch { /* audit failure should not fail send */ }
+
     if (!response.ok) {
       console.error("WeSender send error:", data);
-
-      // TODO: Fall back to email on failure
-      // await sendFallbackEmail(number, templateName, messageBody);
-
       return { success: false, error: data?.error || "Send failed" };
     }
 
@@ -77,11 +91,10 @@ export async function sendWhatsApp(
   } catch (err: any) {
     console.error("WeSender request error:", err);
 
-    // Log failure
     await logMessage({
       direction: "outgoing",
       recipient: normalizedNumber,
-      recipient_type: "customer",
+      recipient_type: options.recipient_type || "customer",
       template_name: templateName,
       message_body: messageBody,
       status: "failed",
@@ -89,8 +102,16 @@ export async function sendWhatsApp(
       error_message: err.message || "Network error",
     });
 
-    // TODO: Fall back to email on failure
-    // await sendFallbackEmail(number, templateName, messageBody);
+    try {
+      await logAction(null, "whatsapp_sent", options.order_id ? "order" : "whatsapp", options.order_id, undefined, {
+        recipient: normalizedNumber,
+        template: templateName,
+        message_body: messageBody,
+        status: "failed",
+        error: err.message || "Network error",
+        sent_at: startTime,
+      });
+    } catch { /* ignore */ }
 
     return { success: false, error: err.message };
   }

@@ -1,3 +1,5 @@
+import { logAction } from "./audit";
+
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM_EMAIL = "noreply@eng-tours.com";
 const FROM_NAME = "ENG Tours";
@@ -8,14 +10,24 @@ interface SendEmailResult {
   error?: string;
 }
 
+interface EmailContext {
+  order_id?: string;
+  template?: string;
+  variables?: Record<string, string>;
+}
+
 /**
- * Send a raw HTML email via Resend
+ * Send a raw HTML email via Resend - auto-logs to audit_log
  */
 export async function sendEmail(
   to: string,
   subject: string,
-  htmlBody: string
+  htmlBody: string,
+  context?: EmailContext
 ): Promise<SendEmailResult> {
+  const startTime = new Date().toISOString();
+  let result: SendEmailResult;
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -35,14 +47,38 @@ export async function sendEmail(
 
     if (!response.ok) {
       console.error("Resend error:", data);
-      return { success: false, error: data?.message || "Send failed" };
+      result = { success: false, error: data?.message || "Send failed" };
+    } else {
+      result = { success: true, id: data?.id };
     }
-
-    return { success: true, id: data?.id };
   } catch (err: any) {
     console.error("Email send error:", err);
-    return { success: false, error: err.message };
+    result = { success: false, error: err.message };
   }
+
+  // Audit log - every email attempt tracked
+  try {
+    await logAction(
+      null,
+      "email_sent",
+      context?.order_id ? "order" : "email",
+      context?.order_id,
+      undefined,
+      {
+        recipient: to,
+        subject,
+        template: context?.template,
+        variables: context?.variables,
+        success: result.success,
+        message_id: result.id,
+        error: result.error,
+        sent_at: startTime,
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      }
+    );
+  } catch { /* don't fail email on audit failure */ }
+
+  return result;
 }
 
 /**
