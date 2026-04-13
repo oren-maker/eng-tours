@@ -27,7 +27,43 @@ const ENTITY_LABELS: Record<string, string> = {
   coupon: "קופון",
   faq: "שאלה נפוצה",
   setting: "הגדרה",
+  supplier_confirmation: "אישור ספק",
+  participant: "משתתף",
+  payment: "תשלום",
+  room: "חדר",
 };
+
+const ACTION_LABELS: Record<string, string> = {
+  create: "🆕 יצירה",
+  update: "✏️ עדכון",
+  delete: "🗑️ מחיקה",
+  create_user: "👤 יצירת משתמש",
+  update_user: "✏️ עדכון משתמש",
+  delete_user: "🗑️ מחיקת משתמש",
+  reset_password: "🔐 איפוס סיסמה",
+  login: "🔓 התחברות",
+  logout: "🔒 התנתקות",
+  order_status_changed: "🔄 שינוי סטטוס הזמנה",
+  order_cancelled: "❌ ביטול הזמנה",
+  payment_added: "💰 תשלום נוסף",
+  note_added: "📝 הערה נוספה",
+  supplier_confirm: "✓ אישור ספק",
+  supplier_confirm_all: "✓ אישור ספק (כללי)",
+  email_sent: "📧 מייל נשלח",
+  whatsapp_sent: "💬 WhatsApp נשלח",
+  archive: "📦 העברה לארכיון",
+  restore: "♻️ שחזור מארכיון",
+  duplicate: "📋 שכפול",
+};
+
+function actionLabel(action: string): string {
+  if (ACTION_LABELS[action]) return ACTION_LABELS[action];
+  // Fallback: try to translate prefix
+  if (action.startsWith("create_")) return "🆕 יצירה";
+  if (action.startsWith("update_")) return "✏️ עדכון";
+  if (action.startsWith("delete_")) return "🗑️ מחיקה";
+  return action;
+}
 
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -79,28 +115,68 @@ export default function AuditLogPage() {
       minute: "2-digit",
     });
 
+  const FIELD_LABELS: Record<string, string> = {
+    status: "סטטוס", internal_notes: "הערות פנימיות", added_note: "הערה",
+    amount: "סכום", method: "אמצעי תשלום", card_last4: "4 ספרות אחרונות",
+    confirmation: "מספר אישור", confirmation_number: "מספר אישור",
+    payment_date: "תאריך תשלום", total_paid: "סה״כ שולם",
+    name: "שם", email: "מייל", phone: "טלפון", role: "תפקיד",
+    is_active: "פעיל", display_name: "שם לתצוגה", password: "סיסמה",
+    cancellation_fee_percent: "אחוז דמי ביטול", cancellation_fee_amount: "סכום דמי ביטול",
+    refund_amount: "סכום החזר", has_issue: "יש בעיה", issue_description: "תיאור הבעיה",
+    notes: "הערות", participant_id: "משתתף", recipient: "נמען", template: "תבנית",
+    items_count: "מספר פריטים", changes: "שינויים", from: "מ", to: "ל",
+  };
+
+  const STATUS_LABELS_LOG: Record<string, string> = {
+    draft: "טיוטה", pending_payment: "ממתין לתשלום", partial: "שולם חלקית",
+    completed: "הושלם", supplier_review: "בבדיקת ספק", supplier_approved: "אושר ע״י ספק",
+    confirmed: "אושר", cancelled: "מבוטל",
+  };
+
+  const formatValue = (k: string, v: unknown): string => {
+    if (v === null || v === undefined) return "—";
+    if (k === "status" && typeof v === "string") return STATUS_LABELS_LOG[v] || v;
+    if (k === "is_active") return v ? "כן" : "לא";
+    if (typeof v === "boolean") return v ? "כן" : "לא";
+    if (typeof v === "object") return JSON.stringify(v);
+    return String(v);
+  };
+
   const renderDiff = (before: Record<string, unknown> | null, after: Record<string, unknown> | null) => {
     if (!before && !after) return <span className="text-gray-400">אין נתונים</span>;
 
-    const _allKeys = new Set([
+    const allKeys = Array.from(new Set([
       ...Object.keys(before || {}),
       ...Object.keys(after || {}),
-    ]);
+    ]));
 
     return (
-      <div className="grid grid-cols-2 gap-4 text-xs">
-        <div>
-          <div className="font-semibold text-red-600 mb-1">לפני</div>
-          <pre className="bg-red-50 p-2 rounded overflow-x-auto text-gray-700" dir="ltr">
-            {before ? JSON.stringify(before, null, 2) : "null"}
-          </pre>
-        </div>
-        <div>
-          <div className="font-semibold text-green-600 mb-1">אחרי</div>
-          <pre className="bg-green-50 p-2 rounded overflow-x-auto text-gray-700" dir="ltr">
-            {after ? JSON.stringify(after, null, 2) : "null"}
-          </pre>
-        </div>
+      <div className="space-y-1 text-xs">
+        {allKeys.map((k) => {
+          const beforeVal = before?.[k];
+          const afterVal = after?.[k];
+          const same = JSON.stringify(beforeVal) === JSON.stringify(afterVal);
+          const label = FIELD_LABELS[k] || k;
+          return (
+            <div key={k} className="grid grid-cols-12 gap-2 items-center bg-white border border-gray-200 rounded p-2">
+              <div className="col-span-3 font-semibold text-gray-700">{label}:</div>
+              {same ? (
+                <div className="col-span-9 text-gray-600">{formatValue(k, afterVal ?? beforeVal)}</div>
+              ) : (
+                <>
+                  {beforeVal !== undefined && (
+                    <div className="col-span-4 bg-red-50 text-red-700 px-2 py-1 rounded">{formatValue(k, beforeVal)}</div>
+                  )}
+                  <div className="col-span-1 text-center text-gray-400">←</div>
+                  {afterVal !== undefined && (
+                    <div className="col-span-4 bg-green-50 text-green-700 px-2 py-1 rounded">{formatValue(k, afterVal)}</div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -219,7 +295,7 @@ export default function AuditLogPage() {
                       <td className="px-4 py-3">
                         {entry.user_name || entry.user_id?.slice(0, 8) || "-"}
                       </td>
-                      <td className="px-4 py-3 font-medium">{entry.action}</td>
+                      <td className="px-4 py-3 font-medium">{actionLabel(entry.action)}</td>
                       <td className="px-4 py-3">
                         <span className="inline-block px-2 py-0.5 rounded bg-gray-100 text-xs">
                           {ENTITY_LABELS[entry.entity_type] || entry.entity_type}
