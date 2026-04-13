@@ -9,11 +9,15 @@
 
 html {
   direction: rtl;
+  overflow-y: auto;
+  height: 100%;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
+  overflow-y: auto;
+  min-height: 100%;
 }
 
 @layer base {

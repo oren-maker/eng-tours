@@ -14,19 +14,30 @@ function StarRating({ stars }: { stars: number }) {
 
 export default function HotelsPage() {
   const [hotels, setHotels] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/hotels")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setHotels(data);
-        else setError(data.error || "שגיאה בטעינה");
+    Promise.all([
+      fetch("/api/hotels").then((r) => r.json()),
+      fetch("/api/rooms").then((r) => r.json()),
+    ])
+      .then(([hotelsData, roomsData]) => {
+        if (Array.isArray(hotelsData)) setHotels(hotelsData);
+        else setError(hotelsData.error || "שגיאה בטעינה");
+        if (Array.isArray(roomsData)) setRooms(roomsData);
       })
       .catch(() => setError("שגיאה בטעינה"))
       .finally(() => setLoading(false));
   }, []);
+
+  function hotelInventory(hotelId: string) {
+    const hotelRooms = rooms.filter((r) => r.hotel_id === hotelId);
+    const total = hotelRooms.reduce((s, r) => s + (r.total_rooms || 0), 0);
+    const booked = hotelRooms.reduce((s, r) => s + (r.booked_rooms || 0), 0);
+    return { total, booked, rooms: hotelRooms.length };
+  }
 
   return (
     <div>
@@ -58,44 +69,56 @@ export default function HotelsPage() {
                 <tr className="bg-gray-50 text-gray-600">
                   <th className="text-right px-4 py-3 font-medium">שם המלון</th>
                   <th className="text-right px-4 py-3 font-medium">עיר</th>
-                  <th className="text-right px-4 py-3 font-medium">מדינה</th>
                   <th className="text-right px-4 py-3 font-medium">דירוג</th>
+                  <th className="text-right px-4 py-3 font-medium">מצב מלאי</th>
                   <th className="text-right px-4 py-3 font-medium">טלפון</th>
                   <th className="text-right px-4 py-3 font-medium">פעולות</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {hotels.map((hotel) => (
+                {hotels.map((hotel) => {
+                  const inv = hotelInventory(hotel.id);
+                  const occupancy = inv.total > 0 ? Math.round((inv.booked / inv.total) * 100) : 0;
+                  return (
                   <tr key={hotel.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-gray-800">
-                      {hotel.name}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{hotel.city || "—"}</td>
-                    <td className="px-4 py-3 text-gray-600">{hotel.country || "—"}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{hotel.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{hotel.city || hotel.country || "—"}</td>
+                    <td className="px-4 py-3"><StarRating stars={hotel.stars || 0} /></td>
                     <td className="px-4 py-3">
-                      <StarRating stars={hotel.stars || 0} />
+                      {inv.rooms === 0 ? (
+                        <span className="text-xs text-gray-400">אין חדרים</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600">
+                            {inv.booked}/{inv.total}
+                          </span>
+                          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                occupancy >= 90 ? "bg-red-500" :
+                                occupancy >= 70 ? "bg-yellow-500" :
+                                "bg-green-500"
+                              }`}
+                              style={{ width: `${Math.min(occupancy, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                      {hotel.contact_phone || "—"}
-                    </td>
+                    <td className="px-4 py-3 text-gray-600 font-mono text-xs" dir="ltr">{hotel.contact_phone || "—"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Link
-                          href={`/hotels/${hotel.id}/rooms`}
-                          className="text-primary-700 hover:text-primary-800 text-xs font-medium"
-                        >
+                        <Link href={`/hotels/${hotel.id}/rooms`} className="text-primary-700 hover:text-primary-800 text-xs font-medium">
                           חדרים
                         </Link>
-                        <Link
-                          href={`/hotels/${hotel.id}`}
-                          className="text-gray-500 hover:text-gray-700 text-xs font-medium"
-                        >
+                        <Link href={`/hotels/${hotel.id}`} className="text-gray-500 hover:text-gray-700 text-xs font-medium">
                           עריכה
                         </Link>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

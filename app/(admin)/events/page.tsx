@@ -107,14 +107,22 @@ export default function EventsPage() {
                         {event.status === "active" ? "פעיל" : "ארכיון"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 flex items-center gap-1">
-                      <EventActions eventId={event.id} status={event.status} />
-                      <Link
-                        href={`/coupons?event=${event.id}`}
-                        className="text-xs text-primary-700 hover:text-primary-900 px-3 py-1 rounded border border-primary-200 hover:bg-primary-50 font-medium"
-                      >
-                        צור קופון
-                      </Link>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <Link
+                          href={`/events/${event.id}/dashboard`}
+                          className="text-xs text-white bg-primary-700 hover:bg-primary-800 px-3 py-1 rounded font-medium"
+                        >
+                          📊 צפה
+                        </Link>
+                        <EventActions eventId={event.id} status={event.status} />
+                        <Link
+                          href={`/coupons?event=${event.id}`}
+                          className="text-xs text-primary-700 hover:text-primary-900 px-3 py-1 rounded border border-primary-200 hover:bg-primary-50 font-medium"
+                        >
+                          צור קופון
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -8,7 +8,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen">
       <AdminSidebar />
-      <main className="md:mr-60 min-h-screen p-4 md:p-6 pb-20 md:pb-6">
+      <main className="md:mr-60 min-h-screen p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto">
         {children}
       </main>
     </div>
