@@ -63,6 +63,19 @@ export async function PATCH(
     return NextResponse.json({ error: "room_id is required" }, { status: 400 });
   }
 
+  // Validation: cannot reduce total_rooms below booked_rooms
+  if (body.total_rooms !== undefined && body.total_rooms !== null) {
+    const { data: before } = await supabase.from("rooms").select("booked_rooms").eq("id", body.room_id).single();
+    const booked = Number(before?.booked_rooms) || 0;
+    const newTotal = Number(body.total_rooms);
+    if (newTotal < booked) {
+      return NextResponse.json(
+        { error: `לא ניתן להוריד את המלאי ל-${newTotal}. כבר נרכשו ${booked} חדרים. המלאי המינימלי האפשרי הוא ${booked}.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("rooms")
     .update({

@@ -6,11 +6,13 @@ import type { NextRequest } from "next/server";
 const adminPages = [
   "/dashboard",
   "/events",
+  "/airlines",
   "/flights",
   "/hotels",
   "/tickets",
   "/packages",
   "/orders",
+  "/issues",
   "/waiting-list",
   "/coupons",
   "/financial",
@@ -18,6 +20,7 @@ const adminPages = [
   "/users",
   "/whatsapp",
   "/settings",
+  "/settings-hub",
   "/audit-log",
 ];
 
@@ -43,6 +46,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/login" ||
     pathname.startsWith("/book/") ||
     pathname.startsWith("/pay/") ||
+    pathname.endsWith("/print") ||
     pathname.includes(".")
   ) {
     return NextResponse.next();
@@ -62,18 +66,22 @@ export async function middleware(request: NextRequest) {
     }
 
     if (token.role !== "admin") {
+      // Supplier tried to access admin — redirect to supplier portal
+      if (token.role === "supplier") {
+        return NextResponse.redirect(new URL("/portal", request.url));
+      }
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
 
-  // Supplier portal - require supplier login
+  // Supplier portal - allow supplier and admin
   if (isSupplierPage(pathname)) {
     const token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
     });
 
-    if (!token || token.role !== "supplier") {
+    if (!token || (token.role !== "supplier" && token.role !== "admin")) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }

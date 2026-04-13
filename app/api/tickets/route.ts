@@ -52,3 +52,44 @@ export async function POST(request: Request) {
   await audit("create", "ticket", data?.id, { after: data }, request);
   return NextResponse.json(data, { status: 201 });
 }
+
+export async function PATCH(request: Request) {
+  const supabase = createServiceClient();
+  const body = await request.json();
+  if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  const { id, ...update } = body;
+  const { data: before } = await supabase.from("tickets").select("*").eq("id", id).single();
+
+  // Validation: cannot reduce total_qty below booked_qty
+  if (update.total_qty !== undefined && before) {
+    const booked = Number(before.booked_qty) || 0;
+    const newTotal = Number(update.total_qty);
+    if (newTotal < booked) {
+      return NextResponse.json(
+        { error: `לא ניתן להוריד את המלאי ל-${newTotal}. כבר נרכשו ${booked} כרטיסים. המלאי המינימלי האפשרי הוא ${booked}.` },
+        { status: 400 }
+      );
+    }
+  }
+
+  const { data, error } = await supabase.from("tickets").update(update).eq("id", id).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("update", "ticket", id, { before, after: data }, request);
+  return NextResponse.json(data);
+}
+
+export async function DELETE(request: Request) {
+  const supabase = createServiceClient();
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const { data: before } = await supabase.from("tickets").select("*").eq("id", id).single();
+  if (before?.booked_qty && Number(before.booked_qty) > 0) {
+    return NextResponse.json({ error: `לא ניתן למחוק — כבר נרכשו ${before.booked_qty} כרטיסים` }, { status: 400 });
+  }
+  const { error } = await supabase.from("tickets").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  await audit("delete", "ticket", id, { before }, request);
+  return NextResponse.json({ success: true });
+}

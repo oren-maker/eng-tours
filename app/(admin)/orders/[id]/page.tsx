@@ -258,6 +258,53 @@ export default function OrderDetailPage() {
 
   return (
     <div>
+      {/* PDF & Send buttons */}
+      <div className="flex items-center gap-2 flex-wrap mb-4 bg-white rounded-xl p-3 shadow-sm">
+        <span className="text-sm text-gray-600 font-medium">📄 פעולות הזמנה:</span>
+        <a href={`/orders/${order.id}/print`} target="_blank" rel="noopener noreferrer"
+          className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800">
+          📥 הורד PDF
+        </a>
+        <button
+          onClick={async () => {
+            const participants = order.participants || [];
+            const emails = participants.map((p: any) => p.email).filter(Boolean);
+            const phones = participants.map((p: any) => p.phone).filter(Boolean);
+            if (emails.length === 0 && phones.length === 0) { alert("אין פרטי קשר לרוכשים"); return; }
+            if (!confirm(`לשלוח את פרטי ההזמנה ל-${emails.length} מיילים ו-${phones.length} טלפונים?`)) return;
+            const res = await fetch(`/api/orders/${order.id}/send-to-buyers`, { method: "POST" });
+            const d = await res.json();
+            alert(d.success ? `נשלח בהצלחה: ${d.sent_email || 0} מיילים, ${d.sent_whatsapp || 0} WhatsApp` : "שגיאה: " + (d.error || "לא ידוע"));
+          }}
+          className="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700">
+          📢 שלח לרוכשים
+        </button>
+        <button
+          onClick={() => {
+            const email = prompt("שלח למייל:");
+            if (!email) return;
+            fetch(`/api/orders/${order.id}/send-email`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            }).then(r => r.json()).then(d => alert(d.success ? "נשלח!" : "שגיאה: " + (d.error || "")));
+          }}
+          className="text-xs border border-blue-300 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-50">
+          📧 שלח למייל
+        </button>
+        <button
+          onClick={() => {
+            const phone = prompt("שלח ל-WhatsApp (מספר טלפון):");
+            if (!phone) return;
+            fetch(`/api/orders/${order.id}/send-whatsapp`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone }),
+            }).then(r => r.json()).then(d => alert(d.success ? "נשלח!" : "שגיאה: " + (d.error || "")));
+          }}
+          className="text-xs border border-green-300 text-green-700 px-3 py-1.5 rounded hover:bg-green-50">
+          💬 שלח ב-WhatsApp
+        </button>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>

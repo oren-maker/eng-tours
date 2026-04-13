@@ -60,6 +60,19 @@ export async function PATCH(req: Request) {
 
   const { flight_id, ...update } = body;
   const { data: before } = await supabase.from("flights").select("*").eq("id", flight_id).single();
+
+  // Validation: cannot reduce total_seats below booked_seats
+  if (update.total_seats !== undefined && before) {
+    const newTotal = Number(update.total_seats);
+    const booked = Number(before.booked_seats) || 0;
+    if (newTotal < booked) {
+      return NextResponse.json(
+        { error: `לא ניתן להוריד את המלאי ל-${newTotal}. כבר נרכשו ${booked} מקומות. המלאי המינימלי האפשרי הוא ${booked}.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const { data, error } = await supabase.from("flights").update(update).eq("id", flight_id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   await audit("update", "flight", flight_id, { before, after: data }, req);
