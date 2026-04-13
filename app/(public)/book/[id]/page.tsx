@@ -43,6 +43,7 @@ function BookingContent() {
   const [returnFlight, setReturnFlight] = useState<string>("");
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [selectedTicket, setSelectedTicket] = useState<string>("");
+  const [openSection, setOpenSection] = useState<"outbound" | "return" | "room" | "ticket" | null>("outbound");
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [contactEmail, setContactEmail] = useState("");
   const [phonePrefix, setPhonePrefix] = useState("+972");
@@ -268,142 +269,205 @@ function BookingContent() {
               </div>
             )}
 
-            {step === 2 && (
-              <div className="space-y-4">
-                {availableFlights.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm p-5">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3">✈️ טיסת הלוך</h3>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="outbound" checked={!outboundFlight} onChange={() => setOutboundFlight("")} />
-                        <span className="text-sm text-gray-600">ללא טיסת הלוך</span>
-                      </label>
-                      {availableFlights.map((f) => {
-                        const remaining = (f.total_seats || 0) - (f.booked_seats || 0);
-                        return (
-                          <label key={f.id} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${outboundFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
-                            <input type="radio" name="outbound" checked={outboundFlight === f.id} onChange={() => setOutboundFlight(f.id)} className="mt-1" />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-800">{f.airline_name} {f.flight_code}</span>
-                                <span className="font-bold text-primary-700">{currencySymbol(f.currency)}{f.price_customer}/אדם</span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {f.origin_iata} → {f.dest_iata}
-                                {f.departure_time && ` · ${new Date(f.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}`}
-                              </p>
-                              <p className={`text-xs mt-1 ${remaining < 5 ? "text-orange-600 font-medium" : "text-green-600"}`}>
-                                {availText(remaining)}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+            {step === 2 && (() => {
+              const sections: { key: "outbound" | "return" | "room" | "ticket"; label: string; icon: string; available: boolean }[] = [];
+              if (availableFlights.length > 0) sections.push({ key: "outbound", label: "טיסת הלוך", icon: "✈️", available: true });
+              if (availableFlights.length > 0) sections.push({ key: "return", label: "טיסת חזור", icon: "🔁", available: true });
+              if (availableRooms.length > 0) sections.push({ key: "room", label: "חדר במלון", icon: "🏨", available: true });
+              if (availableTickets.length > 0) sections.push({ key: "ticket", label: "כרטיס", icon: "🎫", available: true });
 
-                {availableFlights.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm p-5">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3">🔁 טיסת חזור</h3>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="return" checked={!returnFlight} onChange={() => setReturnFlight("")} />
-                        <span className="text-sm text-gray-600">ללא טיסת חזור</span>
-                      </label>
-                      {availableFlights.filter((f) => f.id !== outboundFlight).map((f) => {
-                        const remaining = (f.total_seats || 0) - (f.booked_seats || 0);
-                        return (
-                          <label key={f.id} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${returnFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
-                            <input type="radio" name="return" checked={returnFlight === f.id} onChange={() => setReturnFlight(f.id)} className="mt-1" />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-800">{f.airline_name} {f.flight_code}</span>
-                                <span className="font-bold text-primary-700">{currencySymbol(f.currency)}{f.price_customer}/אדם</span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {f.origin_iata} → {f.dest_iata}
-                                {f.departure_time && ` · ${new Date(f.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}`}
-                              </p>
-                              <p className={`text-xs mt-1 ${remaining < 5 ? "text-orange-600 font-medium" : "text-green-600"}`}>
-                                {availText(remaining)}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              const goToNext = (current: string) => {
+                const idx = sections.findIndex((s) => s.key === current);
+                const next = sections[idx + 1];
+                setOpenSection(next ? next.key : null);
+              };
 
-                {availableRooms.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm p-5">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3">🏨 בחר חדר</h3>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="room" checked={!selectedRoom} onChange={() => setSelectedRoom("")} />
-                        <span className="text-sm text-gray-600">ללא מלון</span>
-                      </label>
-                      {availableRooms.map((r) => {
-                        const remainingRooms = (r.total_rooms || 0) - (r.booked_rooms || 0);
-                        return (
-                          <label key={r.id} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${selectedRoom === r.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
-                            <input type="radio" name="room" checked={selectedRoom === r.id} onChange={() => setSelectedRoom(r.id)} className="mt-1" />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-800">{r.hotels?.name || "מלון"} - {r.room_type}</span>
-                                <span className="font-bold text-primary-700">{currencySymbol(r.currency)}{r.price_customer}/אדם</span>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">{r.capacity} אנשים בחדר</p>
-                              <p className={`text-xs mt-1 ${remainingRooms < 3 ? "text-orange-600 font-medium" : "text-green-600"}`}>
-                                {remainingRooms > 0 ? `${remainingRooms} חדרים זמינים` : "אזל המלאי"}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              const summary = (key: string) => {
+                if (key === "outbound") return flightOut ? `${flightOut.airline_name} ${flightOut.flight_code} · ${currencySymbol(flightOut.currency)}${flightOut.price_customer}/אדם` : "ללא";
+                if (key === "return") return flightBack ? `${flightBack.airline_name} ${flightBack.flight_code} · ${currencySymbol(flightBack.currency)}${flightBack.price_customer}/אדם` : "ללא";
+                if (key === "room") return room ? `${room.hotels?.name || "מלון"} · ${room.room_type} · ${currencySymbol(room.currency)}${room.price_customer}/אדם` : "ללא";
+                if (key === "ticket") return ticket ? `${ticket.name} · ${currencySymbol(ticket.currency)}${ticket.price_customer}` : "ללא";
+                return "";
+              };
 
-                {availableTickets.length > 0 && (
-                  <div className="bg-white rounded-xl shadow-sm p-5">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-3">🎫 בחר כרטיס</h3>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="ticket" checked={!selectedTicket} onChange={() => setSelectedTicket("")} />
-                        <span className="text-sm text-gray-600">ללא כרטיס</span>
-                      </label>
-                      {availableTickets.map((t) => {
-                        const remaining = (t.total_qty || 0) - (t.booked_qty || 0);
-                        return (
-                          <label key={t.id} className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${selectedTicket === t.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
-                            <input type="radio" name="ticket" checked={selectedTicket === t.id} onChange={() => setSelectedTicket(t.id)} className="mt-1" />
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-gray-800">{t.name}</span>
-                                <span className="font-bold text-primary-700">{currencySymbol(t.currency)}{t.price_customer}</span>
-                              </div>
-                              <p className={`text-xs mt-1 ${remaining < 5 ? "text-orange-600 font-medium" : "text-green-600"}`}>
-                                {availText(remaining)}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              const isSelected = (key: string) => {
+                if (key === "outbound") return outboundFlight !== undefined;
+                if (key === "return") return returnFlight !== undefined;
+                if (key === "room") return selectedRoom !== undefined;
+                if (key === "ticket") return selectedTicket !== undefined;
+                return false;
+              };
+              const isPicked = (key: string) => {
+                if (key === "outbound") return !!outboundFlight;
+                if (key === "return") return !!returnFlight;
+                if (key === "room") return !!selectedRoom;
+                if (key === "ticket") return !!selectedTicket;
+                return false;
+              };
 
-                {availableFlights.length === 0 && availableRooms.length === 0 && availableTickets.length === 0 && (
-                  <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-                    <div className="text-4xl mb-3">😔</div>
-                    <p className="text-gray-500">אין שירותים זמינים לכמות המבוקשת</p>
-                    <p className="text-xs text-gray-400 mt-2">נסה להפחית את מספר האנשים או פנה אלינו ישירות</p>
-                  </div>
-                )}
-              </div>
-            )}
+              return (
+                <div className="space-y-3">
+                  {sections.length === 0 && (
+                    <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+                      <div className="text-4xl mb-3">😔</div>
+                      <p className="text-gray-500">אין שירותים זמינים לכמות המבוקשת</p>
+                    </div>
+                  )}
+
+                  {sections.map((sec) => {
+                    const open = openSection === sec.key;
+                    const picked = isSelected(sec.key);
+                    return (
+                      <div key={sec.key} className={`bg-white rounded-xl shadow-sm overflow-hidden border-2 ${open ? "border-primary-300" : isPicked(sec.key) ? "border-green-200" : "border-transparent"}`}>
+                        <button
+                          type="button"
+                          onClick={() => setOpenSection(open ? null : sec.key)}
+                          className={`w-full p-4 flex items-center justify-between gap-3 ${open ? "bg-primary-50" : "hover:bg-gray-50"}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <span className="text-2xl">{sec.icon}</span>
+                            <div className="text-right flex-1 min-w-0">
+                              <div className="font-semibold text-gray-800">{sec.label}</div>
+                              {!open && picked && (
+                                <div className={`text-xs mt-0.5 truncate ${isPicked(sec.key) ? "text-green-700" : "text-gray-500"}`}>
+                                  {isPicked(sec.key) ? "✓ " : ""}{summary(sec.key)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+                            {open ? "▲ סגור" : picked ? "✏️ פתח" : "▼ פתח"}
+                          </span>
+                        </button>
+
+                        {open && (
+                          <div className="p-4 border-t border-gray-100 space-y-2">
+                            {sec.key === "outbound" && (
+                              <>
+                                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                  onClick={() => { setOutboundFlight(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  <input type="radio" name="outbound" checked={!outboundFlight} readOnly />
+                                  <span className="text-sm text-gray-600">ללא טיסת הלוך</span>
+                                </label>
+                                {availableFlights.map((f) => {
+                                  const remaining = (f.total_seats || 0) - (f.booked_seats || 0);
+                                  return (
+                                    <label key={f.id}
+                                      onClick={() => { setOutboundFlight(f.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${outboundFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
+                                      <input type="radio" name="outbound" checked={outboundFlight === f.id} readOnly className="mt-1" />
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-gray-800">{f.airline_name} {f.flight_code}</span>
+                                          <span className="font-bold text-primary-700">{currencySymbol(f.currency)}{f.price_customer}/אדם</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          {f.origin_iata} → {f.dest_iata}
+                                          {f.departure_time && ` · ${new Date(f.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}`}
+                                        </p>
+                                        <p className={`text-xs mt-1 ${remaining < 5 ? "text-orange-600 font-medium" : "text-green-600"}`}>{availText(remaining)}</p>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {sec.key === "return" && (
+                              <>
+                                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                  onClick={() => { setReturnFlight(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  <input type="radio" name="return" checked={!returnFlight} readOnly />
+                                  <span className="text-sm text-gray-600">ללא טיסת חזור</span>
+                                </label>
+                                {availableFlights.filter((f) => f.id !== outboundFlight).map((f) => {
+                                  const remaining = (f.total_seats || 0) - (f.booked_seats || 0);
+                                  return (
+                                    <label key={f.id}
+                                      onClick={() => { setReturnFlight(f.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${returnFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
+                                      <input type="radio" name="return" checked={returnFlight === f.id} readOnly className="mt-1" />
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-gray-800">{f.airline_name} {f.flight_code}</span>
+                                          <span className="font-bold text-primary-700">{currencySymbol(f.currency)}{f.price_customer}/אדם</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          {f.origin_iata} → {f.dest_iata}
+                                          {f.departure_time && ` · ${new Date(f.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}`}
+                                        </p>
+                                        <p className={`text-xs mt-1 ${remaining < 5 ? "text-orange-600 font-medium" : "text-green-600"}`}>{availText(remaining)}</p>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {sec.key === "room" && (
+                              <>
+                                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                  onClick={() => { setSelectedRoom(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  <input type="radio" name="room" checked={!selectedRoom} readOnly />
+                                  <span className="text-sm text-gray-600">ללא מלון</span>
+                                </label>
+                                {availableRooms.map((r) => {
+                                  const remainingRooms = (r.total_rooms || 0) - (r.booked_rooms || 0);
+                                  return (
+                                    <label key={r.id}
+                                      onClick={() => { setSelectedRoom(r.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${selectedRoom === r.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
+                                      <input type="radio" name="room" checked={selectedRoom === r.id} readOnly className="mt-1" />
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-gray-800">{r.hotels?.name || "מלון"} - {r.room_type}</span>
+                                          <span className="font-bold text-primary-700">{currencySymbol(r.currency)}{r.price_customer}/אדם</span>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">{r.capacity} אנשים בחדר</p>
+                                        <p className={`text-xs mt-1 ${remainingRooms < 3 ? "text-orange-600 font-medium" : "text-green-600"}`}>
+                                          {remainingRooms > 0 ? `${remainingRooms} חדרים זמינים` : "אזל המלאי"}
+                                        </p>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {sec.key === "ticket" && (
+                              <>
+                                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                                  onClick={() => { setSelectedTicket(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  <input type="radio" name="ticket" checked={!selectedTicket} readOnly />
+                                  <span className="text-sm text-gray-600">ללא כרטיס</span>
+                                </label>
+                                {availableTickets.map((t) => {
+                                  const remaining = (t.total_qty || 0) - (t.booked_qty || 0);
+                                  return (
+                                    <label key={t.id}
+                                      onClick={() => { setSelectedTicket(t.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${selectedTicket === t.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
+                                      <input type="radio" name="ticket" checked={selectedTicket === t.id} readOnly className="mt-1" />
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-gray-800">{t.name}</span>
+                                          <span className="font-bold text-primary-700">{currencySymbol(t.currency)}{t.price_customer}</span>
+                                        </div>
+                                        <p className={`text-xs mt-1 ${remaining < 5 ? "text-orange-600 font-medium" : "text-green-600"}`}>{availText(remaining)}</p>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {step === 3 && (
               <div className="bg-white rounded-xl shadow-sm p-6">
@@ -495,21 +559,26 @@ function BookingContent() {
 
           <div>
             <div className="bg-white rounded-xl shadow-sm p-5 sticky top-4">
-              <h3 className="text-base font-semibold text-gray-800 mb-3">💰 סיכום מחיר</h3>
-              <div className="space-y-2 text-sm">
-                {flightOut && <div className="flex justify-between"><span className="text-gray-600">הלוך × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{flightOutPrice.toLocaleString()}</span></div>}
-                {flightBack && <div className="flex justify-between"><span className="text-gray-600">חזור × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{flightBackPrice.toLocaleString()}</span></div>}
-                {room && <div className="flex justify-between"><span className="text-gray-600">חדר × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{roomPrice.toLocaleString()}</span></div>}
-                {ticket && <div className="flex justify-between"><span className="text-gray-600">כרטיס × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{ticketPrice.toLocaleString()}</span></div>}
-                {totalPrice > 0 && (
-                  <div className="pt-2 mt-2 border-t-2 border-primary-200 flex justify-between items-baseline">
-                    <span className="text-gray-700 font-medium">סה״כ:</span>
-                    <span className="text-2xl font-bold text-primary-700">{currencySymbol(currency)}{totalPrice.toLocaleString()}</span>
+              {step > 1 && totalPrice > 0 && (
+                <>
+                  <h3 className="text-base font-semibold text-gray-800 mb-3">💰 סיכום מחיר</h3>
+                  <div className="space-y-2 text-sm mb-3">
+                    {flightOut && <div className="flex justify-between"><span className="text-gray-600">הלוך × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{flightOutPrice.toLocaleString()}</span></div>}
+                    {flightBack && <div className="flex justify-between"><span className="text-gray-600">חזור × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{flightBackPrice.toLocaleString()}</span></div>}
+                    {room && <div className="flex justify-between"><span className="text-gray-600">חדר × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{roomPrice.toLocaleString()}</span></div>}
+                    {ticket && <div className="flex justify-between"><span className="text-gray-600">כרטיס × {peopleCount}</span><span className="font-medium">{currencySymbol(currency)}{ticketPrice.toLocaleString()}</span></div>}
+                    <div className="pt-2 mt-2 border-t-2 border-primary-200 flex justify-between items-baseline">
+                      <span className="text-gray-700 font-medium">סה״כ:</span>
+                      <span className="text-2xl font-bold text-primary-700">{currencySymbol(currency)}{totalPrice.toLocaleString()}</span>
+                    </div>
                   </div>
-                )}
-              </div>
+                </>
+              )}
+              {step === 1 && (
+                <p className="text-sm text-gray-500 mb-3 text-center">סיכום המחיר יוצג לאחר בחירת השירותים</p>
+              )}
 
-              <div className="mt-5 flex gap-2">
+              <div className="flex gap-2">
                 {step > 1 && <button onClick={() => setStep(step - 1)} className="flex-1 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50">חזור</button>}
                 {step < 4 ? (
                   <button onClick={() => setStep(step + 1)} disabled={!canNext()} className="flex-1 bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-800 disabled:opacity-50">הבא →</button>
