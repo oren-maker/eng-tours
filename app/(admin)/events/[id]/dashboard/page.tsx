@@ -200,66 +200,22 @@ export default function EventDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Orders (2/3) */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-800">הזמנות האירוע</h3>
-              <Link href="/orders" className="text-xs text-primary-600 hover:text-primary-800">כל ההזמנות →</Link>
-            </div>
-            {orders.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <div className="text-4xl mb-2">📋</div>
-                <p className="text-sm">אין הזמנות לאירוע</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 text-gray-600">
-                      <th className="text-right px-4 py-3 font-medium">מספר</th>
-                      <th className="text-right px-4 py-3 font-medium">סטטוס</th>
-                      <th className="text-right px-4 py-3 font-medium">סכום</th>
-                      <th className="text-right px-4 py-3 font-medium">שולם</th>
-                      <th className="text-right px-4 py-3 font-medium">תאריך</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {orders.slice(0, 15).map((o) => (
-                      <tr key={o.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <Link href={`/orders/${o.id}`} className="font-mono text-xs text-primary-600 hover:text-primary-800">
-                            #{o.id.slice(0, 8)}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[o.status]}`}>
-                            {STATUS_LABELS[o.status] || o.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-medium text-gray-800">₪{Number(o.total_price || 0).toLocaleString("he-IL")}</td>
-                        <td className="px-4 py-3 text-gray-600">₪{o.amount_paid || 0}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
-                          {new Date(o.created_at).toLocaleDateString("he-IL")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Status Breakdown - clickable */}
+          {/* Status Breakdown - at top */}
           <div className="bg-white rounded-xl shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold text-gray-800">פילוח סטטוסים</h3>
+              <h3 className="text-base font-semibold text-gray-800">
+                פילוח סטטוסים
+                <span className="text-sm text-gray-500 font-normal mr-2">· סה״כ {totalOrders} הזמנות</span>
+              </h3>
               {statusFilter && (
                 <button onClick={() => setStatusFilter(null)} className="text-xs text-gray-500 hover:text-primary-700">
-                  ✕ נקה סינון
+                  ✕ סגור
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
+                { key: "all", label: "הכל", count: totalOrders, bg: "bg-primary-50", bgActive: "bg-primary-100 ring-2 ring-primary-400", text: "text-primary-700", textLabel: "text-primary-600" },
                 { key: "confirmed", label: "מאושרות", count: confirmedOrders, bg: "bg-green-50", bgActive: "bg-green-100 ring-2 ring-green-400", text: "text-green-700", textLabel: "text-green-600" },
                 { key: "pending", label: "ממתינות", count: pendingOrders, bg: "bg-yellow-50", bgActive: "bg-yellow-100 ring-2 ring-yellow-400", text: "text-yellow-700", textLabel: "text-yellow-600" },
                 { key: "cancelled", label: "מבוטלות", count: cancelledOrders, bg: "bg-red-50", bgActive: "bg-red-100 ring-2 ring-red-400", text: "text-red-700", textLabel: "text-red-600" },
@@ -278,9 +234,10 @@ export default function EventDashboardPage() {
               ))}
             </div>
 
-            {/* Filtered list */}
+            {/* Filtered list - shows only when a status is selected */}
             {statusFilter && (() => {
               const filtered = orders.filter((o) => {
+                if (statusFilter === "all") return true;
                 if (statusFilter === "confirmed") return o.status === "confirmed" || o.status === "completed";
                 if (statusFilter === "pending") return o.status === "pending_payment" || o.status === "draft";
                 if (statusFilter === "cancelled") return o.status === "cancelled";
@@ -289,25 +246,48 @@ export default function EventDashboardPage() {
               });
               return (
                 <div className="mt-4 border-t border-gray-100 pt-3">
-                  <div className="text-sm text-gray-600 mb-2">{filtered.length} הזמנות:</div>
-                  <div className="max-h-80 overflow-y-auto space-y-1">
-                    {filtered.length === 0 ? (
-                      <p className="text-center text-gray-400 py-4 text-sm">אין הזמנות בסטטוס זה</p>
-                    ) : (
-                      filtered.map((o) => (
-                        <Link
-                          key={o.id}
-                          href={`/orders/${o.id}`}
-                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded text-sm border-r-2 border-gray-200"
-                        >
-                          <span className="font-mono text-xs text-primary-600">#{o.id.slice(0, 8)}</span>
-                          <span className="text-gray-700 text-xs">{STATUS_LABELS[o.status] || o.status}</span>
-                          <span className="font-medium text-gray-800">₪{Number(o.total_price || 0).toLocaleString("he-IL")}</span>
-                          <span className="text-gray-400 text-xs">{new Date(o.created_at).toLocaleDateString("he-IL")}</span>
-                        </Link>
-                      ))
-                    )}
+                  <div className="text-sm text-gray-600 mb-2 flex items-center justify-between">
+                    <span>{filtered.length} הזמנות:</span>
+                    <Link href="/orders" className="text-xs text-primary-600 hover:text-primary-800">כל ההזמנות →</Link>
                   </div>
+                  {filtered.length === 0 ? (
+                    <p className="text-center text-gray-400 py-4 text-sm">אין הזמנות בסטטוס זה</p>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 text-gray-600 text-xs sticky top-0">
+                            <th className="text-right px-3 py-2 font-medium">מספר</th>
+                            <th className="text-right px-3 py-2 font-medium">סטטוס</th>
+                            <th className="text-right px-3 py-2 font-medium">סכום</th>
+                            <th className="text-right px-3 py-2 font-medium">שולם</th>
+                            <th className="text-right px-3 py-2 font-medium">תאריך</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {filtered.map((o) => (
+                            <tr key={o.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2">
+                                <Link href={`/orders/${o.id}`} className="font-mono text-xs text-primary-600 hover:text-primary-800">
+                                  #{o.id.slice(0, 8)}
+                                </Link>
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[o.status]}`}>
+                                  {STATUS_LABELS[o.status] || o.status}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 font-medium text-gray-800">₪{Number(o.total_price || 0).toLocaleString("he-IL")}</td>
+                              <td className="px-3 py-2 text-gray-600">₪{Number(o.amount_paid || 0).toLocaleString("he-IL")}</td>
+                              <td className="px-3 py-2 text-xs text-gray-500">
+                                {new Date(o.created_at).toLocaleDateString("he-IL")}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               );
             })()}
