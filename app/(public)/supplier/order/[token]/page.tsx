@@ -46,9 +46,22 @@ export default function SupplierOrderPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Check if already authenticated
-    const stored = typeof window !== "undefined" ? localStorage.getItem("supplier_auth") : null;
-    if (stored === "true") setAuthenticated(true);
+    // Check if admin is logged in via NextAuth session
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((session) => {
+        if (session?.user?.role === "admin" || session?.user?.role === "supplier") {
+          setAuthenticated(true);
+          return;
+        }
+        // Fallback - check local supplier auth
+        const stored = typeof window !== "undefined" ? localStorage.getItem("supplier_auth") : null;
+        if (stored === "true") setAuthenticated(true);
+      })
+      .catch(() => {
+        const stored = typeof window !== "undefined" ? localStorage.getItem("supplier_auth") : null;
+        if (stored === "true") setAuthenticated(true);
+      });
   }, []);
 
   useEffect(() => {

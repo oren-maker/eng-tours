@@ -81,7 +81,12 @@ export default function EventDashboardPage() {
 
   // Non-cancelled orders = valid orders for revenue/cost calculation
   const validOrders = orders.filter((o) => o.status !== "cancelled" && o.status !== "draft");
-  const revenue = validOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+  const cancelledOrdersList = orders.filter((o) => o.status === "cancelled");
+
+  const regularRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+  // Cancellation fees become additional revenue
+  const cancellationFees = cancelledOrdersList.reduce((sum, o) => sum + (Number(o.cancellation_fee_amount) || 0), 0);
+  const revenue = regularRevenue + cancellationFees;
   const totalPaid = orders.reduce((sum, o) => sum + (Number(o.amount_paid) || 0), 0);
 
   // Flight statistics
@@ -167,7 +172,10 @@ export default function EventDashboardPage() {
         <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-primary-500">
           <div className="text-xs text-gray-500 mb-1">סה״כ הכנסות</div>
           <div className="text-2xl font-bold text-gray-800">₪{Math.round(revenue).toLocaleString("he-IL")}</div>
-          <div className="text-xs text-gray-400 mt-1">שולם: ₪{totalPaid.toLocaleString("he-IL")}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            שולם: ₪{totalPaid.toLocaleString("he-IL")}
+            {cancellationFees > 0 && <span className="text-orange-600 block">כולל ₪{Math.round(cancellationFees).toLocaleString("he-IL")} דמי ביטול</span>}
+          </div>
         </div>
         <div className="bg-white rounded-xl p-5 shadow-sm border-r-4 border-green-500">
           <div className="text-xs text-gray-500 mb-1">רווח גולמי משוער</div>

@@ -46,12 +46,14 @@ export async function POST(
     ? `\n[${new Date().toLocaleString("he-IL")}] בוטל עם דמי ביטול ${cancellation_fee_percent}% (₪${feeAmount.toFixed(0)}). החזר: ₪${refundAmount.toFixed(0)}`
     : `\n[${new Date().toLocaleString("he-IL")}] בוטל ללא דמי ביטול`;
 
-  // Cancel the order
+  // Cancel the order - save cancellation fee data
   const { data: updatedOrder, error: updateError } = await supabase
     .from("orders")
     .update({
       status: "cancelled",
       cancelled_by: token?.sub || null,
+      cancellation_fee_percent,
+      cancellation_fee_amount: feeAmount,
       internal_notes: (currentOrder.internal_notes || "") + feeNote,
     })
     .eq("id", id)

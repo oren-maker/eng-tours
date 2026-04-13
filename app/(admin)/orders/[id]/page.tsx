@@ -104,11 +104,14 @@ export default function OrderDetailPage() {
   const [savingNote, setSavingNote] = useState(false);
 
   const fetchOrder = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}`);
+      // Cache-bust to force fresh data
+      const res = await fetch(`/api/orders/${orderId}?t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
-        // API returns { order: {...} }
         setOrder(data.order || data);
       }
     } catch (err) {
