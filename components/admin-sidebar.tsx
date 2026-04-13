@@ -55,8 +55,9 @@ export default function AdminSidebar() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex fixed top-0 right-0 bottom-0 w-56 bg-primary-700 text-white flex-col z-50 shadow-lg">
         <div className="p-4 border-b border-white/15 text-center">
-          <h1 className="text-lg font-bold">ENG Tours</h1>
-          <p className="text-[10px] text-white/50 mt-0.5">מערכת ניהול אירועים</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="ENG Tours" className="h-12 w-auto mx-auto object-contain" />
+          <p className="text-[10px] text-white/50 mt-1">מערכת ניהול אירועים</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
