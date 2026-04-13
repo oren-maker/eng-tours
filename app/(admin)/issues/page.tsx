@@ -115,6 +115,9 @@ export default function IssuesPage() {
                             💬 {issue.notes}
                           </div>
                         )}
+                        {(issue.payment_amount != null || issue.payment_method || issue.payment_confirmation) && (
+                          <PaymentInfo conf={issue} />
+                        )}
                       </div>
 
                       <div className="text-xs text-gray-400 mt-2">
@@ -140,6 +143,36 @@ export default function IssuesPage() {
               );
             })}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PaymentInfo({ conf }: { conf: any }) {
+  const currencySymbol: Record<string, string> = { ILS: "₪", USD: "$", EUR: "€", GBP: "£" };
+  const methodLabel: Record<string, string> = { credit: "כרטיס אשראי", transfer: "העברה בנקאית", cash: "מזומן", check: "צ'ק" };
+  return (
+    <div className="mt-2 bg-amber-50 border border-amber-200 rounded p-2 text-xs">
+      <div className="font-semibold text-amber-800 mb-1">💰 פרטי תשלום</div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-0.5 text-gray-700">
+        {conf.payment_amount != null && (
+          <div>סכום: <span className="font-semibold">{currencySymbol[conf.payment_currency || "ILS"] || ""}{Number(conf.payment_amount).toLocaleString("he-IL")}</span></div>
+        )}
+        {conf.payment_method && (
+          <div>אמצעי: <span className="font-semibold">{methodLabel[conf.payment_method] || conf.payment_method}</span></div>
+        )}
+        {conf.payment_installments > 1 && (
+          <div>תשלומים: <span className="font-semibold">{conf.payment_installments}</span></div>
+        )}
+        {conf.payment_confirmation && (
+          <div>אישור עסקה: <span className="font-mono font-semibold" dir="ltr">{conf.payment_confirmation}</span></div>
+        )}
+        {conf.payment_date && (
+          <div>ת. תשלום: <span className="font-semibold">{new Date(conf.payment_date).toLocaleDateString("he-IL")}</span></div>
+        )}
+        {conf.payment_due_date && (
+          <div>ת. לחיוב: <span className="font-semibold">{new Date(conf.payment_due_date).toLocaleDateString("he-IL")}</span></div>
         )}
       </div>
     </div>
