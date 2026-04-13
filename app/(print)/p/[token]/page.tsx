@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
-import PrintActions from "./print-actions";
+import PrintActions from "../../orders/[id]/print/print-actions";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "טיוטה",
@@ -26,16 +26,17 @@ function fmtMoney(n: any) {
   return "₪" + (Number(n) || 0).toLocaleString("he-IL");
 }
 
-export default async function OrderPrintPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function OrderPrintPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   const supabase = createServiceClient();
 
   const { data: order } = await supabase
     .from("orders")
     .select("*, events(name, start_date, end_date, destination_country)")
-    .eq("id", id)
+    .eq("share_token", token)
     .single();
   if (!order) notFound();
+  const id = order.id;
 
   const { data: participants } = await supabase
     .from("participants")

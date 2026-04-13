@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import PrintActions from "../../../orders/[id]/print/print-actions";
+// (print-actions kept in old location for sharing)
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "טיוטה", pending_payment: "ממתין", partial: "חלקי",

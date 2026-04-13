@@ -226,9 +226,10 @@ function BookingContent() {
         </div>
       )}
 
-      <header className="bg-gradient-to-l from-primary-800 to-primary-600 text-white py-8 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-1">ENG Tours</h1>
+      <header className="bg-gradient-to-l from-primary-800 to-primary-600 text-white py-6 px-4">
+        <div className="max-w-5xl mx-auto flex items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="ENG Tours" className="h-14 w-auto object-contain" />
           <p className="text-sm text-white/80">טופס הזמנה - {event.name}</p>
         </div>
       </header>
@@ -599,17 +600,26 @@ function BookingContent() {
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-xl font-bold text-primary-900 mb-4">❓ שאלות ותשובות</h3>
             <div className="space-y-2">
-              {faqs.map((faq) => (
-                <details key={faq.id} className="border border-gray-100 rounded-lg overflow-hidden">
-                  <summary className="p-3 cursor-pointer hover:bg-gray-50 flex items-center justify-between text-sm font-medium text-gray-800">
-                    <span>{faq.question}</span>
-                    <span className="text-primary-500 text-xs">▼</span>
-                  </summary>
-                  <div className="p-3 pt-0 text-sm text-gray-600 leading-relaxed">
-                    {faq.answer}
+              {faqs.map((faq) => {
+                const isOpen = openFaq === faq.id;
+                return (
+                  <div key={faq.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : faq.id)}
+                      className="w-full p-3 text-right cursor-pointer hover:bg-gray-50 flex items-center justify-between text-sm font-medium text-gray-800"
+                    >
+                      <span>{faq.question}</span>
+                      <span className={`text-primary-500 text-xs transition-transform ${isOpen ? "rotate-180" : ""}`}>▼</span>
+                    </button>
+                    {isOpen && (
+                      <div className="p-3 pt-0 text-sm text-gray-600 leading-relaxed border-t border-gray-100">
+                        {faq.answer}
+                      </div>
+                    )}
                   </div>
-                </details>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

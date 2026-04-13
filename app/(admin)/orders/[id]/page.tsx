@@ -261,7 +261,7 @@ export default function OrderDetailPage() {
       {/* PDF & Send buttons */}
       <div className="flex items-center gap-2 flex-wrap mb-4 bg-white rounded-xl p-3 shadow-sm">
         <span className="text-sm text-gray-600 font-medium">📄 פעולות הזמנה:</span>
-        <a href={`/orders/${order.id}/print`} target="_blank" rel="noopener noreferrer"
+        <a href={`/p/${(order as any).share_token || order.id}`} target="_blank" rel="noopener noreferrer"
           className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800">
           📥 הורד PDF
         </a>

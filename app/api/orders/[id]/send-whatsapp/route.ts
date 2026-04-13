@@ -17,10 +17,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!isConfigured()) return NextResponse.json({ error: "WaSender not configured" }, { status: 500 });
 
   const base = process.env.NEXT_PUBLIC_BASE_URL || "https://eng-tours.vercel.app";
-  const link = `${base}/orders/${id}/print`;
-
   const supabase = createServiceClient();
-  const { data: order } = await supabase.from("orders").select("events(name)").eq("id", id).single();
+  const { data: order } = await supabase.from("orders").select("share_token, events(name)").eq("id", id).single();
+  const link = `${base}/p/${(order as any)?.share_token || id}`;
   const eventName = (order as any)?.events?.name || "אירוע";
 
   // Find connected session
