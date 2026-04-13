@@ -50,7 +50,8 @@ export default function PackageWizardPage() {
         if (Array.isArray(flightsData)) setFlights(flightsData);
         if (Array.isArray(roomsData)) setRooms(roomsData.filter((r: any) => r.event_id === eventId));
         if (Array.isArray(ticketsData)) setTickets(ticketsData.filter((t: any) => t.event_id === eventId));
-        if (Array.isArray(faqData)) setFaqs(faqData.filter((f: any) => f.is_active));
+        const faqArr = Array.isArray(faqData) ? faqData : (faqData?.faqs || []);
+        setFaqs(faqArr.filter((f: any) => f.is_active !== false));
       })
       .finally(() => setLoading(false));
   }, [eventId]);
