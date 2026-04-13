@@ -499,22 +499,9 @@ export default function SupplierOrderPage() {
               <h3 className="text-lg font-semibold text-gray-800 mb-3">תשלומים שבוצעו</h3>
               {(() => {
                 const pmts = (order?.payments || []) as any[];
-                const perParticipant = participants
-                  .filter((p: any) => Number(p.amount_paid) > 0)
-                  .map((p: any) => ({
-                    _kind: "participant",
-                    key: "p-" + p.id,
-                    payer: `${p.first_name_en} ${p.last_name_en}`,
-                    amount: p.amount_paid,
-                    method: p.payment_method,
-                    card_last4: p.payment_card_last4,
-                    confirmation: p.payment_confirmation,
-                    date: p.payment_date,
-                  }));
-                const extra = pmts.map((pm: any) => {
+                const rows = pmts.map((pm: any) => {
                   const payer = participants.find((pt: any) => pt.id === pm.participant_id) as any;
                   return {
-                    _kind: "payment",
                     key: "x-" + pm.id,
                     payer: payer ? `${payer.first_name_en} ${payer.last_name_en}` : "— כללי —",
                     amount: pm.amount,
@@ -524,7 +511,6 @@ export default function SupplierOrderPage() {
                     date: pm.payment_date,
                   };
                 });
-                const rows = [...perParticipant, ...extra];
                 if (rows.length === 0) {
                   return <p className="text-sm text-gray-400 text-center py-4">לא נרשמו תשלומים עדיין</p>;
                 }

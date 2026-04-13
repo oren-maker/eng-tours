@@ -45,6 +45,7 @@ export async function POST(request: Request) {
     }).eq("id", participant_id);
   }
 
+
   const newPaid = paid + amt;
   const orderUpdate: any = { amount_paid: newPaid };
   if (newPaid >= total) orderUpdate.status = "completed";
