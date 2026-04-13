@@ -337,12 +337,13 @@ export async function POST(request: NextRequest) {
             if (p.phone) phones.add(String(p.phone));
           }
 
+          const { renderTemplate } = await import("@/lib/wa-templates");
           for (const phone of phones) {
             let digits = phone.replace(/[^0-9]/g, "");
             if (digits.startsWith("0")) digits = "972" + digits.slice(1);
             const to = "+" + digits;
             const link = `${base}/p/${order.share_token}`;
-            const text = `🎉 *ENG TOURS*\nההזמנה שלך התקבלה!\n\nאירוע: *${eventName}*\nמספר הזמנה: *#${orderShortId}*\n\nצפייה ופרטים מלאים:\n${link}`;
+            const text = await renderTemplate("order_created", { event_name: eventName, order_id: orderShortId, link });
             try {
               await wasender.sendTextWithSessionKey(session.api_key, { to, text });
               await supabase.from("whatsapp_log").insert({

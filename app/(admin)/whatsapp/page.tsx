@@ -338,74 +338,15 @@ export default function WhatsAppAdminPage() {
         </div>
       )}
 
-      {/* Templates tab */}
+      {/* Templates tab - redirects to dedicated page */}
       {activeTab === "templates" && (
-        <div className="space-y-4">
-          {templates.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center text-sm text-gray-400">
-              אין תבניות
-            </div>
-          ) : (
-            templates.map((tpl) => (
-              <div
-                key={tpl.id}
-                className="bg-white rounded-xl shadow-sm p-5 border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-gray-900">{tpl.name}</h3>
-                  <button
-                    onClick={() => {
-                      setEditingTemplate(tpl);
-                      setEditBody(tpl.body);
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    עריכה
-                  </button>
-                </div>
-                {editingTemplate?.id === tpl.id ? (
-                  <div className="space-y-2">
-                    <textarea
-                      value={editBody}
-                      onChange={(e) => setEditBody(e.target.value)}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleUpdateTemplate}
-                        className="px-4 py-1.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-dark"
-                      >
-                        שמור
-                      </button>
-                      <button
-                        onClick={() => setEditingTemplate(null)}
-                        className="px-4 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm"
-                      >
-                        ביטול
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">
-                    {tpl.body}
-                  </p>
-                )}
-                {tpl.variables?.length > 0 && (
-                  <div className="mt-2 flex gap-1 flex-wrap">
-                    {tpl.variables.map((v) => (
-                      <span
-                        key={v}
-                        className="px-2 py-0.5 bg-primary-50 text-primary text-xs rounded-full"
-                      >
-                        {`{{${v}}}`}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
+        <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+          <div className="text-5xl mb-3">📝</div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">ניהול תבניות</h3>
+          <p className="text-sm text-gray-500 mb-5">עריכת כל התבניות של הודעות WhatsApp עם תצוגה מקדימה</p>
+          <a href="/whatsapp/templates" className="inline-block bg-primary-700 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-primary-800">
+            פתח ניהול תבניות →
+          </a>
         </div>
       )}
 

@@ -30,7 +30,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!session?.api_key) return NextResponse.json({ error: "אין חשבון WhatsApp מחובר" }, { status: 400 });
 
   const to = normalizePhone(phone);
-  const text = `📋 *ENG TOURS*\nפרטי הזמנה לאירוע: *${eventName}*\n\nצפייה והורדת PDF:\n${link}`;
+  const { renderTemplate } = await import("@/lib/wa-templates");
+  const text = await renderTemplate("order_details", { event_name: eventName, link });
 
   const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
   if (!r.ok) return NextResponse.json({ success: false, error: r.error }, { status: 500 });

@@ -62,10 +62,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const sessions: any[] = Array.isArray(sr.data) ? sr.data : ((sr.data as any)?.data || []);
     const session = sessions.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase()));
     if (session?.api_key) {
+      const { renderTemplate } = await import("@/lib/wa-templates");
       for (const p of participants) {
         if (!p.phone) continue;
         const to = normalizePhone(p.phone);
-        const text = `📋 *ENG TOURS*\nשלום ${p.first_name_en || ""}! פרטי הזמנה לאירוע: *${eventName}*\n\nצפייה והורדת PDF:\n${link}`;
+        const text = await renderTemplate("order_details_buyers", { first_name: p.first_name_en || "", event_name: eventName, link });
         const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
         if (r.ok) {
           sentWA++;
