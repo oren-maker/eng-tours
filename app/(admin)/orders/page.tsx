@@ -133,7 +133,7 @@ function OrdersContent() {
   const displayedOrders = filteredOrders.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [view, statusFilter, search]);
+  useEffect(() => { setPage(1); }, [view, statusFilter, search, eventFilter]);
 
   return (
     <div>
@@ -297,18 +297,25 @@ function OrdersContent() {
         </div>
 
         <div className="space-y-4">
-          {/* Quick stats */}
+          {/* Quick stats - respects event filter */}
           <div className="bg-white rounded-xl shadow-sm p-4">
-            <h3 className="text-base font-semibold text-gray-800 mb-3">סטטוס מהיר</h3>
+            <h3 className="text-base font-semibold text-gray-800 mb-3">
+              סטטוס מהיר
+              {eventFilter && <span className="text-xs text-gray-400 font-normal mr-1">({eventFilter})</span>}
+            </h3>
             <div className="space-y-2">
               {Object.entries(STATUS_LABELS).map(([key, label]) => {
-                const count = orders.filter((o) => o.status === key).length;
+                const count = orders.filter((o) =>
+                  o.status === key && (!eventFilter || o.event_id === eventFilter)
+                ).length;
                 if (count === 0) return null;
                 return (
                   <button
                     key={key}
                     onClick={() => setStatusFilter(statusFilter === key ? "" : key)}
-                    className="w-full flex items-center justify-between py-1 hover:bg-gray-50 rounded px-2 transition-colors"
+                    className={`w-full flex items-center justify-between py-1 hover:bg-gray-50 rounded px-2 transition-colors ${
+                      statusFilter === key ? "bg-gray-100" : ""
+                    }`}
                   >
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGES[key]}`}>
                       {label}
@@ -318,6 +325,14 @@ function OrdersContent() {
                 );
               })}
             </div>
+            {eventFilter && (
+              <button
+                onClick={() => { setEventFilter(""); setStatusFilter(""); }}
+                className="mt-3 text-xs text-gray-500 hover:text-primary-700 w-full text-center"
+              >
+                ✕ נקה סינון אירוע
+              </button>
+            )}
           </div>
 
           {/* Waiting list */}
