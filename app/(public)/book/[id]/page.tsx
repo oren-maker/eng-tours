@@ -45,6 +45,7 @@ function BookingContent() {
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [selectedTicket, setSelectedTicket] = useState<string>("");
   const [openSection, setOpenSection] = useState<"outbound" | "return" | "room" | "ticket" | null>("outbound");
+  const [decided, setDecided] = useState<Set<string>>(new Set());
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [contactEmail, setContactEmail] = useState("");
   const [phonePrefix, setPhonePrefix] = useState("+972");
@@ -162,7 +163,13 @@ function BookingContent() {
 
   function canNext() {
     if (step === 1) return peopleCount > 0;
-    if (step === 2) return !!(outboundFlight || returnFlight || selectedRoom || selectedTicket);
+    if (step === 2) {
+      const required: string[] = [];
+      if (availableFlights.length > 0) required.push("outbound", "return");
+      if (availableRooms.length > 0) required.push("room");
+      if (availableTickets.length > 0) required.push("ticket");
+      return required.every((k) => decided.has(k));
+    }
     if (step === 3) return passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.birth_date) && contactEmail && contactPhone;
     return true;
   }
@@ -280,6 +287,9 @@ function BookingContent() {
               if (availableRooms.length > 0) sections.push({ key: "room", label: "חדר במלון", icon: "🏨", available: true });
               if (availableTickets.length > 0) sections.push({ key: "ticket", label: "כרטיס", icon: "🎫", available: true });
 
+              const totalSections = sections.length;
+              const markDecided = (key: string) => setDecided((prev) => new Set(prev).add(key));
+
               const goToNext = (current: string) => {
                 const idx = sections.findIndex((s) => s.key === current);
                 const next = sections[idx + 1];
@@ -318,11 +328,11 @@ function BookingContent() {
                     </div>
                   )}
 
-                  {sections.map((sec) => {
+                  {sections.map((sec, secIdx) => {
                     const open = openSection === sec.key;
-                    const picked = isSelected(sec.key);
+                    const wasDecided = decided.has(sec.key);
                     return (
-                      <div key={sec.key} className={`bg-white rounded-xl shadow-sm overflow-hidden border-2 ${open ? "border-primary-300" : isPicked(sec.key) ? "border-green-200" : "border-transparent"}`}>
+                      <div key={sec.key} className={`bg-white rounded-xl shadow-sm overflow-hidden border-2 ${open ? "border-primary-300" : wasDecided ? "border-green-200" : "border-red-200"}`}>
                         <button
                           type="button"
                           onClick={() => setOpenSection(open ? null : sec.key)}
@@ -331,16 +341,20 @@ function BookingContent() {
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <span className="text-2xl">{sec.icon}</span>
                             <div className="text-right flex-1 min-w-0">
-                              <div className="font-semibold text-gray-800">{sec.label}</div>
-                              {!open && picked && (
-                                <div className={`text-xs mt-0.5 truncate ${isPicked(sec.key) ? "text-green-700" : "text-gray-500"}`}>
-                                  {isPicked(sec.key) ? "✓ " : ""}{summary(sec.key)}
+                              <div className="font-semibold text-gray-800 flex items-center gap-2">
+                                <span>{sec.label}</span>
+                                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-normal">שלב {secIdx + 1}/{totalSections}</span>
+                                {!wasDecided && <span className="text-xs text-red-600 font-normal">⚠ חובה לבחור</span>}
+                              </div>
+                              {!open && wasDecided && (
+                                <div className="text-xs mt-0.5 truncate text-green-700">
+                                  ✓ {summary(sec.key)}
                                 </div>
                               )}
                             </div>
                           </div>
                           <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
-                            {open ? "▲ סגור" : picked ? "✏️ פתח" : "▼ פתח"}
+                            {open ? "▲ סגור" : wasDecided ? "✏️ פתח" : "▼ פתח"}
                           </span>
                         </button>
 
@@ -349,7 +363,7 @@ function BookingContent() {
                             {sec.key === "outbound" && (
                               <>
                                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                                  onClick={() => { setOutboundFlight(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  onClick={() => { setOutboundFlight(""); markDecided("outbound"); setTimeout(() => goToNext(sec.key), 200); }}>
                                   <input type="radio" name="outbound" checked={!outboundFlight} readOnly />
                                   <span className="text-sm text-gray-600">ללא טיסת הלוך</span>
                                 </label>
@@ -357,7 +371,7 @@ function BookingContent() {
                                   const remaining = (f.total_seats || 0) - (f.booked_seats || 0);
                                   return (
                                     <label key={f.id}
-                                      onClick={() => { setOutboundFlight(f.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      onClick={() => { setOutboundFlight(f.id); markDecided("outbound"); setTimeout(() => goToNext(sec.key), 200); }}
                                       className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${outboundFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
                                       <input type="radio" name="outbound" checked={outboundFlight === f.id} readOnly className="mt-1" />
                                       <div className="flex-1">
@@ -380,7 +394,7 @@ function BookingContent() {
                             {sec.key === "return" && (
                               <>
                                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                                  onClick={() => { setReturnFlight(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  onClick={() => { setReturnFlight(""); markDecided("return"); setTimeout(() => goToNext(sec.key), 200); }}>
                                   <input type="radio" name="return" checked={!returnFlight} readOnly />
                                   <span className="text-sm text-gray-600">ללא טיסת חזור</span>
                                 </label>
@@ -388,7 +402,7 @@ function BookingContent() {
                                   const remaining = (f.total_seats || 0) - (f.booked_seats || 0);
                                   return (
                                     <label key={f.id}
-                                      onClick={() => { setReturnFlight(f.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      onClick={() => { setReturnFlight(f.id); markDecided("return"); setTimeout(() => goToNext(sec.key), 200); }}
                                       className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${returnFlight === f.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
                                       <input type="radio" name="return" checked={returnFlight === f.id} readOnly className="mt-1" />
                                       <div className="flex-1">
@@ -411,7 +425,7 @@ function BookingContent() {
                             {sec.key === "room" && (
                               <>
                                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                                  onClick={() => { setSelectedRoom(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  onClick={() => { setSelectedRoom(""); markDecided("room"); setTimeout(() => goToNext(sec.key), 200); }}>
                                   <input type="radio" name="room" checked={!selectedRoom} readOnly />
                                   <span className="text-sm text-gray-600">ללא מלון</span>
                                 </label>
@@ -419,7 +433,7 @@ function BookingContent() {
                                   const remainingRooms = (r.total_rooms || 0) - (r.booked_rooms || 0);
                                   return (
                                     <label key={r.id}
-                                      onClick={() => { setSelectedRoom(r.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      onClick={() => { setSelectedRoom(r.id); markDecided("room"); setTimeout(() => goToNext(sec.key), 200); }}
                                       className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${selectedRoom === r.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
                                       <input type="radio" name="room" checked={selectedRoom === r.id} readOnly className="mt-1" />
                                       <div className="flex-1">
@@ -441,7 +455,7 @@ function BookingContent() {
                             {sec.key === "ticket" && (
                               <>
                                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                                  onClick={() => { setSelectedTicket(""); setTimeout(() => goToNext(sec.key), 200); }}>
+                                  onClick={() => { setSelectedTicket(""); markDecided("ticket"); setTimeout(() => goToNext(sec.key), 200); }}>
                                   <input type="radio" name="ticket" checked={!selectedTicket} readOnly />
                                   <span className="text-sm text-gray-600">ללא כרטיס</span>
                                 </label>
@@ -449,7 +463,7 @@ function BookingContent() {
                                   const remaining = (t.total_qty || 0) - (t.booked_qty || 0);
                                   return (
                                     <label key={t.id}
-                                      onClick={() => { setSelectedTicket(t.id); setTimeout(() => goToNext(sec.key), 200); }}
+                                      onClick={() => { setSelectedTicket(t.id); markDecided("ticket"); setTimeout(() => goToNext(sec.key), 200); }}
                                       className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer ${selectedTicket === t.id ? "border-primary-500 bg-primary-50" : "hover:bg-gray-50"}`}>
                                       <input type="radio" name="ticket" checked={selectedTicket === t.id} readOnly className="mt-1" />
                                       <div className="flex-1">
