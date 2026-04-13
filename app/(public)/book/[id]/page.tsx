@@ -10,6 +10,8 @@ interface Passenger {
   last_name_en: string;
   passport_number: string;
   birth_date: string;
+  phone?: string;
+  email?: string;
 }
 
 export default function PublicBookingPage() {
@@ -89,7 +91,7 @@ function BookingContent() {
     setPassengers((prev) => {
       const next = [...prev];
       while (next.length < peopleCount) {
-        next.push({ first_name_en: "", last_name_en: "", passport_number: "", birth_date: "" });
+        next.push({ first_name_en: "", last_name_en: "", passport_number: "", birth_date: "", phone: "", email: "" });
       }
       return next.slice(0, peopleCount);
     });
@@ -522,31 +524,7 @@ function BookingContent() {
 
                 <div className="space-y-4">
                   {passengers.map((p, i) => (
-                    <div key={i} className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-primary-700 mb-3">נוסע #{i + 1}</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">שם פרטי (באנגלית) *</label>
-                          <input type="text" value={p.first_name_en} onChange={(e) => updatePassenger(i, "first_name_en", e.target.value)} required dir="ltr"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">שם משפחה (באנגלית) *</label>
-                          <input type="text" value={p.last_name_en} onChange={(e) => updatePassenger(i, "last_name_en", e.target.value)} required dir="ltr"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">מספר דרכון *</label>
-                          <input type="text" value={p.passport_number} onChange={(e) => updatePassenger(i, "passport_number", e.target.value)} required dir="ltr"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">תאריך לידה *</label>
-                          <input type="date" value={p.birth_date} onChange={(e) => updatePassenger(i, "birth_date", e.target.value)} required
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-                        </div>
-                      </div>
-                    </div>
+                    <PassengerCard key={i} passenger={p} index={i} onChange={(field, val) => updatePassenger(i, field, val)} phonePrefixes={phonePrefixes} />
                   ))}
                 </div>
               </div>
@@ -654,6 +632,73 @@ function BookingContent() {
       <footer className="text-center py-6 text-xs text-gray-500">
         © ENG Tours - כל הזכויות שמורות
       </footer>
+    </div>
+  );
+}
+
+function PassengerCard({ passenger, index, onChange, phonePrefixes }: {
+  passenger: Passenger;
+  index: number;
+  onChange: (field: keyof Passenger, value: string) => void;
+  phonePrefixes: { value: string; label: string }[];
+}) {
+  const [showContact, setShowContact] = useState(false);
+  // First passenger doesn't need extra contact (already has main contact)
+  const allowExtraContact = index > 0;
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-4">
+      <h4 className="text-sm font-semibold text-primary-700 mb-3">נוסע #{index + 1}</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">שם פרטי (באנגלית) *</label>
+          <input type="text" value={passenger.first_name_en} onChange={(e) => onChange("first_name_en", e.target.value)} required dir="ltr"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">שם משפחה (באנגלית) *</label>
+          <input type="text" value={passenger.last_name_en} onChange={(e) => onChange("last_name_en", e.target.value)} required dir="ltr"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">מספר דרכון *</label>
+          <input type="text" value={passenger.passport_number} onChange={(e) => onChange("passport_number", e.target.value)} required dir="ltr"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">תאריך לידה *</label>
+          <input type="date" value={passenger.birth_date} onChange={(e) => onChange("birth_date", e.target.value)} required
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+        </div>
+      </div>
+
+      {allowExtraContact && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => setShowContact(!showContact)}
+            className="text-xs text-primary-700 hover:text-primary-900 font-medium flex items-center gap-1"
+          >
+            <span>{showContact ? "▲" : "▼"}</span>
+            <span>📇 פרטי איש קשר נוסף (אופציונלי)</span>
+            {(passenger.phone || passenger.email) && !showContact && <span className="text-green-600 mr-1">✓</span>}
+          </button>
+          {showContact && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">מייל</label>
+                <input type="email" value={passenger.email || ""} onChange={(e) => onChange("email", e.target.value)} dir="ltr"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">טלפון</label>
+                <input type="tel" value={passenger.phone || ""} onChange={(e) => onChange("phone", e.target.value)} dir="ltr" placeholder="+972524802830"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -289,6 +289,50 @@ export async function POST(request: NextRequest) {
       after_data: { status: orderStatus, total_price: totalPrice, event_id },
     });
 
+    // Send WhatsApp confirmations to all participants with phone numbers
+    try {
+      const { wasender, isConfigured } = await import("@/lib/wasender");
+      if (isConfigured()) {
+        const sr = await wasender.listSessions();
+        const sessions: any[] = Array.isArray(sr.data) ? sr.data : ((sr.data as any)?.data || []);
+        const session = sessions.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase()));
+        if (session?.api_key) {
+          const { data: ev } = await supabase.from("events").select("name").eq("id", event_id).single();
+          const eventName = (ev as any)?.name || "האירוע";
+          const base = process.env.NEXT_PUBLIC_BASE_URL || "https://eng-tours.vercel.app";
+          const orderShortId = order.id.slice(0, 8);
+
+          // Collect unique phones (main contact + per-participant)
+          const phones = new Set<string>();
+          const mainPhone = body?.contact_phone;
+          if (mainPhone) phones.add(String(mainPhone));
+          for (const p of participants) {
+            if (p.phone) phones.add(String(p.phone));
+          }
+
+          for (const phone of phones) {
+            let digits = phone.replace(/[^0-9]/g, "");
+            if (digits.startsWith("0")) digits = "972" + digits.slice(1);
+            const to = "+" + digits;
+            const link = `${base}/p/${order.share_token}`;
+            const text = `🎉 *ENG Tours*\nההזמנה שלך התקבלה!\n\nאירוע: *${eventName}*\nמספר הזמנה: *#${orderShortId}*\n\nצפייה ופרטים מלאים:\n${link}`;
+            try {
+              await wasender.sendTextWithSessionKey(session.api_key, { to, text });
+              await supabase.from("whatsapp_log").insert({
+                direction: "outgoing", recipient: to.replace("+", ""), recipient_number: to.replace("+", ""),
+                message_body: text, template_name: "order_created", status: "sent", order_id: order.id,
+              });
+              await new Promise((r) => setTimeout(r, 6000));
+            } catch (e) {
+              console.error("WhatsApp send failed for", phone, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("WhatsApp notify error:", e);
+    }
+
     return NextResponse.json({ order }, { status: 201 });
   } catch (err) {
     console.error("Create order error:", err);
