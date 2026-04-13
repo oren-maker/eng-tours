@@ -11,6 +11,7 @@ export default function PackagesPage() {
   const [flights, setFlights] = useState<any[]>([]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [orderCounts, setOrderCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().split("T")[0];
@@ -21,12 +22,22 @@ export default function PackagesPage() {
       cachedFetch<any[]>("/api/flights"),
       cachedFetch<any[]>("/api/rooms"),
       cachedFetch<any[]>("/api/tickets"),
+      cachedFetch<any>("/api/orders"),
     ])
-      .then(([eventsData, flightsData, roomsData, ticketsData]) => {
+      .then(([eventsData, flightsData, roomsData, ticketsData, ordersData]) => {
         if (Array.isArray(eventsData)) setEvents(eventsData.filter((e: any) => e.status === "active"));
         if (Array.isArray(flightsData)) setFlights(flightsData);
         if (Array.isArray(roomsData)) setRooms(roomsData);
         if (Array.isArray(ticketsData)) setTickets(ticketsData);
+        const ordersList = Array.isArray(ordersData) ? ordersData : (ordersData?.orders || []);
+        const counts: Record<string, number> = {};
+        for (const o of ordersList) {
+          if (o.status === "cancelled" || o.status === "draft") continue;
+          const evId = o.event_id;
+          if (!evId) continue;
+          counts[evId] = (counts[evId] || 0) + 1;
+        }
+        setOrderCounts(counts);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -62,6 +73,15 @@ export default function PackagesPage() {
           <h2 className="text-2xl font-bold text-primary-900">חבילות נסיעה</h2>
           <p className="text-sm text-gray-500 mt-1">חבילה נוצרת אוטומטית לכל אירוע - ריכוז של כל הטיסות, מלונות וכרטיסים</p>
         </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg px-4 py-2">
+            <div className="text-xs text-primary-600">סה״כ הזמנות</div>
+            <div className="text-xl font-bold text-primary-800">{Object.values(orderCounts).reduce((a, b) => a + b, 0)}</div>
+          </div>
+          <Link href="/orders" className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800">
+            📋 הצג כל ההזמנות
+          </Link>
+        </div>
       </div>
 
       {loading ? (
@@ -84,6 +104,7 @@ export default function PackagesPage() {
                   <th className="text-right px-4 py-3 font-medium">✈️ טיסות</th>
                   <th className="text-right px-4 py-3 font-medium">🏨 חדרים</th>
                   <th className="text-right px-4 py-3 font-medium">🎫 כרטיסים</th>
+                  <th className="text-right px-4 py-3 font-medium">📋 הזמנות</th>
                   <th className="text-right px-4 py-3 font-medium">מחיר מ-</th>
                   <th className="text-right px-4 py-3 font-medium">פעולות</th>
                 </tr>
@@ -107,6 +128,11 @@ export default function PackagesPage() {
                       <td className="px-4 py-3 text-gray-700 font-medium text-center">{res.flights.length}</td>
                       <td className="px-4 py-3 text-gray-700 font-medium text-center">{res.rooms.length}</td>
                       <td className="px-4 py-3 text-gray-700 font-medium text-center">{res.tickets.length}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className="inline-block bg-primary-50 text-primary-700 font-bold px-2 py-1 rounded-full text-xs">
+                          {orderCounts[ev.id] || 0}
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
                         {res.minTotal > 0 ? (
                           <span className="text-primary-700 font-bold">
@@ -146,6 +172,12 @@ export default function PackagesPage() {
                               >
                                 📢 העתק
                               </button>
+                              <Link
+                                href={`/orders?event=${ev.id}`}
+                                className="text-xs border border-primary-300 text-primary-700 px-3 py-1 rounded hover:bg-primary-50"
+                              >
+                                📋 הצג הזמנות
+                              </Link>
                             </>
                           ) : (
                             <span className="text-xs text-gray-400">אין שירותים זמינים</span>
