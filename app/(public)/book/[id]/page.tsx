@@ -710,20 +710,52 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes }: {
             <span>📇 פרטי איש קשר נוסף (אופציונלי)</span>
             {(passenger.phone || passenger.email) && !showContact && <span className="text-green-600 mr-1">✓</span>}
           </button>
-          {showContact && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">מייל</label>
-                <input type="email" value={passenger.email || ""} onChange={(e) => onChange("email", e.target.value)} dir="ltr"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+          {showContact && (() => {
+            // Parse existing phone into prefix + number
+            const fullPhone = passenger.phone || "";
+            const matchedPrefix = phonePrefixes.find((p) => fullPhone.startsWith(p.value))?.value;
+            const m = fullPhone.match(/^(\+\d{1,4})(.*)$/);
+            const currentPrefix = matchedPrefix || (m ? m[1] : "+972");
+            const currentNumber = matchedPrefix ? fullPhone.slice(matchedPrefix.length) : (m ? m[2] : fullPhone);
+
+            const updatePhone = (prefix: string, number: string) => {
+              const cleaned = number.replace(/[^0-9]/g, "");
+              onChange("phone", cleaned ? prefix + cleaned : "");
+            };
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">מייל</label>
+                  <input type="email" value={passenger.email || ""} onChange={(e) => onChange("email", e.target.value)} dir="ltr"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">טלפון</label>
+                  <div className="flex gap-1" dir="ltr">
+                    <input
+                      type="text"
+                      list={`phone-prefixes-p${index}`}
+                      value={currentPrefix}
+                      onChange={(e) => updatePhone(e.target.value, currentNumber)}
+                      placeholder="+972"
+                      className="w-24 border border-gray-200 rounded-lg px-2 py-2 text-sm focus:border-primary-500 outline-none"
+                    />
+                    <datalist id={`phone-prefixes-p${index}`}>
+                      {phonePrefixes.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                    </datalist>
+                    <input
+                      type="tel"
+                      value={currentNumber}
+                      onChange={(e) => updatePhone(currentPrefix, e.target.value)}
+                      placeholder="524802830"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">טלפון</label>
-                <input type="tel" value={passenger.phone || ""} onChange={(e) => onChange("phone", e.target.value)} dir="ltr" placeholder="+972524802830"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>
