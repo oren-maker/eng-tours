@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -11,8 +12,9 @@ function fmt(n: any) {
   return "₪" + (Number(n) || 0).toLocaleString("he-IL");
 }
 
-export default function CancellationsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function CancellationsPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [event, setEvent] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
