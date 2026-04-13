@@ -117,7 +117,21 @@ export default function SupplierOrderPage() {
             ticketMap.get(p.ticket_id).participants.push(fullName);
           }
         }
-        setItems([...Array.from(flightMap.values()), ...Array.from(roomMap.values()), ...Array.from(ticketMap.values())]);
+        // Pre-fill existing supplier confirmations
+        const existingConfirmations = data.supplier_confirmations || [];
+        const allItems = [...Array.from(flightMap.values()), ...Array.from(roomMap.values()), ...Array.from(ticketMap.values())];
+        for (const item of allItems) {
+          // Find most recent confirmation for this item
+          const existing = existingConfirmations.find((c: any) => c.item_type === item.type && c.item_id === item.id);
+          if (existing) {
+            item.confirmation_number = existing.confirmation_number || "";
+            item.notes = existing.notes || "";
+            item.has_issue = !!existing.has_issue;
+            item.issue_description = existing.issue_description || "";
+            (item as any).existing = true;
+          }
+        }
+        setItems(allItems);
       })
       .catch(() => setError("שגיאה בטעינת ההזמנה"))
       .finally(() => setLoading(false));
@@ -290,6 +304,11 @@ export default function SupplierOrderPage() {
                       <p className="text-xs text-primary-700 mt-1">עבור: {item.participants.join(", ")}</p>
                     </div>
                   </div>
+                  {(item as any).existing && (
+                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
+                      ✓ כבר אושר
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -330,7 +349,7 @@ export default function SupplierOrderPage() {
             </button>
             <button onClick={handleSubmit} disabled={saving}
               className="bg-primary-700 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-primary-800 transition-colors disabled:opacity-50">
-              {saving ? "שומר..." : "✓ שלח אישורים"}
+              {saving ? "שומר..." : items.some((i) => (i as any).existing) ? "💾 שמור שינויים" : "✓ שלח אישורים"}
             </button>
           </div>
         )}

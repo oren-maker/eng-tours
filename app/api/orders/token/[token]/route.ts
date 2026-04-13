@@ -30,6 +30,13 @@ export async function GET(
     `)
     .eq("order_id", order.id);
 
+  // Include existing supplier confirmations
+  const { data: supplierConfirmations } = await supabase
+    .from("supplier_confirmations")
+    .select("*")
+    .eq("order_id", order.id)
+    .order("created_at", { ascending: false });
+
   return NextResponse.json({
     id: order.id,
     event_id: order.event_id,
@@ -40,5 +47,6 @@ export async function GET(
     amount_paid: order.amount_paid,
     created_at: order.created_at,
     participants: participants || [],
+    supplier_confirmations: supplierConfirmations || [],
   });
 }
