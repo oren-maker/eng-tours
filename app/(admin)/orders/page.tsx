@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { cachedFetch } from "@/lib/cached-fetch";
+import { useSearchParams } from "next/navigation";
+import { cachedFetch, invalidateCache } from "@/lib/cached-fetch";
 
 interface Order {
   id: string;
@@ -54,17 +55,33 @@ const STATUS_LABELS: Record<string, string> = {
 const PAGE_SIZE = 20;
 
 export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-12 text-gray-400">טוען...</div>}>
+      <OrdersContent />
+    </Suspense>
+  );
+}
+
+function OrdersContent() {
+  const searchParams = useSearchParams();
+  const urlEvent = searchParams.get("event") || "";
+  const urlStatus = searchParams.get("status") || "";
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [waiters, setWaiters] = useState<Waiter[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"active" | "archive">("active");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(urlStatus);
+  const [eventFilter, setEventFilter] = useState(urlEvent);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
   const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
+  function loadData() {
+    setLoading(true);
+    invalidateCache("/api/orders");
+    invalidateCache("/api/waiting-list");
     Promise.all([
       cachedFetch<any>("/api/orders"),
       cachedFetch<any>("/api/waiting-list"),
@@ -74,7 +91,9 @@ export default function OrdersPage() {
         if (Array.isArray(waitersData)) setWaiters(waitersData);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { loadData(); }, []);
 
   // Split by archive (event_end_date < today) OR cancelled orders → archive
   const activeOrders = orders.filter((o) => {
@@ -88,10 +107,11 @@ export default function OrdersPage() {
     return endDate && endDate.split("T")[0] < today;
   });
 
-  // Apply filters: status + search
+  // Apply filters: status + event + search
   const searchLower = search.trim().toLowerCase();
   const filteredOrders = (view === "active" ? activeOrders : archivedOrders)
     .filter((o) => !statusFilter || o.status === statusFilter)
+    .filter((o) => !eventFilter || o.event_id === eventFilter)
     .filter((o) => {
       if (!searchLower) return true;
       // Search in order ID
@@ -118,7 +138,13 @@ export default function OrdersPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-primary-900">הזמנות</h2>
+        <h2 className="text-2xl font-bold text-primary-900">
+          הזמנות
+          {eventFilter && <span className="text-sm font-normal text-gray-500 mr-2">· סינון: {eventFilter}</span>}
+        </h2>
+        <button onClick={loadData} className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800">
+          🔄 רענן
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
