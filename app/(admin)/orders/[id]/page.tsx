@@ -713,6 +713,13 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
     notes: conf.notes || "",
     has_issue: !!conf.has_issue,
     issue_description: conf.issue_description || "",
+    payment_amount: conf.payment_amount != null ? String(conf.payment_amount) : "",
+    payment_currency: conf.payment_currency || "ILS",
+    payment_method: conf.payment_method || "",
+    payment_installments: conf.payment_installments != null ? String(conf.payment_installments) : "1",
+    payment_confirmation: conf.payment_confirmation || "",
+    payment_date: conf.payment_date || "",
+    payment_due_date: conf.payment_due_date || "",
   });
 
   async function handleSave() {
@@ -721,7 +728,16 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
       const res = await fetch(`/api/supplier-confirmations/${conf.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          payment_amount: form.payment_amount ? Number(form.payment_amount) : null,
+          payment_installments: form.payment_installments ? Number(form.payment_installments) : null,
+          payment_currency: form.payment_currency || null,
+          payment_method: form.payment_method || null,
+          payment_confirmation: form.payment_confirmation || null,
+          payment_date: form.payment_date || null,
+          payment_due_date: form.payment_due_date || null,
+        }),
       });
       if (res.ok) {
         setEditing(false);
@@ -785,10 +801,57 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
                 className="w-full border border-red-200 rounded px-2 py-1 text-xs focus:border-red-500 outline-none resize-none" />
             </div>
           )}
+          <div className="pt-2 mt-2 border-t border-primary-200">
+            <div className="text-xs font-semibold text-gray-700 mb-1">💰 פרטי תשלום</div>
+            <div className="grid grid-cols-2 gap-2">
+              <input type="number" step="0.01" placeholder="סכום" value={form.payment_amount}
+                onChange={(e) => setForm({ ...form, payment_amount: e.target.value })}
+                dir="ltr" className="border border-gray-200 rounded px-2 py-1 text-xs" />
+              <select value={form.payment_currency}
+                onChange={(e) => setForm({ ...form, payment_currency: e.target.value })}
+                className="border border-gray-200 rounded px-2 py-1 text-xs">
+                <option value="ILS">₪ שקל</option>
+                <option value="USD">$ דולר</option>
+                <option value="EUR">€ אירו</option>
+                <option value="GBP">£ פאונד</option>
+              </select>
+              <select value={form.payment_method}
+                onChange={(e) => setForm({ ...form, payment_method: e.target.value })}
+                className="border border-gray-200 rounded px-2 py-1 text-xs">
+                <option value="">אמצעי תשלום...</option>
+                <option value="credit">כרטיס אשראי</option>
+                <option value="transfer">העברה בנקאית</option>
+                <option value="cash">מזומן</option>
+                <option value="check">צ&apos;ק</option>
+              </select>
+              <input type="number" min="1" placeholder="תשלומים" value={form.payment_installments}
+                onChange={(e) => setForm({ ...form, payment_installments: e.target.value })}
+                dir="ltr" className="border border-gray-200 rounded px-2 py-1 text-xs" />
+              <input type="text" placeholder="מספר אישור עסקה" value={form.payment_confirmation}
+                onChange={(e) => setForm({ ...form, payment_confirmation: e.target.value })}
+                dir="ltr" className="border border-gray-200 rounded px-2 py-1 text-xs col-span-2" />
+              <div>
+                <label className="block text-[10px] text-gray-500">תאריך תשלום</label>
+                <input type="date" value={form.payment_date}
+                  onChange={(e) => setForm({ ...form, payment_date: e.target.value })}
+                  className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500">תאריך לחיוב</label>
+                <input type="date" value={form.payment_due_date}
+                  onChange={(e) => setForm({ ...form, payment_due_date: e.target.value })}
+                  className="w-full border border-gray-200 rounded px-2 py-1 text-xs" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
+
+  const currencySymbol: Record<string, string> = { ILS: "₪", USD: "$", EUR: "€", GBP: "£" };
+  const methodLabel: Record<string, string> = { credit: "כרטיס אשראי", transfer: "העברה בנקאית", cash: "מזומן", check: "צ'ק" };
+  const hasPayment = conf.payment_amount != null || conf.payment_method || conf.payment_confirmation;
 
   return (
     <div className={`p-3 rounded-lg border-2 text-sm ${conf.has_issue ? "border-red-400 bg-red-50" : "border-green-200 bg-green-50"}`}>
@@ -835,6 +898,31 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
       )}
       {conf.notes && (
         <div className="text-xs text-gray-500 mt-1">{conf.notes}</div>
+      )}
+      {hasPayment && (
+        <div className="mt-2 bg-white/60 border border-gray-200 rounded p-2 text-xs">
+          <div className="font-semibold text-gray-700 mb-1">💰 פרטי תשלום</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-gray-600">
+            {conf.payment_amount != null && (
+              <div>סכום: <span className="font-semibold text-gray-800">{currencySymbol[conf.payment_currency || "ILS"] || ""}{Number(conf.payment_amount).toLocaleString("he-IL")}</span></div>
+            )}
+            {conf.payment_method && (
+              <div>אמצעי: <span className="font-semibold text-gray-800">{methodLabel[conf.payment_method] || conf.payment_method}</span></div>
+            )}
+            {conf.payment_installments > 1 && (
+              <div>תשלומים: <span className="font-semibold text-gray-800">{conf.payment_installments}</span></div>
+            )}
+            {conf.payment_confirmation && (
+              <div>אישור עסקה: <span className="font-mono font-semibold text-gray-800" dir="ltr">{conf.payment_confirmation}</span></div>
+            )}
+            {conf.payment_date && (
+              <div>תאריך תשלום: <span className="font-semibold text-gray-800">{new Date(conf.payment_date).toLocaleDateString("he-IL")}</span></div>
+            )}
+            {conf.payment_due_date && (
+              <div>תאריך לחיוב: <span className="font-semibold text-gray-800">{new Date(conf.payment_due_date).toLocaleDateString("he-IL")}</span></div>
+            )}
+          </div>
+        </div>
       )}
       {conf.created_at && (
         <div className="text-[10px] text-gray-400 mt-1">

@@ -26,7 +26,24 @@ interface Item {
   notes: string;
   has_issue: boolean;
   issue_description: string;
+  payment_amount: string;
+  payment_currency: string;
+  payment_method: string;
+  payment_installments: string;
+  payment_confirmation: string;
+  payment_date: string;
+  payment_due_date: string;
 }
+
+const EMPTY_PAYMENT = {
+  payment_amount: "",
+  payment_currency: "ILS",
+  payment_method: "",
+  payment_installments: "1",
+  payment_confirmation: "",
+  payment_date: "",
+  payment_due_date: "",
+};
 
 export default function SupplierOrderPage() {
   const params = useParams();
@@ -89,7 +106,7 @@ export default function SupplierOrderPage() {
               name: p.flights ? `${p.flights.airline_name || ""} ${p.flights.flight_code || ""}`.trim() : "טיסה",
               details: p.flights ? `${p.flights.origin_iata || ""} → ${p.flights.dest_iata || ""} · ${p.flights.departure_time ? new Date(p.flights.departure_time).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" }) : ""}` : "",
               participants: [fullName],
-              confirmation_number: "", notes: "", has_issue: false, issue_description: "",
+              confirmation_number: "", notes: "", has_issue: false, issue_description: "", ...EMPTY_PAYMENT,
             });
           } else if (p.flight_id) {
             flightMap.get(p.flight_id).participants.push(fullName);
@@ -100,7 +117,7 @@ export default function SupplierOrderPage() {
               name: p.rooms ? `${p.rooms.hotels?.name || "מלון"} · ${p.rooms.room_type || ""}` : "חדר",
               details: p.rooms ? `${p.rooms.check_in ? new Date(p.rooms.check_in).toLocaleDateString("he-IL") : ""} ← ${p.rooms.check_out ? new Date(p.rooms.check_out).toLocaleDateString("he-IL") : ""}` : "",
               participants: [fullName],
-              confirmation_number: "", notes: "", has_issue: false, issue_description: "",
+              confirmation_number: "", notes: "", has_issue: false, issue_description: "", ...EMPTY_PAYMENT,
             });
           } else if (p.room_id) {
             roomMap.get(p.room_id).participants.push(fullName);
@@ -111,7 +128,7 @@ export default function SupplierOrderPage() {
               name: p.tickets?.name || "כרטיס",
               details: "",
               participants: [fullName],
-              confirmation_number: "", notes: "", has_issue: false, issue_description: "",
+              confirmation_number: "", notes: "", has_issue: false, issue_description: "", ...EMPTY_PAYMENT,
             });
           } else if (p.ticket_id) {
             ticketMap.get(p.ticket_id).participants.push(fullName);
@@ -128,6 +145,13 @@ export default function SupplierOrderPage() {
             item.notes = existing.notes || "";
             item.has_issue = !!existing.has_issue;
             item.issue_description = existing.issue_description || "";
+            item.payment_amount = existing.payment_amount != null ? String(existing.payment_amount) : "";
+            item.payment_currency = existing.payment_currency || "ILS";
+            item.payment_method = existing.payment_method || "";
+            item.payment_installments = existing.payment_installments != null ? String(existing.payment_installments) : "1";
+            item.payment_confirmation = existing.payment_confirmation || "";
+            item.payment_date = existing.payment_date || "";
+            item.payment_due_date = existing.payment_due_date || "";
             (item as any).existing = true;
           }
         }
@@ -175,6 +199,13 @@ export default function SupplierOrderPage() {
             confirmation_number: it.confirmation_number,
             notes: it.notes, has_issue: it.has_issue,
             issue_description: it.issue_description,
+            payment_amount: it.payment_amount ? Number(it.payment_amount) : null,
+            payment_currency: it.payment_currency || null,
+            payment_method: it.payment_method || null,
+            payment_installments: it.payment_installments ? Number(it.payment_installments) : null,
+            payment_confirmation: it.payment_confirmation || null,
+            payment_date: it.payment_date || null,
+            payment_due_date: it.payment_due_date || null,
           })),
         }),
       });
@@ -322,6 +353,65 @@ export default function SupplierOrderPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">הערות</label>
                     <input type="text" value={item.notes} onChange={(e) => updateItem(idx, "notes", e.target.value)}
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h4 className="text-xs font-semibold text-gray-700 mb-2">💰 פרטי תשלום</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div>
+                      <label className="block text-[11px] text-gray-500 mb-0.5">סכום</label>
+                      <input type="number" step="0.01" value={item.payment_amount}
+                        onChange={(e) => updateItem(idx, "payment_amount", e.target.value)}
+                        dir="ltr" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-500 mb-0.5">מטבע</label>
+                      <select value={item.payment_currency}
+                        onChange={(e) => updateItem(idx, "payment_currency", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none">
+                        <option value="ILS">₪ שקל</option>
+                        <option value="USD">$ דולר</option>
+                        <option value="EUR">€ אירו</option>
+                        <option value="GBP">£ פאונד</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-500 mb-0.5">אמצעי תשלום</label>
+                      <select value={item.payment_method}
+                        onChange={(e) => updateItem(idx, "payment_method", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none">
+                        <option value="">בחר...</option>
+                        <option value="credit">כרטיס אשראי</option>
+                        <option value="transfer">העברה בנקאית</option>
+                        <option value="cash">מזומן</option>
+                        <option value="check">צ&apos;ק</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-500 mb-0.5">תשלומים</label>
+                      <input type="number" min="1" value={item.payment_installments}
+                        onChange={(e) => updateItem(idx, "payment_installments", e.target.value)}
+                        dir="ltr" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-[11px] text-gray-500 mb-0.5">מספר אישור עסקה</label>
+                      <input type="text" value={item.payment_confirmation}
+                        onChange={(e) => updateItem(idx, "payment_confirmation", e.target.value)}
+                        dir="ltr" className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-500 mb-0.5">תאריך תשלום</label>
+                      <input type="date" value={item.payment_date}
+                        onChange={(e) => updateItem(idx, "payment_date", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-gray-500 mb-0.5">תאריך לחיוב</label>
+                      <input type="date" value={item.payment_due_date}
+                        onChange={(e) => updateItem(idx, "payment_due_date", e.target.value)}
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-primary-500 outline-none" />
+                    </div>
                   </div>
                 </div>
 

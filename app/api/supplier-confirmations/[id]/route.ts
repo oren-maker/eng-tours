@@ -42,6 +42,15 @@ export async function PATCH(
     updates.issue_description = body.issue_description;
     changes.issue_description = { from: existing.issue_description, to: body.issue_description };
   }
+  for (const f of [
+    "payment_amount", "payment_currency", "payment_method",
+    "payment_installments", "payment_confirmation", "payment_date", "payment_due_date",
+  ]) {
+    if (body[f] !== undefined && String(body[f] ?? "") !== String(existing[f] ?? "")) {
+      updates[f] = body[f];
+      changes[f] = { from: existing[f], to: body[f] };
+    }
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ success: true, message: "אין שינויים" });

@@ -24,8 +24,14 @@ export async function POST(request: Request) {
   let hasAnyIssue = false;
   const changes: any[] = [];
 
+  const PAYMENT_FIELDS = [
+    "payment_amount", "payment_currency", "payment_method",
+    "payment_installments", "payment_confirmation", "payment_date", "payment_due_date",
+  ];
+
   for (const item of items) {
-    if (!item.confirmation_number && !item.has_issue) continue;
+    const hasPayment = PAYMENT_FIELDS.some((f) => item[f] != null && item[f] !== "");
+    if (!item.confirmation_number && !item.has_issue && !hasPayment) continue;
 
     const prev = (existing || []).find(
       (e: any) => e.item_type === item.item_type && e.item_id === item.item_id
@@ -47,6 +53,13 @@ export async function POST(request: Request) {
       if (prev.issue_description !== item.issue_description) {
         diffs.issue_description = { from: prev.issue_description, to: item.issue_description };
       }
+      for (const f of PAYMENT_FIELDS) {
+        const a = prev[f] == null ? null : prev[f];
+        const b = item[f] == null || item[f] === "" ? null : item[f];
+        if (String(a) !== String(b)) {
+          diffs[f] = { from: a, to: b };
+        }
+      }
 
       if (Object.keys(diffs).length > 0) {
         await supabase
@@ -56,6 +69,13 @@ export async function POST(request: Request) {
             notes: item.notes || null,
             has_issue: !!item.has_issue,
             issue_description: item.issue_description || null,
+            payment_amount: item.payment_amount ?? null,
+            payment_currency: item.payment_currency || null,
+            payment_method: item.payment_method || null,
+            payment_installments: item.payment_installments ?? null,
+            payment_confirmation: item.payment_confirmation || null,
+            payment_date: item.payment_date || null,
+            payment_due_date: item.payment_due_date || null,
           })
           .eq("id", prev.id);
 
@@ -75,6 +95,13 @@ export async function POST(request: Request) {
         notes: item.notes || null,
         has_issue: !!item.has_issue,
         issue_description: item.issue_description || null,
+        payment_amount: item.payment_amount ?? null,
+        payment_currency: item.payment_currency || null,
+        payment_method: item.payment_method || null,
+        payment_installments: item.payment_installments ?? null,
+        payment_confirmation: item.payment_confirmation || null,
+        payment_date: item.payment_date || null,
+        payment_due_date: item.payment_due_date || null,
       });
       changes.push({
         type: item.item_type,
