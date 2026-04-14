@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/events/auto-archive",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/events/auto-reminders",
-      "schedule": "0 9 * * *"
+      "path": "/api/cron/daily",
+      "schedule": "0 3 * * *"
     }
   ]
 }
