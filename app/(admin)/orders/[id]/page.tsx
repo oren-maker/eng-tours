@@ -674,7 +674,7 @@ export default function OrderDetailPage() {
                         {p.passport_number && (
                           <button onClick={() => setPassportModal(p as any)}
                             className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded hover:bg-primary-100 whitespace-nowrap">
-                            🛂 הצג דרכון
+                            🛂 הצג מסמך
                           </button>
                         )}
                       </div>
@@ -907,8 +907,10 @@ export default function OrderDetailPage() {
 
 function PassportModal({ passenger, onClose }: { passenger: any; onClose: () => void }) {
   const data = passenger.passport_data?.data || {};
+  const docLabels: Record<string, string> = { passport: "דרכון", id_card: "תעודת זהות", drivers_license: "רישיון נהיגה" };
+  const docLabel = docLabels[passenger.document_type] || "דרכון";
   const fields: [string, string, any][] = [
-    ["מספר דרכון", "passport_number", passenger.passport_number || data.passport_number],
+    [`מספר ${docLabel}`, "document_number", passenger.passport_number || data.document_number || data.passport_number],
     ["שם משפחה", "surname", data.surname || passenger.last_name_en],
     ["שמות פרטיים", "given_names", data.given_names || passenger.first_name_en],
     ["שם מלא אנגלית", "full_name_en", data.full_name_en],
@@ -925,7 +927,7 @@ function PassportModal({ passenger, onClose }: { passenger: any; onClose: () => 
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800">🛂 פרטי דרכון — {passenger.first_name_en} {passenger.last_name_en}</h3>
+          <h3 className="text-lg font-bold text-gray-800">🛂 פרטי {docLabel} — {passenger.first_name_en} {passenger.last_name_en}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-2">×</button>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-y-auto">

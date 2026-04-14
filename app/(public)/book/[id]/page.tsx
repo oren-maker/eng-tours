@@ -579,7 +579,7 @@ function BookingContent() {
 
                 <div className="space-y-4">
                   {passengers.map((p, i) => (
-                    <PassengerCard key={i} passenger={p} index={i} onChange={(field, val) => updatePassenger(i, field, val)} phonePrefixes={phonePrefixes} minAge={(event as any)?.min_age} />
+                    <PassengerCard key={i} passenger={p} index={i} onChange={(field, val) => updatePassenger(i, field, val)} phonePrefixes={phonePrefixes} minAge={(event as any)?.min_age} isDomestic={(event as any)?.is_domestic} />
                   ))}
                 </div>
               </div>
@@ -691,20 +691,28 @@ function BookingContent() {
   );
 }
 
-function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
+function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge, isDomestic }: {
   passenger: Passenger;
   index: number;
   onChange: (field: keyof Passenger, value: any) => void;
   phonePrefixes: { value: string; label: string }[];
   minAge?: number | null;
+  isDomestic?: boolean;
 }) {
   const [showContact, setShowContact] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [ocrAttempts, setOcrAttempts] = useState(0);
   const [manualMode, setManualMode] = useState(false);
   const [ocrError, setOcrError] = useState("");
+  const [docType, setDocType] = useState<"passport" | "id_card" | "drivers_license">(isDomestic ? "id_card" : "passport");
   const fileRef = useRef<HTMLInputElement>(null);
   const allowExtraContact = index > 0;
+
+  const docTypeLabels: Record<string, string> = {
+    passport: "דרכון",
+    id_card: "תעודת זהות",
+    drivers_license: "רישיון נהיגה",
+  };
 
   const hasImage = !!passenger.passport_image_url;
   const hasOcrData = !!passenger.passport_data;
@@ -716,27 +724,28 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
     try {
       const fd = new FormData();
       fd.append("image", file);
+      fd.append("document_type", docType);
       const res = await fetch("/api/passport/ocr", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "שגיאה");
 
-      if (!data.is_passport || !data.data?.passport_number) {
+      if (!data.is_valid || !data.data?.document_number) {
         setOcrAttempts((n) => n + 1);
-        throw new Error("לא זוהה דרכון תקין. ודא שהתמונה ברורה ומציגה את כל הדרכון.");
+        throw new Error(`לא זוהה ${docTypeLabels[docType]} תקין. ודא שהתמונה ברורה.`);
       }
 
-      // Auto-fill visible fields
       const d = data.data;
       if (d.given_names || d.full_name_en) {
         const given = d.given_names || d.full_name_en?.split(/\s+/).slice(0, -1).join(" ") || "";
         onChange("first_name_en", given);
       }
       if (d.surname) onChange("last_name_en", d.surname);
-      if (d.passport_number) onChange("passport_number", d.passport_number);
+      if (d.document_number) onChange("passport_number", d.document_number);
       if (d.expiry_date) onChange("passport_expiry", d.expiry_date);
       if (d.birth_date) onChange("birth_date", d.birth_date);
       if (data.image_url) onChange("passport_image_url", data.image_url);
       onChange("passport_data", data);
+      onChange("document_type" as any, docType);
     } catch (e: any) {
       setOcrError(e.message || "שגיאה");
       setOcrAttempts((n) => n + 1);
@@ -753,11 +762,11 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
         {!manualMode && (
           hasOcrData ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded-full">✓ דרכון אומת</span>
+              <span className="text-xs bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded-full">✓ {docTypeLabels[docType]} אומת</span>
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm("הדרכון כבר נבדק. האם להחליף לצילום חדש?")) fileRef.current?.click();
+                  if (confirm("המסמך כבר נבדק. האם להחליף לצילום חדש?")) fileRef.current?.click();
                 }}
                 className="text-xs text-gray-500 hover:text-primary-700 underline"
               >
@@ -771,13 +780,25 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
               disabled={uploading}
               className="text-xs px-3 py-1.5 rounded-lg font-medium transition bg-primary-700 text-white hover:bg-primary-800 disabled:opacity-50"
             >
-              {uploading ? "מעלה..." : "📷 העלה תמונת דרכון"}
+              {uploading ? "מעלה..." : `📷 העלה צילום ${docTypeLabels[docType]}`}
             </button>
           )
         )}
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
       </div>
+
+      {isDomestic && !hasOcrData && !manualMode && (
+        <div className="mb-3 flex gap-2 flex-wrap">
+          <span className="text-xs text-gray-600 self-center">סוג מסמך:</span>
+          {(["id_card", "drivers_license", "passport"] as const).map((t) => (
+            <button key={t} type="button" onClick={() => setDocType(t)}
+              className={`text-xs px-3 py-1 rounded-full border transition ${docType === t ? "bg-primary-700 text-white border-primary-700" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
+              {docTypeLabels[t]}
+            </button>
+          ))}
+        </div>
+      )}
 
       {ocrError && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-2 text-xs mb-3">
@@ -816,12 +837,12 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">מספר דרכון *</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">מספר {docTypeLabels[docType]} *</label>
           <input type="text" value={passenger.passport_number} onChange={(e) => onChange("passport_number", e.target.value)} required dir="ltr"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">תוקף דרכון *</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">תוקף {docTypeLabels[docType]} *</label>
           <input type="date" value={passenger.passport_expiry} onChange={(e) => onChange("passport_expiry", e.target.value)} required
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-primary-500 outline-none" />
         </div>
