@@ -1,51 +1,41 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 
-// Israeli ID number checksum (9 digits, Luhn-like, Ministry of Interior algorithm)
-function validateIsraeliIdNumber(id: string): boolean {
-  id = (id || "").replace(/\D/g, "").padStart(9, "0");
-  if (id.length !== 9) return false;
-  let sum = 0;
-  for (let i = 0; i < 9; i++) {
-    let d = Number(id[i]) * ((i % 2) + 1);
-    if (d > 9) d = Math.floor(d / 10) + (d % 10);
-    sum += d;
-  }
-  return sum % 10 === 0;
-}
-
-const SYSTEM_PROMPT = `You are an OCR + document classifier specialized in Israeli government-issued ID cards ("תעודת זהות").
+const SYSTEM_PROMPT = `You are an OCR + document classifier specialized in PASSPORTS (any nationality).
 Respond ONLY with valid JSON — no prose, no markdown fences.
 
 Required JSON schema:
 {
-  "is_israeli_id": boolean,
-  "confidence": number,
-  "document_type_guess": string,
-  "reasons": string[],
+  "is_passport": boolean,
+  "confidence": number,              // 0-1
+  "document_type_guess": string,     // "passport", "id_card", "drivers_license", "other", "unreadable"
+  "issuing_country": string | null,  // ISO 3166-1 alpha-3 or country name
+  "reasons": string[],               // why you classified this way
   "data": {
-    "id_number": string | null,
-    "first_name_he": string | null,
-    "last_name_he": string | null,
-    "first_name_en": string | null,
-    "last_name_en": string | null,
-    "birth_date": string | null,
-    "issue_date": string | null,
-    "expiry_date": string | null,
+    "passport_number": string | null,   // alphanumeric, strip spaces
+    "surname": string | null,            // family name (often uppercase)
+    "given_names": string | null,        // first + middle names
+    "full_name_en": string | null,       // full English/Latin name
+    "full_name_native": string | null,   // name in native script (Hebrew/Arabic/Cyrillic etc) if present
+    "birth_date": string | null,         // YYYY-MM-DD
+    "issue_date": string | null,         // YYYY-MM-DD
+    "expiry_date": string | null,        // YYYY-MM-DD
     "sex": "M" | "F" | null,
-    "nationality": string | null,
-    "father_name": string | null,
-    "mother_name": string | null
+    "nationality": string | null,        // ISO 3166-1 alpha-3 (e.g. ISR, USA, GBR) or country name
+    "place_of_birth": string | null,
+    "mrz_line_1": string | null,         // Machine-Readable Zone line 1 if visible
+    "mrz_line_2": string | null          // MRZ line 2 if visible
   },
   "notes": string
 }
 
 Rules:
-- Israeli IDs contain: "מדינת ישראל", "תעודת זהות", Ministry of Interior logo, blue/teal color scheme, 9-digit ID number.
-- If NOT an Israeli ID (passport, driver's license, random photo, unreadable), set is_israeli_id=false.
+- Passports have: "PASSPORT" word, country name, photo, personal details, MRZ (2 lines at bottom).
+- If document is NOT a passport (ID card, driver's license, random photo), set is_passport=false.
 - Return null for fields you cannot read confidently. Do NOT guess.
-- Dates: convert DD/MM/YYYY to YYYY-MM-DD. Partial → null.
-- id_number: digits only, no spaces or dashes.`;
+- Dates: convert DD/MM/YYYY or DD MMM YYYY (15 JAN 1990) to YYYY-MM-DD. Partial → null.
+- passport_number: alphanumeric only (letters + digits), strip spaces/dashes.
+- MRZ lines: copy exactly as shown (uppercase, with < fillers). If not visible, null.`;
 
 async function callGemini(base64: string, mimeType: string): Promise<any> {
   const key = process.env.GEMINI_API_KEY;
@@ -55,7 +45,7 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
     contents: [{
       parts: [
         { inline_data: { mime_type: mimeType, data: base64 } },
-        { text: "Classify this document and extract fields. Return ONLY JSON per the schema in the system instructions." },
+        { text: "Classify this document and extract all fields. Return ONLY JSON per the schema." },
       ],
     }],
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -66,7 +56,6 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
     },
   };
 
-  // Try models in order of preference (verified to work with vision on free tier)
   const models = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"];
   let lastError: Error | null = null;
   for (const model of models) {
@@ -81,14 +70,13 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
       if (!res.ok) {
         const msg = data?.error?.message || `HTTP ${res.status}`;
         lastError = new Error(`Gemini ${model}: ${msg}`);
-        // If it's a quota issue, try next model; if it's auth/request issue, bail immediately
         if (res.status === 429 || /quota|rate.?limit/i.test(msg)) continue;
         throw lastError;
       }
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) { lastError = new Error(`Gemini ${model}: empty response`); continue; }
       const parsed = JSON.parse(text);
-      (parsed as any)._used_model = model;
+      parsed._used_model = model;
       return parsed;
     } catch (e: any) {
       lastError = e;
@@ -105,19 +93,19 @@ async function callAnthropic(base64: string, mimeType: string): Promise<any> {
   const client = new Anthropic({ apiKey: key });
   const response = await client.messages.create({
     model: "claude-opus-4-6",
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages: [{
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: mimeType as any, data: base64 } },
-        { type: "text", text: "Classify this document and extract fields. JSON only." },
+        { type: "text", text: "Classify this document and extract all fields. JSON only." },
       ],
     }],
   });
   const textBlock = response.content.find((b) => b.type === "text") as { type: "text"; text: string } | undefined;
   if (!textBlock) throw new Error("Anthropic returned empty response");
-  let raw = textBlock.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  const raw = textBlock.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
   return JSON.parse(raw);
 }
 
@@ -142,13 +130,8 @@ export async function POST(request: Request) {
     let parsed: any;
     let usedProvider = provider;
     try {
-      if (provider === "anthropic") {
-        parsed = await callAnthropic(base64, file.type);
-      } else {
-        parsed = await callGemini(base64, file.type);
-      }
+      parsed = provider === "anthropic" ? await callAnthropic(base64, file.type) : await callGemini(base64, file.type);
     } catch (primaryErr: any) {
-      // Fallback: if primary fails, try the other
       const fallback = provider === "anthropic" ? "gemini" : "anthropic";
       try {
         parsed = fallback === "gemini" ? await callGemini(base64, file.type) : await callAnthropic(base64, file.type);
@@ -158,17 +141,34 @@ export async function POST(request: Request) {
       }
     }
 
-    const num = parsed?.data?.id_number;
-    const checksumValid = num ? validateIsraeliIdNumber(num) : null;
+    // Validations
+    const today = new Date();
+    const expiry = parsed?.data?.expiry_date ? new Date(parsed.data.expiry_date) : null;
+    const issue = parsed?.data?.issue_date ? new Date(parsed.data.issue_date) : null;
+    const expired = expiry ? expiry < today : null;
+    const issueBeforeExpiry = issue && expiry ? issue < expiry : null;
+    const sixMonthsFromNow = new Date(today.getTime() + 183 * 24 * 3600 * 1000);
+    const expiresBefore6Months = expiry ? expiry < sixMonthsFromNow : null; // many countries require 6mo validity
+
+    const verified = !!(
+      parsed.is_passport &&
+      parsed?.data?.passport_number &&
+      parsed?.data?.expiry_date &&
+      expired === false
+    );
 
     return NextResponse.json({
       ...parsed,
-      checksum_valid: checksumValid,
-      verified: !!(parsed.is_israeli_id && checksumValid),
+      validations: {
+        expired,
+        issue_before_expiry: issueBeforeExpiry,
+        expires_within_6_months: expiresBefore6Months,
+      },
+      verified,
       provider: usedProvider,
     });
   } catch (err: any) {
-    console.error("israeli-id OCR error:", err);
+    console.error("passport OCR error:", err);
     return NextResponse.json({ error: err.message || "Internal error" }, { status: 500 });
   }
 }
