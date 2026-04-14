@@ -103,20 +103,27 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ tok
       <table>
         <thead>
           <tr>
-            <th>#</th><th>שם</th><th>דרכון</th><th>לידה</th><th>טלפון</th><th>מייל</th>
+            <th>#</th><th>שם</th><th>סוג תעודה</th><th>לידה</th><th>טלפון</th><th>מייל</th>
           </tr>
         </thead>
         <tbody>
-          {(participants || []).map((p: any, i: number) => (
-            <tr key={p.id}>
-              <td>{i + 1}</td>
-              <td>{p.first_name_en} {p.last_name_en}</td>
-              <td style={{ fontFamily: "monospace" }}>{p.passport_number || "—"}</td>
-              <td>{fmtDate(p.birth_date)}</td>
-              <td dir="ltr" style={{ textAlign: "right" }}>{p.phone || "—"}</td>
-              <td dir="ltr" style={{ textAlign: "right" }}>{p.email || "—"}</td>
-            </tr>
-          ))}
+          {(participants || []).map((p: any, i: number) => {
+            const docLabels: Record<string, string> = { passport: "דרכון", id_card: "תעודת זהות", drivers_license: "רישיון נהיגה" };
+            const docLabel = docLabels[p.document_type] || "דרכון";
+            return (
+              <tr key={p.id}>
+                <td>{i + 1}</td>
+                <td>{p.first_name_en} {p.last_name_en}</td>
+                <td>
+                  <div style={{ fontSize: "11px", color: "#6b7280" }}>{docLabel}</div>
+                  <div style={{ fontFamily: "monospace" }}>{p.passport_number || "—"}</div>
+                </td>
+                <td>{fmtDate(p.birth_date)}</td>
+                <td dir="ltr" style={{ textAlign: "right" }}>{p.phone || "—"}</td>
+                <td dir="ltr" style={{ textAlign: "right" }}>{p.email || "—"}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

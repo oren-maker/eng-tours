@@ -140,7 +140,19 @@ function OrdersContent() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-primary-900">
           הזמנות
-          {eventFilter && <span className="text-sm font-normal text-gray-500 mr-2">· סינון: {eventFilter}</span>}
+          {eventFilter && (() => {
+            const eventName = orders.find((o: any) => o.event_id === eventFilter)?.events?.name;
+            return (
+              <span className="text-sm font-normal text-gray-500 mr-2">
+                {" · סינון: "}
+                {eventName ? (
+                  <span className="text-primary-700 font-semibold">{eventName} ({eventFilter})</span>
+                ) : (
+                  <span>{eventFilter}</span>
+                )}
+              </span>
+            );
+          })()}
         </h2>
         <button onClick={loadData} className="bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-800">
           🔄 רענן

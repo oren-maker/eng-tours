@@ -640,10 +640,10 @@ export default function OrderDetailPage() {
                     שם (EN)
                   </th>
                   <th className="text-right px-3 py-2 font-medium text-gray-600">
-                    דרכון
+                    סוג תעודה
                   </th>
                   <th className="text-right px-3 py-2 font-medium text-gray-600">
-                    תוקף דרכון
+                    תוקף
                   </th>
                   <th className="text-right px-3 py-2 font-medium text-gray-600">
                     תאריך לידה
@@ -679,8 +679,16 @@ export default function OrderDetailPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs">
-                      {p.passport_number || "-"}
+                    <td className="px-3 py-2 text-xs">
+                      {p.passport_number ? (() => {
+                        const docLabels: Record<string, string> = { passport: "דרכון", id_card: "ת״ז", drivers_license: "רישיון" };
+                        return (
+                          <div>
+                            <div className="text-[10px] text-gray-500">{docLabels[(p as any).document_type] || "דרכון"}</div>
+                            <div className="font-mono">{p.passport_number}</div>
+                          </div>
+                        );
+                      })() : "-"}
                     </td>
                     <td className="px-3 py-2 text-xs">
                       {p.passport_expiry || "-"}
