@@ -669,15 +669,18 @@ export default function OrderDetailPage() {
                 {order.participants.map((p) => (
                   <tr key={p.id} className="border-b last:border-0">
                     <td className="px-3 py-2">
-                      {p.first_name_en} {p.last_name_en}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{p.first_name_en} {p.last_name_en}</span>
+                        {p.passport_number && (
+                          <button onClick={() => setPassportModal(p as any)}
+                            className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded hover:bg-primary-100 whitespace-nowrap">
+                            🛂 הצג דרכון
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">
-                      {p.passport_number ? (
-                        <button onClick={() => setPassportModal(p as any)}
-                          className="text-primary-700 hover:underline">
-                          {p.passport_number}
-                        </button>
-                      ) : "-"}
+                      {p.passport_number || "-"}
                     </td>
                     <td className="px-3 py-2 text-xs">
                       {p.passport_expiry || "-"}
@@ -948,7 +951,7 @@ function PassportModal({ passenger, onClose }: { passenger: any; onClose: () => 
             ) : (
               <div className="text-gray-400 text-sm text-center py-12">
                 <div className="text-4xl mb-2">📷</div>
-                <div>אין תמונת דרכון</div>
+                <div>אין צילום</div>
               </div>
             )}
           </div>

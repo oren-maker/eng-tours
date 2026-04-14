@@ -435,10 +435,17 @@ export default function SupplierOrderPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {participants.map((p, i) => (
                 <div key={p.id} className="text-sm bg-gray-50 px-3 py-2 rounded-lg">
-                  <span className="font-medium text-gray-800">{i + 1}. {p.first_name_en} {p.last_name_en}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-gray-800">{i + 1}. {p.first_name_en} {p.last_name_en}</span>
+                    {p.passport_number && (
+                      <button onClick={() => setPassportModal(p as any)}
+                        className="text-[10px] bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded hover:bg-primary-100">
+                        🛂 הצג דרכון
+                      </button>
+                    )}
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    דרכון: <button onClick={() => setPassportModal(p as any)} className="text-primary-700 hover:underline">{p.passport_number}</button>
-                    {" · "}לידה: {p.birth_date ? new Date(p.birth_date).toLocaleDateString("he-IL") : "—"}
+                    דרכון: {p.passport_number} · לידה: {p.birth_date ? new Date(p.birth_date).toLocaleDateString("he-IL") : "—"}
                   </div>
                   <div className="text-xs text-gray-400" dir="ltr">{p.phone} · {p.email}</div>
                 </div>
@@ -755,7 +762,7 @@ function PassportModal({ passenger, onClose }: { passenger: any; onClose: () => 
             ) : (
               <div className="text-gray-400 text-sm text-center py-12">
                 <div className="text-4xl mb-2">📷</div>
-                <div>אין תמונת דרכון</div>
+                <div>אין צילום</div>
               </div>
             )}
           </div>
