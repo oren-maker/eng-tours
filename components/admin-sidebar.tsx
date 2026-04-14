@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { href: "/orders", label: "הזמנות", icon: "📋" },
   { href: "/issues", label: "בעיות פתוחות", icon: "⚠️" },
   { href: "/financial", label: "כלכלי", icon: "💰" },
+  { href: "/marketing", label: "שיווק", icon: "📢" },
   { href: "/settings-hub", label: "הגדרות כלליות", icon: "⚙️" },
 ];
 
