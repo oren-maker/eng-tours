@@ -36,6 +36,7 @@ export default function EmailTemplatesPage() {
   const [editBody, setEditBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [previewMode, setPreviewMode] = useState<"source" | "rendered">("rendered");
+  const [fullPreview, setFullPreview] = useState<string | null>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -128,10 +129,16 @@ export default function EmailTemplatesPage() {
                       </button>
                     </label>
                     {!isEditing && (
-                      <button onClick={() => { setEditing(t.id); setEditSubject(t.subject); setEditBody(t.body_html); }}
-                        className="text-xs bg-primary-50 text-primary-700 border border-primary-200 px-3 py-1.5 rounded hover:bg-primary-100">
-                        ✏️ ערוך
-                      </button>
+                      <>
+                        <button onClick={() => setFullPreview(t.name)}
+                          className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded hover:bg-blue-100">
+                          👁️ תצוגה מקדימה
+                        </button>
+                        <button onClick={() => { setEditing(t.id); setEditSubject(t.subject); setEditBody(t.body_html); }}
+                          className="text-xs bg-primary-50 text-primary-700 border border-primary-200 px-3 py-1.5 rounded hover:bg-primary-100">
+                          ✏️ ערוך
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -200,6 +207,32 @@ export default function EmailTemplatesPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {fullPreview && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setFullPreview(null)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+              <div>
+                <h3 className="text-sm font-bold text-gray-800">📧 תצוגה מקדימה מלאה</h3>
+                <p className="text-xs text-gray-500">תבנית: <code dir="ltr">{fullPreview}</code> · כולל header, footer, קישור הסרה</p>
+              </div>
+              <div className="flex gap-2">
+                <a href={`/api/email/templates/preview?name=${fullPreview}`} target="_blank" rel="noopener noreferrer"
+                  className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800">
+                  🔗 פתח בטאב חדש
+                </a>
+                <button onClick={() => setFullPreview(null)} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-2">×</button>
+              </div>
+            </div>
+            <iframe
+              src={`/api/email/templates/preview?name=${fullPreview}`}
+              className="flex-1 w-full bg-gray-100 border-0"
+              style={{ minHeight: "600px" }}
+              title={`preview-${fullPreview}`}
+            />
+          </div>
         </div>
       )}
     </div>
