@@ -15,7 +15,7 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Enrich with order + event info
-  const orderIds = [...new Set((issues || []).map((i) => i.order_id))];
+  const orderIds = Array.from(new Set((issues || []).map((i) => i.order_id)));
   if (orderIds.length === 0) return NextResponse.json([]);
 
   const { data: orders } = await supabase

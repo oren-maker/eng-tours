@@ -66,7 +66,7 @@ export async function GET(
     .limit(200);
 
   // Enrich with user display names
-  const userIds = [...new Set((auditLog || []).map((a: any) => a.user_id).filter(Boolean))];
+  const userIds = Array.from(new Set((auditLog || []).map((a: any) => a.user_id).filter(Boolean)));
   const userMap: Record<string, string> = {};
   if (userIds.length > 0) {
     const { data: users } = await supabase

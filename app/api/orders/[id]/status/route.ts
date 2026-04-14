@@ -130,7 +130,7 @@ export async function PATCH(
         const adminPhone = await getAdminPhone();
 
         if (status === "confirmed") {
-          for (const p of customerPhones) {
+          for (const p of Array.from(customerPhones)) {
             await sendTemplateMessage("order_confirmed_customer", p, { link }, { order_id: id, recipient_type: "customer" });
             await new Promise((r) => setTimeout(r, 6000));
           }

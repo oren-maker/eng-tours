@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     const phones = new Set<string>(((fullOrder as any)?.participants || []).map((p: any) => p.phone).filter(Boolean));
     const orderShortId = order.id.slice(0, 8);
     const templateName = newPaid >= total ? "payment_confirmed" : "partial_payment";
-    for (const phone of phones) {
+    for (const phone of Array.from(phones)) {
       if (templateName === "payment_confirmed") {
         await sendTemplateMessage("payment_confirmed", phone, { event_name: eventName, amount: amt, order_id: orderShortId }, { order_id: order.id, recipient_type: "customer" });
       } else {

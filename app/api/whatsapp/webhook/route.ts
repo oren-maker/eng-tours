@@ -1,16 +1,25 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import crypto from "crypto";
 
 const SECRET = process.env.WASENDER_WEBHOOK_SECRET || "";
 
+function timingSafeEq(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
 export async function POST(request: Request) {
-  // Verify webhook signature if secret is configured
-  if (SECRET) {
-    const sig = request.headers.get("x-webhook-signature") || request.headers.get("x-signature") || "";
-    if (sig !== SECRET) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  // Require webhook secret (fail closed)
+  if (!SECRET) {
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
+  }
+  const sig = request.headers.get("x-webhook-signature") || request.headers.get("x-signature") || "";
+  if (!sig || !timingSafeEq(sig, SECRET)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   let body: any = null;

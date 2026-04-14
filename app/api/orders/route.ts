@@ -34,6 +34,12 @@ export async function GET(request: NextRequest) {
 
 // POST /api/orders - Create order from public booking form
 export async function POST(request: NextRequest) {
+  const { rateLimit, getClientIp } = await import("@/lib/rate-limit");
+  const ip = getClientIp(request);
+  const rl = rateLimit(`orders-post:${ip}`, 20, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "יותר מדי הזמנות בטווח זמן קצר" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+  }
   const supabase = createServiceClient();
 
   try {
@@ -346,7 +352,7 @@ export async function POST(request: NextRequest) {
             await new Promise((r) => setTimeout(r, 6000));
           }
 
-          for (const phone of phones) {
+          for (const phone of Array.from(phones)) {
             let digits = phone.replace(/[^0-9]/g, "");
             if (digits.startsWith("0")) digits = "972" + digits.slice(1);
             const to = "+" + digits;
