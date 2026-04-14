@@ -90,7 +90,27 @@ export const DEFAULT_EMAIL_TEMPLATES: Record<string, { subject: string; body_htm
   },
 };
 
-function renderHtml(subject: string, body: string): string {
+async function getCompanyInfo() {
+  const supabase = createServiceClient();
+  const { data } = await supabase.from("system_settings").select("key, value").in("key",
+    ["company_name", "company_tagline", "company_phone", "company_email", "company_website", "company_address"]
+  );
+  const info: Record<string, string> = {};
+  for (const row of data || []) info[row.key] = row.value || "";
+  return info;
+}
+
+async function renderHtml(subject: string, body: string): Promise<string> {
+  const info = await getCompanyInfo();
+  const name = info.company_name || "ENG TOURS";
+  const tagline = info.company_tagline || "";
+  const year = new Date().getFullYear();
+  const footerParts: string[] = [];
+  if (info.company_phone) footerParts.push(`📞 ${info.company_phone}`);
+  if (info.company_email) footerParts.push(`📧 <a href="mailto:${info.company_email}" style="color:#fbbf24;text-decoration:none">${info.company_email}</a>`);
+  if (info.company_website) footerParts.push(`🌐 <a href="${info.company_website}" style="color:#fbbf24;text-decoration:none">${info.company_website.replace(/^https?:\/\//, "")}</a>`);
+  const footerLine = footerParts.join(" · ");
+
   return `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head><meta charset="UTF-8"><title>${subject}</title></head>
@@ -98,14 +118,17 @@ function renderHtml(subject: string, body: string): string {
   <div style="max-width:600px;margin:0 auto;padding:20px">
     <div style="background:white;border-radius:12px;overflow:hidden;border:1px solid #f3e8ff">
       <div style="background:linear-gradient(135deg,#DD9933 0%,#b87a1f 100%);padding:24px;text-align:center">
-        <h1 style="margin:0;color:white;font-size:28px;letter-spacing:1px">ENG TOURS</h1>
+        <h1 style="margin:0;color:white;font-size:28px;letter-spacing:1px">${name}</h1>
+        ${tagline ? `<p style="margin:6px 0 0;color:white;opacity:0.92;font-size:13px">${tagline}</p>` : ""}
       </div>
       <div style="padding:24px;color:#374151;line-height:1.6">
         <style>.btn{display:inline-block;background:#DD9933;color:white;padding:10px 20px;text-decoration:none;border-radius:6px;font-weight:500;margin:8px 0}.btn:hover{background:#b87a1f}h2{color:#1f2937;margin-top:0}</style>
         ${body}
       </div>
-      <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:12px">
-        © ${new Date().getFullYear()} ENG TOURS — כל הזכויות שמורות
+      <div style="background:#1f2937;padding:20px;text-align:center;color:#9ca3af;font-size:12px;line-height:1.8">
+        ${footerLine ? `<div>${footerLine}</div>` : ""}
+        ${info.company_address ? `<div style="margin-top:4px">${info.company_address}</div>` : ""}
+        <div style="margin-top:8px">© ${year} ${name} · כל הזכויות שמורות</div>
       </div>
     </div>
   </div>
@@ -132,7 +155,7 @@ export async function renderEmailTemplate(name: string, variables: Record<string
   if (!tpl) return null;
   const subject = applyTemplate(tpl.subject, variables);
   const body = applyTemplate(tpl.body, variables);
-  return { subject, html: renderHtml(subject, body) };
+  return { subject, html: await renderHtml(subject, body) };
 }
 
 export async function ensureDefaultEmailTemplates() {

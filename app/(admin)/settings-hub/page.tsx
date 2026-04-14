@@ -39,6 +39,13 @@ const settingsItems = [
     color: "bg-gray-50 border-gray-200 hover:bg-gray-100",
   },
   {
+    href: "/settings/company",
+    label: "פרטי החברה",
+    description: "טלפון, מייל, אתר, כתובת — מוצגים במיילים וב-PDF",
+    icon: "🏢",
+    color: "bg-amber-50 border-amber-200 hover:bg-amber-100",
+  },
+  {
     href: "/settings/legal",
     label: "מסמכים משפטיים",
     description: "תנאי שימוש ומדיניות פרטיות",
