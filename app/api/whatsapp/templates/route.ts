@@ -12,6 +12,11 @@ export async function GET() {
     }
 
     const supabase = createServiceClient();
+    // Auto-seed any missing default templates on every read (idempotent)
+    try {
+      const { ensureDefaultTemplates } = await import("@/lib/wa-templates");
+      await ensureDefaultTemplates();
+    } catch {}
     const { data, error } = await supabase
       .from("whatsapp_templates")
       .select("*")

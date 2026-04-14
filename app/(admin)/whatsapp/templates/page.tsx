@@ -92,10 +92,24 @@ export default function TemplatesPage() {
           <h2 className="text-2xl font-bold text-primary-900 mt-1">📝 תבניות הודעות WhatsApp</h2>
           <p className="text-sm text-gray-500 mt-1">עריכת התבניות שנשלחות אוטומטית ללקוחות וספקים</p>
         </div>
-        <button onClick={seedDefaults} disabled={seeding}
-          className="text-sm bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 disabled:opacity-50">
-          {seeding ? "מוסיף..." : "➕ הוסף תבניות חסרות"}
-        </button>
+        <div className="flex gap-2">
+          <button onClick={seedDefaults} disabled={seeding}
+            className="text-sm bg-primary-700 text-white px-4 py-2 rounded-lg hover:bg-primary-800 disabled:opacity-50">
+            {seeding ? "מוסיף..." : "➕ הוסף תבניות חסרות"}
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm("לאפס את כל התבניות לברירת המחדל? פעולה זו תדרוס כל שינוי שביצעת.")) return;
+              const res = await fetch("/api/whatsapp/templates/reset-all", { method: "POST" });
+              const d = await res.json();
+              alert(res.ok ? `${d.restored} תבניות שוחזרו` : "שגיאה");
+              load();
+            }}
+            className="text-sm border border-red-300 text-red-700 px-4 py-2 rounded-lg hover:bg-red-50"
+          >
+            🔄 אפס הכל לברירת מחדל
+          </button>
+        </div>
       </div>
 
       {loading ? (
