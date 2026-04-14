@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 
 function currencySymbol(c?: string) { return c === "USD" ? "$" : c === "EUR" ? "€" : "₪"; }
@@ -13,6 +13,8 @@ interface Passenger {
   birth_date: string;
   phone?: string;
   email?: string;
+  passport_image_url?: string;
+  passport_data?: any;
 }
 
 function computeAge(birthDate: string): number | null {
@@ -104,7 +106,7 @@ function BookingContent() {
     setPassengers((prev) => {
       const next = [...prev];
       while (next.length < peopleCount) {
-        next.push({ first_name_en: "", last_name_en: "", passport_number: "", passport_expiry: "", birth_date: "", phone: "", email: "" });
+        next.push({ first_name_en: "", last_name_en: "", passport_number: "", passport_expiry: "", birth_date: "", phone: "", email: "", passport_image_url: "", passport_data: null });
       }
       return next.slice(0, peopleCount);
     });
@@ -692,17 +694,101 @@ function BookingContent() {
 function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
   passenger: Passenger;
   index: number;
-  onChange: (field: keyof Passenger, value: string) => void;
+  onChange: (field: keyof Passenger, value: any) => void;
   phonePrefixes: { value: string; label: string }[];
   minAge?: number | null;
 }) {
   const [showContact, setShowContact] = useState(false);
-  // First passenger doesn't need extra contact (already has main contact)
+  const [uploading, setUploading] = useState(false);
+  const [ocrAttempts, setOcrAttempts] = useState(0);
+  const [manualMode, setManualMode] = useState(false);
+  const [ocrError, setOcrError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
   const allowExtraContact = index > 0;
+
+  const hasImage = !!passenger.passport_image_url;
+  const hasOcrData = !!passenger.passport_data;
+  const ocrExhausted = ocrAttempts >= 3;
+  const fieldsLocked = hasOcrData && !manualMode && !ocrExhausted;
+
+  async function handleUpload(file: File) {
+    setUploading(true); setOcrError("");
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const res = await fetch("/api/passport/ocr", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "שגיאה");
+
+      if (!data.is_passport || !data.data?.passport_number) {
+        setOcrAttempts((n) => n + 1);
+        throw new Error("לא זוהה דרכון תקין. ודא שהתמונה ברורה ומציגה את כל הדרכון.");
+      }
+
+      // Auto-fill visible fields
+      const d = data.data;
+      if (d.given_names || d.full_name_en) {
+        const given = d.given_names || d.full_name_en?.split(/\s+/).slice(0, -1).join(" ") || "";
+        onChange("first_name_en", given);
+      }
+      if (d.surname) onChange("last_name_en", d.surname);
+      if (d.passport_number) onChange("passport_number", d.passport_number);
+      if (d.expiry_date) onChange("passport_expiry", d.expiry_date);
+      if (d.birth_date) onChange("birth_date", d.birth_date);
+      if (data.image_url) onChange("passport_image_url", data.image_url);
+      onChange("passport_data", data);
+    } catch (e: any) {
+      setOcrError(e.message || "שגיאה");
+      setOcrAttempts((n) => n + 1);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <h4 className="text-sm font-semibold text-primary-700 mb-3">נוסע #{index + 1}</h4>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h4 className="text-sm font-semibold text-primary-700">נוסע #{index + 1}</h4>
+        {!manualMode && (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${hasOcrData ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-primary-700 text-white hover:bg-primary-800"} disabled:opacity-50`}
+          >
+            {uploading ? "מעלה..." : hasOcrData ? "✓ דרכון הועלה — העלה שוב" : "📷 העלה תמונת דרכון"}
+          </button>
+        )}
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+      </div>
+
+      {ocrError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-2 text-xs mb-3">
+          ❌ {ocrError} <span className="text-gray-500">(ניסיון {ocrAttempts}/3)</span>
+        </div>
+      )}
+
+      {ocrExhausted && !manualMode && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-3 text-xs">
+          <div className="font-semibold text-yellow-800 mb-1">⚠ זיהוי אוטומטי לא הצליח אחרי 3 ניסיונות</div>
+          <div className="text-yellow-700 mb-2">אפשר להזין את הפרטים ידנית:</div>
+          <button type="button" onClick={() => setManualMode(true)}
+            className="bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700">
+            ✏️ עבור להזנה ידנית
+          </button>
+        </div>
+      )}
+
+      {hasImage && (
+        <div className="mb-3 flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={passenger.passport_image_url} alt="passport" className="h-16 w-24 object-cover rounded border border-gray-200" />
+          <span className="text-xs text-green-700">✓ תמונת דרכון הועלתה</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">שם פרטי (באנגלית) *</label>

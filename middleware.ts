@@ -20,6 +20,7 @@ const publicApiPrefixes = [
   "/api/payments/",                      // Customer payment flow via payment_token
   "/api/coupons/validate",               // Public: validate coupon code during booking
   "/api/ocr/passport",                   // Public: OCR during booking form
+  "/api/passport/ocr",                   // Public: new OCR during booking form (Groq/Gemini)
 ];
 
 // Cron endpoints — auth is done inside the route via CRON_SECRET, middleware lets them through

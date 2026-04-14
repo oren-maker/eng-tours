@@ -104,6 +104,7 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  const [passportModal, setPassportModal] = useState<any>(null);
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -671,7 +672,12 @@ export default function OrderDetailPage() {
                       {p.first_name_en} {p.last_name_en}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">
-                      {p.passport_number || "-"}
+                      {p.passport_number ? (
+                        <button onClick={() => setPassportModal(p as any)}
+                          className="text-primary-700 hover:underline">
+                          {p.passport_number}
+                        </button>
+                      ) : "-"}
                     </td>
                     <td className="px-3 py-2 text-xs">
                       {p.passport_expiry || "-"}
@@ -889,6 +895,64 @@ export default function OrderDetailPage() {
             אין היסטוריית שינויים
           </p>
         )}
+      </div>
+
+      {passportModal && <PassportModal passenger={passportModal} onClose={() => setPassportModal(null)} />}
+    </div>
+  );
+}
+
+function PassportModal({ passenger, onClose }: { passenger: any; onClose: () => void }) {
+  const data = passenger.passport_data?.data || {};
+  const fields: [string, string, any][] = [
+    ["מספר דרכון", "passport_number", passenger.passport_number || data.passport_number],
+    ["שם משפחה", "surname", data.surname || passenger.last_name_en],
+    ["שמות פרטיים", "given_names", data.given_names || passenger.first_name_en],
+    ["שם מלא אנגלית", "full_name_en", data.full_name_en],
+    ["תאריך לידה", "birth_date", passenger.birth_date || data.birth_date],
+    ["תאריך הנפקה", "issue_date", data.issue_date],
+    ["תאריך תפוגה", "expiry_date", passenger.passport_expiry || data.expiry_date],
+    ["מין", "sex", data.sex],
+    ["לאום", "nationality", data.nationality || passenger.passport_data?.issuing_country],
+    ["מקום לידה", "place_of_birth", data.place_of_birth],
+    ["MRZ שורה 1", "mrz_line_1", data.mrz_line_1],
+    ["MRZ שורה 2", "mrz_line_2", data.mrz_line_2],
+  ];
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800">🛂 פרטי דרכון — {passenger.first_name_en} {passenger.last_name_en}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-2">×</button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-y-auto">
+          <div className="p-5 border-b lg:border-b-0 lg:border-l border-gray-200">
+            <div className="text-xs font-semibold text-gray-500 mb-2">פירוט</div>
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-gray-100">
+                {fields.map(([label, key, value]) => (
+                  <tr key={key} className={value ? "" : "opacity-50"}>
+                    <td className="py-2 bg-gray-50 font-medium text-gray-600 px-2 w-36">{label}</td>
+                    <td className="py-2 px-2 font-mono text-xs" dir={typeof value === "string" && /[a-zA-Z0-9]/.test(value[0] || "") ? "ltr" : "auto"}>
+                      {value || <span className="text-gray-400">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-5 bg-gray-50 flex items-center justify-center">
+            {passenger.passport_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={passenger.passport_image_url} alt="passport" className="max-h-[70vh] object-contain rounded-lg shadow-lg" />
+            ) : (
+              <div className="text-gray-400 text-sm text-center py-12">
+                <div className="text-4xl mb-2">📷</div>
+                <div>אין תמונת דרכון</div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

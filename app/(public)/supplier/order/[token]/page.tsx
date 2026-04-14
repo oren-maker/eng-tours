@@ -53,6 +53,7 @@ export default function SupplierOrderPage() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [passportModal, setPassportModal] = useState<any>(null);
 
   const [order, setOrder] = useState<any>(null);
   const [items, setItems] = useState<Item[]>([]);
@@ -436,7 +437,8 @@ export default function SupplierOrderPage() {
                 <div key={p.id} className="text-sm bg-gray-50 px-3 py-2 rounded-lg">
                   <span className="font-medium text-gray-800">{i + 1}. {p.first_name_en} {p.last_name_en}</span>
                   <div className="text-xs text-gray-500 mt-1">
-                    דרכון: {p.passport_number} · לידה: {p.birth_date ? new Date(p.birth_date).toLocaleDateString("he-IL") : "—"}
+                    דרכון: <button onClick={() => setPassportModal(p as any)} className="text-primary-700 hover:underline">{p.passport_number}</button>
+                    {" · "}לידה: {p.birth_date ? new Date(p.birth_date).toLocaleDateString("he-IL") : "—"}
                   </div>
                   <div className="text-xs text-gray-400" dir="ltr">{p.phone} · {p.email}</div>
                 </div>
@@ -702,6 +704,63 @@ export default function SupplierOrderPage() {
         </>
         )}
       </main>
+
+      {passportModal && <PassportModal passenger={passportModal} onClose={() => setPassportModal(null)} />}
+    </div>
+  );
+}
+
+function PassportModal({ passenger, onClose }: { passenger: any; onClose: () => void }) {
+  const data = passenger.passport_data?.data || {};
+  const fields: [string, any][] = [
+    ["מספר דרכון", passenger.passport_number || data.passport_number],
+    ["שם משפחה", data.surname || passenger.last_name_en],
+    ["שמות פרטיים", data.given_names || passenger.first_name_en],
+    ["תאריך לידה", passenger.birth_date || data.birth_date],
+    ["תאריך הנפקה", data.issue_date],
+    ["תאריך תפוגה", passenger.passport_expiry || data.expiry_date],
+    ["מין", data.sex],
+    ["לאום", data.nationality || passenger.passport_data?.issuing_country],
+    ["מקום לידה", data.place_of_birth],
+    ["MRZ שורה 1", data.mrz_line_1],
+    ["MRZ שורה 2", data.mrz_line_2],
+  ];
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800">🛂 פרטי דרכון — {passenger.first_name_en} {passenger.last_name_en}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-2">×</button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-y-auto">
+          <div className="p-5 border-b lg:border-b-0 lg:border-l border-gray-200">
+            <div className="text-xs font-semibold text-gray-500 mb-2">פירוט</div>
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-gray-100">
+                {fields.map(([label, value]) => (
+                  <tr key={label} className={value ? "" : "opacity-50"}>
+                    <td className="py-2 bg-gray-50 font-medium text-gray-600 px-2 w-36">{label}</td>
+                    <td className="py-2 px-2 font-mono text-xs" dir={typeof value === "string" && /[a-zA-Z0-9]/.test(value[0] || "") ? "ltr" : "auto"}>
+                      {value || <span className="text-gray-400">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-5 bg-gray-50 flex items-center justify-center">
+            {passenger.passport_image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={passenger.passport_image_url} alt="passport" className="max-h-[70vh] object-contain rounded-lg shadow-lg" />
+            ) : (
+              <div className="text-gray-400 text-sm text-center py-12">
+                <div className="text-4xl mb-2">📷</div>
+                <div>אין תמונת דרכון</div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -255,6 +255,7 @@ export async function POST(request: NextRequest) {
       phone: p.phone,
       email: p.email,
       passport_image_url: p.passport_image_url,
+      passport_data: p.passport_data || null,
       flight_id: p.flight_id || null,
       room_id: p.room_id || null,
       ticket_id: p.ticket_id || null,
