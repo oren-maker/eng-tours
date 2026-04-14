@@ -81,6 +81,7 @@ Schema:
   "reasons": string[],
   "data": {
     "document_number": string | null,
+    "license_number": string | null,
     "surname": string | null,
     "given_names": string | null,
     "full_name_he": string | null,
@@ -94,10 +95,14 @@ Schema:
   }
 }
 
+CRITICAL FIELD MAPPING:
+- "document_number" MUST be the holder's ISRAELI ID NUMBER (תעודת זהות / ת״ז) — a 9-digit number shown on the license. This uniquely identifies the person.
+- "license_number" is a separate field for the license serial number (usually near the top/back).
+- If the ID number is not visible, set document_number to null (do NOT fall back to license serial).
+
 Rules:
-- Israeli driver's licenses have: "רישיון נהיגה", "מדינת ישראל" / "State of Israel", categories (B, A, etc.), photo.
+- Israeli driver's licenses have: "רישיון נהיגה", "מדינת ישראל" / "State of Israel", categories (B, A, etc.), photo, both an ID number (9 digits) AND a license serial.
 - If NOT a driver's license, set is_valid=false.
-- document_number: license number (digits only).
 - Dates: YYYY-MM-DD.
 - Do NOT guess.`,
 };
@@ -210,12 +215,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // Checksum for Israeli ID
-    if (docType === "id_card" && parsed?.data?.document_number) {
+    // Checksum for Israeli ID — applies to both id_card and drivers_license
+    // (in drivers_license we ask model to extract the ID number, not license serial)
+    if ((docType === "id_card" || docType === "drivers_license") && parsed?.data?.document_number) {
       parsed.checksum_valid = idNumberChecksum(parsed.data.document_number);
       if (parsed.is_valid && !parsed.checksum_valid) {
         parsed.is_valid = false;
-        parsed.reasons = [...(parsed.reasons || []), "ספרת ביקורת של תעודת הזהות לא תקינה"];
+        parsed.reasons = [...(parsed.reasons || []), "ספרת ביקורת של מספר תעודת הזהות לא תקינה"];
       }
     }
 
