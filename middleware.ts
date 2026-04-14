@@ -22,6 +22,7 @@ const publicApiPrefixes = [
   "/api/ocr/passport",                   // Public: OCR during booking form
   "/api/passport/ocr",                   // Public: new OCR during booking form (Groq/Gemini)
   "/api/unsubscribe",                    // Public: email unsubscribe
+  "/api/email/templates/preview",        // Public: email template preview (renders sample data only)
 ];
 
 // Cron endpoints — auth is done inside the route via CRON_SECRET, middleware lets them through
