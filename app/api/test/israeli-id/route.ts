@@ -66,20 +66,36 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    const msg = data?.error?.message || `HTTP ${res.status}`;
-    throw new Error(`Gemini API: ${msg}`);
+  // Try models in order of preference (widest free tier first)
+  const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash", "gemini-2.5-flash"];
+  let lastError: Error | null = null;
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.error?.message || `HTTP ${res.status}`;
+        lastError = new Error(`Gemini ${model}: ${msg}`);
+        // If it's a quota issue, try next model; if it's auth/request issue, bail immediately
+        if (res.status === 429 || /quota|rate.?limit/i.test(msg)) continue;
+        throw lastError;
+      }
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) { lastError = new Error(`Gemini ${model}: empty response`); continue; }
+      const parsed = JSON.parse(text);
+      (parsed as any)._used_model = model;
+      return parsed;
+    } catch (e: any) {
+      lastError = e;
+      if (!/quota|rate.?limit|429/i.test(e.message || "")) throw e;
+    }
   }
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini returned empty response");
-  return JSON.parse(text);
+  throw lastError || new Error("All Gemini models exhausted");
 }
 
 async function callAnthropic(base64: string, mimeType: string): Promise<any> {
