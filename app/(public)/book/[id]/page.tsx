@@ -751,14 +751,29 @@ function PassengerCard({ passenger, index, onChange, phonePrefixes, minAge }: {
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h4 className="text-sm font-semibold text-primary-700">נוסע #{index + 1}</h4>
         {!manualMode && (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${hasOcrData ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-primary-700 text-white hover:bg-primary-800"} disabled:opacity-50`}
-          >
-            {uploading ? "מעלה..." : hasOcrData ? "✓ דרכון הועלה — העלה שוב" : "📷 העלה תמונת דרכון"}
-          </button>
+          hasOcrData ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-green-100 text-green-800 border border-green-200 px-2 py-1 rounded-full">✓ דרכון אומת</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("הדרכון כבר נבדק. האם להחליף לצילום חדש?")) fileRef.current?.click();
+                }}
+                className="text-xs text-gray-500 hover:text-primary-700 underline"
+              >
+                החלף
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="text-xs px-3 py-1.5 rounded-lg font-medium transition bg-primary-700 text-white hover:bg-primary-800 disabled:opacity-50"
+            >
+              {uploading ? "מעלה..." : "📷 העלה תמונת דרכון"}
+            </button>
+          )
         )}
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
