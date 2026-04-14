@@ -56,5 +56,27 @@ export async function POST(request: Request) {
     after: { participant_id: participant_id || null, amount: amt, method, card_last4, confirmation, date, total_paid: newPaid, remaining_after: total - newPaid },
   }, request);
 
+  // Send payment notification
+  try {
+    const { sendTemplateMessage } = await import("@/lib/wa-templates");
+    const { data: fullOrder } = await supabase
+      .from("orders")
+      .select("events(name), participants(phone)")
+      .eq("id", order.id)
+      .single();
+    const eventName = (fullOrder as any)?.events?.name || "האירוע";
+    const phones = new Set<string>(((fullOrder as any)?.participants || []).map((p: any) => p.phone).filter(Boolean));
+    const orderShortId = order.id.slice(0, 8);
+    const templateName = newPaid >= total ? "payment_confirmed" : "partial_payment";
+    for (const phone of phones) {
+      if (templateName === "payment_confirmed") {
+        await sendTemplateMessage("payment_confirmed", phone, { event_name: eventName, amount: amt, order_id: orderShortId }, { order_id: order.id, recipient_type: "customer" });
+      } else {
+        await sendTemplateMessage("partial_payment", phone, { id: orderShortId }, { order_id: order.id, recipient_type: "customer" });
+      }
+      await new Promise((r) => setTimeout(r, 6000));
+    }
+  } catch (e) { console.error("payment notify error:", e); }
+
   return NextResponse.json({ success: true, amount_paid: amt, remaining: total - newPaid });
 }

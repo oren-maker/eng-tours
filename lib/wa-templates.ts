@@ -133,6 +133,61 @@ export async function ensureDefaultTemplates() {
   return toInsert.length;
 }
 
+/** Send WhatsApp template message + log to DB. Non-throwing. */
+export async function sendTemplateMessage(templateName: string, toPhone: string, variables: Record<string, any> = {}, context?: { order_id?: string; recipient_type?: string }) {
+  try {
+    const { wasender, isConfigured } = await import("@/lib/wasender");
+    if (!isConfigured() || !toPhone) return { ok: false, reason: "not_configured_or_no_phone" };
+
+    const sr = await wasender.listSessions();
+    const sessions: any[] = Array.isArray(sr.data) ? sr.data : ((sr.data as any)?.data || []);
+    const session = sessions.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase()));
+    if (!session?.api_key) return { ok: false, reason: "no_connected_session" };
+
+    const text = await renderTemplate(templateName, variables);
+    if (!text) return { ok: false, reason: "empty_template" };
+
+    let digits = String(toPhone).replace(/[^0-9]/g, "");
+    if (digits.startsWith("0")) digits = "972" + digits.slice(1);
+    const to = "+" + digits;
+
+    const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
+
+    const supabase = createServiceClient();
+    await supabase.from("whatsapp_log").insert({
+      direction: "outgoing",
+      recipient: to.replace("+", ""),
+      recipient_number: to.replace("+", ""),
+      recipient_type: context?.recipient_type || null,
+      message_body: text,
+      template_name: templateName,
+      status: r.ok ? "sent" : "failed",
+      error_message: r.ok ? null : r.error,
+      order_id: context?.order_id || null,
+    });
+
+    return { ok: r.ok, msgId: (r.data as any)?.data?.msgId };
+  } catch (err: any) {
+    console.error(`sendTemplateMessage(${templateName}) error:`, err);
+    return { ok: false, error: err.message };
+  }
+}
+
+/** Get admin phone for admin notifications */
+export async function getAdminPhone(): Promise<string | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("users")
+    .select("phone")
+    .eq("role", "admin")
+    .eq("is_active", true)
+    .not("phone", "is", null)
+    .order("is_primary_admin", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as any)?.phone || process.env.ADMIN_PHONE || null;
+}
+
 /** Restore ALL templates to their DEFAULT values (overwrites DB copies). */
 export async function resetAllTemplatesToDefault() {
   const supabase = createServiceClient();

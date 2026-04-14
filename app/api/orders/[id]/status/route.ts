@@ -111,6 +111,39 @@ export async function PATCH(
         before: { status: currentOrder.status },
         after: { status },
       }, request);
+
+      // Fire template notifications based on new status
+      try {
+        const { sendTemplateMessage, getAdminPhone } = await import("@/lib/wa-templates");
+        const base = process.env.NEXT_PUBLIC_BASE_URL || "https://eng-tours.vercel.app";
+        const { data: fullOrder } = await supabase
+          .from("orders")
+          .select("id, share_token, event_id, events(name), participants(phone, first_name_en)")
+          .eq("id", id)
+          .single();
+        const ev: any = (fullOrder as any)?.events;
+        const eventName = ev?.name || "האירוע";
+        const link = `${base}/p/${(fullOrder as any)?.share_token || id}`;
+        const orderShortId = id.slice(0, 8);
+        const customerPhones = new Set<string>(((fullOrder as any)?.participants || []).map((p: any) => p.phone).filter(Boolean));
+        const supplierLink = `${base}/supplier/order/${(fullOrder as any)?.share_token}`;
+        const adminPhone = await getAdminPhone();
+
+        if (status === "confirmed") {
+          for (const p of customerPhones) {
+            await sendTemplateMessage("order_confirmed_customer", p, { link }, { order_id: id, recipient_type: "customer" });
+            await new Promise((r) => setTimeout(r, 6000));
+          }
+        } else if (status === "supplier_review") {
+          // Notify admin + send supplier flow notifications
+          if (adminPhone) {
+            await sendTemplateMessage("supplier_new_order", adminPhone, { order_id: orderShortId, event_name: eventName, link: supplierLink }, { order_id: id, recipient_type: "admin" });
+            await new Promise((r) => setTimeout(r, 6000));
+            await sendTemplateMessage("order_pending_supplier", adminPhone, { id: orderShortId, link: supplierLink }, { order_id: id, recipient_type: "supplier" });
+            await new Promise((r) => setTimeout(r, 6000));
+          }
+        }
+      } catch (e) { console.error("status notify error:", e); }
     }
     if (noteChanged) {
       const prev = currentOrder.internal_notes || "";

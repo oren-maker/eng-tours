@@ -337,7 +337,15 @@ export async function POST(request: NextRequest) {
             if (p.phone) phones.add(String(p.phone));
           }
 
-          const { renderTemplate } = await import("@/lib/wa-templates");
+          const { renderTemplate, sendTemplateMessage, getAdminPhone } = await import("@/lib/wa-templates");
+
+          // Notify admin of new order
+          const adminPhone = await getAdminPhone();
+          if (adminPhone) {
+            await sendTemplateMessage("new_order", adminPhone, { id: orderShortId, event_name: eventName }, { order_id: order.id, recipient_type: "admin" });
+            await new Promise((r) => setTimeout(r, 6000));
+          }
+
           for (const phone of phones) {
             let digits = phone.replace(/[^0-9]/g, "");
             if (digits.startsWith("0")) digits = "972" + digits.slice(1);

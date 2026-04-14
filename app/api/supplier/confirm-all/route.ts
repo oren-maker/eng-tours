@@ -136,5 +136,31 @@ export async function POST(request: Request) {
     },
   }, request);
 
+  // Send supplier notifications
+  try {
+    const { sendTemplateMessage, getAdminPhone } = await import("@/lib/wa-templates");
+    const adminPhone = await getAdminPhone();
+    const orderShortId = order.id.slice(0, 8);
+    if (adminPhone) {
+      if (hasAnyIssue) {
+        await sendTemplateMessage("supplier_issue", adminPhone, { name: "ספק", id: orderShortId }, { order_id: order.id, recipient_type: "admin" });
+      } else {
+        await sendTemplateMessage("supplier_approved", adminPhone, { name: "ספק", id: orderShortId }, { order_id: order.id, recipient_type: "admin" });
+        await new Promise((r) => setTimeout(r, 6000));
+        // Send airline confirmation to customers for flight items
+        const flightConf = changes.find((c: any) => c.type === "flight")?.confirmation_number;
+        if (flightConf) {
+          const { data: parts } = await supabase.from("participants").select("phone").eq("order_id", order.id);
+          for (const p of parts || []) {
+            if ((p as any).phone) {
+              await sendTemplateMessage("order_confirmed_airline", (p as any).phone, { confirmation: flightConf }, { order_id: order.id, recipient_type: "customer" });
+              await new Promise((r) => setTimeout(r, 6000));
+            }
+          }
+        }
+      }
+    }
+  } catch (e) { console.error("supplier notify error:", e); }
+
   return NextResponse.json({ success: true, status: newStatus, changes });
 }
