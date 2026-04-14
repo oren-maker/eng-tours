@@ -44,12 +44,6 @@ export const DEFAULT_TEMPLATES: Record<string, { body: string; description: stri
     variables: ["n", "event_name", "link"],
     body: "⏰ *ENG TOURS*\nעוד {{n}} ימים לאירוע *{{event_name}}*!\n\nפרטי הנסיעה:\n{{link}}",
   },
-  waiting_list_available: {
-    description: "התפנה מקום - הודעה למי שברשימת המתנה",
-    variables: ["link"],
-    body: "התפנה מקום! הזמן עכשיו: {{link}}",
-  },
-
   // === Supplier flow ===
   supplier_new_order: {
     description: "הודעה לספק על הזמנה חדשה שממתינה לאישור",
@@ -83,11 +77,6 @@ export const DEFAULT_TEMPLATES: Record<string, { body: string; description: stri
     variables: ["n", "item_name"],
     body: "נשארו {{n}} מקומות ב-{{item_name}}",
   },
-  backup_failed: {
-    description: "התרעה שהגיבוי האוטומטי נכשל",
-    variables: ["date"],
-    body: "גיבוי אוטומטי נכשל – {{date}}",
-  },
   "2fa_code": {
     description: "קוד אימות דו-שלבי בהתחברות",
     variables: ["code"],
@@ -106,9 +95,11 @@ export async function renderTemplate(name: string, variables: Record<string, str
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("whatsapp_templates")
-    .select("body")
+    .select("body, is_active")
     .eq("name", name)
     .single();
+  // If template disabled, return empty (prevents send)
+  if (data && data.is_active === false) return "";
   let body = data?.body;
   if (!body) body = DEFAULT_TEMPLATES[name]?.body || "";
   return applyTemplate(body || "", variables);
@@ -145,7 +136,7 @@ export async function sendTemplateMessage(templateName: string, toPhone: string,
     if (!session?.api_key) return { ok: false, reason: "no_connected_session" };
 
     const text = await renderTemplate(templateName, variables);
-    if (!text) return { ok: false, reason: "empty_template" };
+    if (!text) return { ok: false, reason: "template_disabled_or_empty" };
 
     let digits = String(toPhone).replace(/[^0-9]/g, "");
     if (digits.startsWith("0")) digits = "972" + digits.slice(1);

@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, body: templateBody, variables } = body;
+    const { id, name, body: templateBody, variables, is_active } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -62,6 +62,7 @@ export async function PATCH(request: NextRequest) {
     if (name !== undefined) updateData.name = name;
     if (templateBody !== undefined) updateData.body = templateBody;
     if (variables !== undefined) updateData.variables = variables;
+    if (is_active !== undefined) updateData.is_active = !!is_active;
     updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase

@@ -16,20 +16,18 @@ const TEMPLATE_DESCRIPTIONS: Record<string, { title: string; usage: string; exam
   order_created: { title: "אישור הזמנה חדשה", usage: "נשלח אוטומטית ללקוח עם יצירת הזמנה חדשה", exampleVars: { event_name: "פסטיבל איי יוון", order_id: "A1B2C3D4", link: "https://eng-tours.vercel.app/p/abc-123" } },
   order_details: { title: "פרטי הזמנה (ידני)", usage: "כשאדמין לוחץ 'שלח ב-WhatsApp' בעמוד הזמנה", exampleVars: { event_name: "פסטיבל איי יוון", link: "https://eng-tours.vercel.app/p/abc-123" } },
   order_details_buyers: { title: "פרטי הזמנה לכל הרוכשים", usage: "כשאדמין לוחץ 'שלח לרוכשים' בעמוד הזמנה", exampleVars: { first_name: "דן", event_name: "פסטיבל איי יוון", link: "https://eng-tours.vercel.app/p/abc-123" } },
-  supplier_new_order: { title: "הזמנה חדשה לספק", usage: "נשלח לספק כשהזמנה ממתינה לאישור", exampleVars: { order_id: "A1B2C3D4", event_name: "פסטיבל איי יוון", link: "https://eng-tours.vercel.app/supplier/order/abc" } },
-  payment_confirmed: { title: "אישור תשלום", usage: "נשלח ללקוח אחרי קבלת תשלום", exampleVars: { event_name: "פסטיבל איי יוון", amount: "5000", order_id: "A1B2C3D4" } },
+  supplier_new_order: { title: "הזמנה חדשה לספק", usage: "נשלח כשהזמנה עוברת לסטטוס supplier_review", exampleVars: { order_id: "A1B2C3D4", event_name: "פסטיבל איי יוון", link: "https://eng-tours.vercel.app/supplier/order/abc" } },
+  payment_confirmed: { title: "אישור תשלום", usage: "נשלח ללקוח כשהזמנה משולמת במלואה", exampleVars: { event_name: "פסטיבל איי יוון", amount: "5000", order_id: "A1B2C3D4" } },
   event_reminder: { title: "תזכורת לפני אירוע", usage: "נשלח אוטומטית N ימים לפני האירוע", exampleVars: { n: "7", event_name: "פסטיבל איי יוון", link: "https://eng-tours.vercel.app/p/abc-123" } },
   "2fa_code": { title: "קוד אימות 2FA", usage: "נשלח בעת התחברות עם אימות דו-שלבי", exampleVars: { code: "123456" } },
-  backup_failed: { title: "התרעת גיבוי כושל", usage: "נשלח למנהלים כשגיבוי אוטומטי נכשל", exampleVars: { date: "14.4.2026" } },
-  new_order: { title: "הזמנה חדשה (למנהל)", usage: "נשלח למנהל על הזמנה חדשה", exampleVars: { id: "A1B2C3D4", event_name: "פסטיבל איי יוון" } },
-  order_confirmed_airline: { title: "אישור חברת תעופה", usage: "נשלח לנוסעים אחרי אישור טיסה", exampleVars: { confirmation: "AB1234" } },
-  order_confirmed_customer: { title: "אישור ללקוח", usage: "נשלח ללקוח אחרי אישור סופי", exampleVars: { link: "https://eng-tours.vercel.app/p/abc-123" } },
-  order_pending_supplier: { title: "הזמנה ממתינה לספק", usage: "ספק מקבל התראה", exampleVars: { id: "A1B2C3D4", link: "https://eng-tours.vercel.app/supplier/order/abc" } },
-  partial_payment: { title: "תשלום חלקי", usage: "התראה שהזמנה שולמה חלקית", exampleVars: { id: "A1B2C3D4" } },
-  supplier_approved: { title: "ספק אישר הזמנה", usage: "התראה למנהל שספק אישר", exampleVars: { name: "אל על", id: "A1B2C3D4" } },
-  supplier_issue: { title: "דיווח בעיה מספק", usage: "התראה כשספק מדווח בעיה", exampleVars: { name: "אל על", id: "A1B2C3D4" } },
+  new_order: { title: "הזמנה חדשה (למנהל)", usage: "נשלח למנהל על כל הזמנה חדשה שנוצרה", exampleVars: { id: "A1B2C3D4", event_name: "פסטיבל איי יוון" } },
+  order_confirmed_airline: { title: "אישור חברת תעופה", usage: "נשלח לנוסעים אחרי אישור הספק של הטיסה", exampleVars: { confirmation: "AB1234" } },
+  order_confirmed_customer: { title: "אישור ללקוח", usage: "נשלח ללקוח אחרי אישור סופי (status=confirmed)", exampleVars: { link: "https://eng-tours.vercel.app/p/abc-123" } },
+  order_pending_supplier: { title: "הזמנה ממתינה לספק", usage: "נשלח לספק כשהזמנה ממתינה לאישורו", exampleVars: { id: "A1B2C3D4", link: "https://eng-tours.vercel.app/supplier/order/abc" } },
+  partial_payment: { title: "תשלום חלקי", usage: "נשלח ללקוח על תשלום שלא הושלם במלואו", exampleVars: { id: "A1B2C3D4" } },
+  supplier_approved: { title: "ספק אישר הזמנה", usage: "נשלח למנהל כשספק מאשר את הזמנה", exampleVars: { name: "אל על", id: "A1B2C3D4" } },
+  supplier_issue: { title: "דיווח בעיה מספק", usage: "נשלח למנהל כשספק מדווח בעיה בהזמנה", exampleVars: { name: "אל על", id: "A1B2C3D4" } },
   low_stock: { title: "מלאי נמוך", usage: "התראה למנהל על מלאי נמוך", exampleVars: { n: "3", item_name: "מלון מרינה" } },
-  waiting_list_available: { title: "התפנה מקום", usage: "נשלח למי שברשימת המתנה", exampleVars: { link: "https://eng-tours.vercel.app/book/xxx" } },
 };
 
 function applyTemplate(body: string, vars: Record<string, string>) {
@@ -71,6 +69,22 @@ export default function TemplatesPage() {
         alert(d.error || "שגיאה");
       }
     } finally { setSaving(false); }
+  }
+
+  async function toggleActive(t: Template) {
+    const newValue = t.is_active === false;
+    // Optimistic update
+    setTemplates((prev) => prev.map((x) => x.id === t.id ? { ...x, is_active: newValue } : x));
+    const res = await fetch("/api/whatsapp/templates", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: t.id, is_active: newValue }),
+    });
+    if (!res.ok) {
+      // revert
+      setTemplates((prev) => prev.map((x) => x.id === t.id ? { ...x, is_active: !newValue } : x));
+      alert("שגיאה בעדכון");
+    }
   }
 
   async function seedDefaults() {
@@ -127,23 +141,39 @@ export default function TemplatesPage() {
             const meta = TEMPLATE_DESCRIPTIONS[t.name];
             const isEditing = editing === t.id;
             const preview = applyTemplate(isEditing ? editBody : t.body, meta?.exampleVars || {});
+            const isActive = t.is_active !== false;
             return (
-              <div key={t.id} className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+              <div key={t.id} className={`rounded-xl shadow-sm p-5 border transition-all ${isActive ? "bg-white border-gray-100" : "bg-gray-50 border-gray-200 opacity-70"}`}>
                 <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-gray-900">{meta?.title || t.name}</h3>
                       <code className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded" dir="ltr">{t.name}</code>
-                      {t.is_active === false && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">לא פעיל</span>}
+                      {!isActive && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">⛔ כבוי</span>}
                     </div>
                     {meta?.usage && <p className="text-xs text-gray-500 mt-1">💡 {meta.usage}</p>}
                   </div>
-                  {!isEditing && (
-                    <button onClick={() => { setEditing(t.id); setEditBody(t.body); }}
-                      className="text-xs bg-primary-50 text-primary-700 border border-primary-200 px-3 py-1.5 rounded hover:bg-primary-100">
-                      ✏️ ערוך
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Toggle switch */}
+                    <label className="flex items-center gap-2 cursor-pointer" title={isActive ? "לחץ לכיבוי" : "לחץ להפעלה"}>
+                      <span className={`text-xs font-medium ${isActive ? "text-green-700" : "text-gray-400"}`}>
+                        {isActive ? "פעיל" : "כבוי"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleActive(t)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isActive ? "bg-green-500" : "bg-gray-300"}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-1" : "translate-x-6"}`} />
+                      </button>
+                    </label>
+                    {!isEditing && (
+                      <button onClick={() => { setEditing(t.id); setEditBody(t.body); }}
+                        className="text-xs bg-primary-50 text-primary-700 border border-primary-200 px-3 py-1.5 rounded hover:bg-primary-100">
+                        ✏️ ערוך
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
