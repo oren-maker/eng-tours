@@ -100,7 +100,7 @@ async function getCompanyInfo() {
   return info;
 }
 
-async function renderHtml(subject: string, body: string): Promise<string> {
+async function renderHtml(subject: string, body: string, recipientEmail?: string): Promise<string> {
   const info = await getCompanyInfo();
   const name = info.company_name || "ENG TOURS";
   const tagline = info.company_tagline || "";
@@ -129,6 +129,7 @@ async function renderHtml(subject: string, body: string): Promise<string> {
         ${footerLine ? `<div>${footerLine}</div>` : ""}
         ${info.company_address ? `<div style="margin-top:4px">${info.company_address}</div>` : ""}
         <div style="margin-top:8px">© ${year} ${name} · כל הזכויות שמורות</div>
+        ${recipientEmail ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid #374151;font-size:11px"><a href="${info.company_website || "https://eng-tours.vercel.app"}/unsubscribe?email=${encodeURIComponent(recipientEmail)}&token=${(await import("@/lib/unsubscribe-token")).signEmailToken(recipientEmail)}" style="color:#6b7280;text-decoration:underline">הסר אותי מרשימת התפוצה</a></div>` : ""}
       </div>
     </div>
   </div>
@@ -143,7 +144,7 @@ export function applyTemplate(text: string, vars: Record<string, any> = {}) {
   });
 }
 
-export async function renderEmailTemplate(name: string, variables: Record<string, any> = {}): Promise<{ subject: string; html: string } | null> {
+export async function renderEmailTemplate(name: string, variables: Record<string, any> = {}, recipientEmail?: string): Promise<{ subject: string; html: string } | null> {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("email_templates")
@@ -155,7 +156,18 @@ export async function renderEmailTemplate(name: string, variables: Record<string
   if (!tpl) return null;
   const subject = applyTemplate(tpl.subject, variables);
   const body = applyTemplate(tpl.body, variables);
-  return { subject, html: await renderHtml(subject, body) };
+  return { subject, html: await renderHtml(subject, body, recipientEmail) };
+}
+
+export async function isUnsubscribed(email: string): Promise<boolean> {
+  if (!email) return false;
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("email_unsubscribes")
+    .select("email")
+    .eq("email", email.toLowerCase().trim())
+    .maybeSingle();
+  return !!data;
 }
 
 export async function ensureDefaultEmailTemplates() {

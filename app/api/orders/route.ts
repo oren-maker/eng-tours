@@ -257,6 +257,7 @@ export async function POST(request: NextRequest) {
       passport_image_url: p.passport_image_url,
       passport_data: p.passport_data || null,
       document_type: p.document_type || "passport",
+      marketing_consent: !!p.marketing_consent,
       flight_id: p.flight_id || null,
       room_id: p.room_id || null,
       ticket_id: p.ticket_id || null,

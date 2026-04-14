@@ -19,8 +19,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const RESEND_KEY = process.env.RESEND_API_KEY;
   if (RESEND_KEY) {
     try {
-      const { renderEmailTemplate } = await import("@/lib/email-templates");
-      const tpl = await renderEmailTemplate("order_details", { event_name: eventName, link });
+      const { renderEmailTemplate, isUnsubscribed } = await import("@/lib/email-templates");
+      if (await isUnsubscribed(email)) {
+        return NextResponse.json({ success: false, error: "הנמען ביקש להסיר עצמו מרשימת התפוצה", skipped: true }, { status: 400 });
+      }
+      const tpl = await renderEmailTemplate("order_details", { event_name: eventName, link }, email);
       if (!tpl) return NextResponse.json({ success: false, error: "התבנית order_details כבויה או חסרה" }, { status: 400 });
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",

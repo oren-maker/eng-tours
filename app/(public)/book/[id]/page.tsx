@@ -55,6 +55,7 @@ function BookingContent() {
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [faqOpen, setFaqOpen] = useState(false);
   const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedMarketing, setAgreedMarketing] = useState(false);
 
   const [peopleCount, setPeopleCount] = useState(1);
   const [outboundFlight, setOutboundFlight] = useState<string>("");
@@ -154,6 +155,7 @@ function BookingContent() {
         participants: passengers.map((p, idx) => ({
           ...p,
           age_at_event: computeAge(p.birth_date),
+          marketing_consent: agreedMarketing,
           // Fallback to main contact if not set (passenger #1 always uses main)
           phone: p.phone || (idx === 0 ? fullContactPhone : fullContactPhone),
           email: p.email || (idx === 0 ? contactEmail : contactEmail),
@@ -573,6 +575,18 @@ function BookingContent() {
                       {contactPhone && !agreedTerms && (
                         <span className="block text-[11px] text-orange-700 font-semibold mt-1">⚠ חובה לאשר כדי להמשיך</span>
                       )}
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-2 mt-2 p-3 rounded-lg border border-gray-200 bg-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreedMarketing}
+                      onChange={(e) => setAgreedMarketing(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-primary-700 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-xs text-gray-700 leading-relaxed">
+                      אני מאשר/ת לקבל חומר פרסומי במייל וב-WhatsApp (אופציונלי). ניתן להסיר בכל עת.
                     </span>
                   </label>
                 </div>
