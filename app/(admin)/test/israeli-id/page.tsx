@@ -8,7 +8,7 @@ export default function PassportTestPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
-  const [provider, setProvider] = useState<"gemini" | "anthropic">("gemini");
+  const [provider, setProvider] = useState<"groq" | "gemini">("groq");
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleFile(f: File | null) {
@@ -70,17 +70,18 @@ export default function PassportTestPage() {
           <h3 className="font-semibold text-gray-800 mb-4">📤 העלאת תמונה</h3>
 
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <div className="text-xs text-gray-600 mb-2 font-medium">מודל:</div>
+            <div className="text-xs text-gray-600 mb-2 font-medium">מודל ראשי:</div>
             <div className="flex gap-2">
+              <button onClick={() => setProvider("groq")}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition ${provider === "groq" ? "bg-purple-600 text-white border-purple-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
+                ⚡ Groq Llama 4 (מהיר)
+              </button>
               <button onClick={() => setProvider("gemini")}
                 className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition ${provider === "gemini" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                🆓 Gemini (חינם)
-              </button>
-              <button onClick={() => setProvider("anthropic")}
-                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition ${provider === "anthropic" ? "bg-orange-600 text-white border-orange-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
-                💰 Claude (דורש קרדיט)
+                🆓 Gemini Flash
               </button>
             </div>
+            <p className="text-[10px] text-gray-500 mt-2">💡 אם המודל הראשי נכשל — המערכת עוברת אוטומטית לשני</p>
           </div>
 
           <label htmlFor="idfile" className="flex flex-col items-center justify-center border-2 border-dashed border-primary-300 rounded-xl p-8 cursor-pointer hover:bg-primary-50 transition-colors">

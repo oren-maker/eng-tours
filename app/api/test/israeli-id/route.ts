@@ -7,40 +7,70 @@ Respond ONLY with valid JSON — no prose, no markdown fences.
 Required JSON schema:
 {
   "is_passport": boolean,
-  "confidence": number,              // 0-1
-  "document_type_guess": string,     // "passport", "id_card", "drivers_license", "other", "unreadable"
-  "issuing_country": string | null,  // ISO 3166-1 alpha-3 or country name
-  "reasons": string[],               // why you classified this way
+  "confidence": number,
+  "document_type_guess": string,
+  "issuing_country": string | null,
+  "reasons": string[],
   "data": {
-    "passport_number": string | null,   // alphanumeric, strip spaces
-    "surname": string | null,            // family name (often uppercase)
-    "given_names": string | null,        // first + middle names
-    "full_name_en": string | null,       // full English/Latin name
-    "full_name_native": string | null,   // name in native script (Hebrew/Arabic/Cyrillic etc) if present
-    "birth_date": string | null,         // YYYY-MM-DD
-    "issue_date": string | null,         // YYYY-MM-DD
-    "expiry_date": string | null,        // YYYY-MM-DD
+    "passport_number": string | null,
+    "surname": string | null,
+    "given_names": string | null,
+    "full_name_en": string | null,
+    "full_name_native": string | null,
+    "birth_date": string | null,
+    "issue_date": string | null,
+    "expiry_date": string | null,
     "sex": "M" | "F" | null,
-    "nationality": string | null,        // ISO 3166-1 alpha-3 (e.g. ISR, USA, GBR) or country name
+    "nationality": string | null,
     "place_of_birth": string | null,
-    "mrz_line_1": string | null,         // Machine-Readable Zone line 1 if visible
-    "mrz_line_2": string | null          // MRZ line 2 if visible
+    "mrz_line_1": string | null,
+    "mrz_line_2": string | null
   },
   "notes": string
 }
 
 Rules:
 - Passports have: "PASSPORT" word, country name, photo, personal details, MRZ (2 lines at bottom).
-- If document is NOT a passport (ID card, driver's license, random photo), set is_passport=false.
+- If NOT a passport (ID card, driver's license, random photo), set is_passport=false.
 - Return null for fields you cannot read confidently. Do NOT guess.
 - Dates: convert DD/MM/YYYY or DD MMM YYYY (15 JAN 1990) to YYYY-MM-DD. Partial → null.
-- passport_number: alphanumeric only (letters + digits), strip spaces/dashes.
-- MRZ lines: copy exactly as shown (uppercase, with < fillers). If not visible, null.`;
+- passport_number: alphanumeric only, strip spaces/dashes.
+- MRZ lines: copy exactly as shown. If not visible, null.`;
 
+// === Groq (primary, free) ===
+async function callGroq(base64: string, mimeType: string): Promise<any> {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY not configured");
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: [
+          { type: "text", text: "Classify this document and extract all fields. JSON only." },
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } },
+        ]},
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 2048,
+      temperature: 0.1,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Groq: ${data?.error?.message || `HTTP ${res.status}`}`);
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Groq: empty response");
+  const parsed = JSON.parse(content);
+  parsed._used_model = "groq/llama-4-scout";
+  return parsed;
+}
+
+// === Gemini (fallback) ===
 async function callGemini(base64: string, mimeType: string): Promise<any> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not configured");
-
   const body = {
     contents: [{
       parts: [
@@ -49,23 +79,14 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
       ],
     }],
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.1,
-      maxOutputTokens: 2048,
-    },
+    generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 2048 },
   };
-
   const models = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"];
   let lastError: Error | null = null;
   for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
       if (!res.ok) {
         const msg = data?.error?.message || `HTTP ${res.status}`;
@@ -74,9 +95,9 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
         throw lastError;
       }
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) { lastError = new Error(`Gemini ${model}: empty response`); continue; }
+      if (!text) { lastError = new Error(`Gemini ${model}: empty`); continue; }
       const parsed = JSON.parse(text);
-      parsed._used_model = model;
+      parsed._used_model = `gemini/${model}`;
       return parsed;
     } catch (e: any) {
       lastError = e;
@@ -86,34 +107,11 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
   throw lastError || new Error("All Gemini models exhausted");
 }
 
-async function callAnthropic(base64: string, mimeType: string): Promise<any> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new Error("ANTHROPIC_API_KEY not configured");
-  const Anthropic = (await import("@anthropic-ai/sdk")).default;
-  const client = new Anthropic({ apiKey: key });
-  const response = await client.messages.create({
-    model: "claude-opus-4-6",
-    max_tokens: 2048,
-    system: SYSTEM_PROMPT,
-    messages: [{
-      role: "user",
-      content: [
-        { type: "image", source: { type: "base64", media_type: mimeType as any, data: base64 } },
-        { type: "text", text: "Classify this document and extract all fields. JSON only." },
-      ],
-    }],
-  });
-  const textBlock = response.content.find((b) => b.type === "text") as { type: "text"; text: string } | undefined;
-  if (!textBlock) throw new Error("Anthropic returned empty response");
-  const raw = textBlock.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-  return JSON.parse(raw);
-}
-
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
-    const provider = (formData.get("provider") as string) || "gemini";
+    const provider = (formData.get("provider") as string) || "groq";
     if (!file) return NextResponse.json({ error: "נדרשת תמונה" }, { status: 400 });
 
     const validTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -127,18 +125,23 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
 
-    let parsed: any;
-    let usedProvider = provider;
-    try {
-      parsed = provider === "anthropic" ? await callAnthropic(base64, file.type) : await callGemini(base64, file.type);
-    } catch (primaryErr: any) {
-      const fallback = provider === "anthropic" ? "gemini" : "anthropic";
+    // Try chosen provider first, then fall back to the other
+    const order = provider === "gemini" ? ["gemini", "groq"] : ["groq", "gemini"];
+    let parsed: any = null;
+    let usedProvider = "";
+    let errors: string[] = [];
+    for (let i = 0; i < order.length; i++) {
+      const p = order[i];
       try {
-        parsed = fallback === "gemini" ? await callGemini(base64, file.type) : await callAnthropic(base64, file.type);
-        usedProvider = fallback + " (fallback)";
-      } catch {
-        throw primaryErr;
+        parsed = p === "groq" ? await callGroq(base64, file.type) : await callGemini(base64, file.type);
+        usedProvider = i === 0 ? p : `${p} (fallback)`;
+        break;
+      } catch (e: any) {
+        errors.push(`${p}: ${e.message || e}`);
       }
+    }
+    if (!parsed) {
+      return NextResponse.json({ error: "כל המודלים נכשלו", details: errors }, { status: 502 });
     }
 
     // Validations
@@ -148,7 +151,7 @@ export async function POST(request: Request) {
     const expired = expiry ? expiry < today : null;
     const issueBeforeExpiry = issue && expiry ? issue < expiry : null;
     const sixMonthsFromNow = new Date(today.getTime() + 183 * 24 * 3600 * 1000);
-    const expiresBefore6Months = expiry ? expiry < sixMonthsFromNow : null; // many countries require 6mo validity
+    const expiresBefore6Months = expiry ? expiry < sixMonthsFromNow : null;
 
     const verified = !!(
       parsed.is_passport &&
@@ -159,11 +162,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ...parsed,
-      validations: {
-        expired,
-        issue_before_expiry: issueBeforeExpiry,
-        expires_within_6_months: expiresBefore6Months,
-      },
+      validations: { expired, issue_before_expiry: issueBeforeExpiry, expires_within_6_months: expiresBefore6Months },
       verified,
       provider: usedProvider,
     });
