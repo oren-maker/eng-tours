@@ -52,6 +52,7 @@ function BookingContent() {
   const [orderId, setOrderId] = useState("");
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [faqOpen, setFaqOpen] = useState(false);
+  const [agreedTerms, setAgreedTerms] = useState(false);
 
   const [peopleCount, setPeopleCount] = useState(1);
   const [outboundFlight, setOutboundFlight] = useState<string>("");
@@ -194,6 +195,8 @@ function BookingContent() {
     if (step === 3) {
       const basicValid = passengers.every((p) => p.first_name_en && p.last_name_en && p.passport_number && p.passport_expiry && p.birth_date) && contactEmail && contactPhone;
       if (!basicValid) return false;
+      // Terms checkbox required if phone entered
+      if (contactPhone && !agreedTerms) return false;
       // Min age check
       const minAge = (event as any)?.min_age;
       if (minAge) {
@@ -551,6 +554,25 @@ function BookingContent() {
                       </div>
                     </div>
                   </div>
+
+                  {contactPhone && (
+                    <label className="flex items-start gap-2 mt-4 p-3 bg-white rounded-lg border border-primary-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={agreedTerms}
+                        onChange={(e) => setAgreedTerms(e.target.checked)}
+                        required
+                        className="mt-1 w-4 h-4 text-primary-700 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-xs text-gray-700 leading-relaxed">
+                        על ידי מסירת מספר הטלפון שלך, אתה מסכים ליצור חשבון בכפוף ל-
+                        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline font-medium">תנאי שימוש</a>
+                        {" ו-"}
+                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline font-medium">מדיניות פרטיות</a>
+                        .
+                      </span>
+                    </label>
+                  )}
                 </div>
 
                 <div className="space-y-4">

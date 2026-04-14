@@ -38,6 +38,13 @@ const settingsItems = [
     icon: "⚙️",
     color: "bg-gray-50 border-gray-200 hover:bg-gray-100",
   },
+  {
+    href: "/settings/legal",
+    label: "מסמכים משפטיים",
+    description: "תנאי שימוש ומדיניות פרטיות",
+    icon: "📜",
+    color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
+  },
 ];
 
 export default function SettingsHubPage() {
