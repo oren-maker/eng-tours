@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
-// Israeli ID number checksum (9 digits, Luhn-like)
+// Israeli ID number checksum (9 digits, Luhn-like, Ministry of Interior algorithm)
 function validateIsraeliIdNumber(id: string): boolean {
   id = (id || "").replace(/\D/g, "").padStart(9, "0");
   if (id.length !== 9) return false;
@@ -15,10 +14,102 @@ function validateIsraeliIdNumber(id: string): boolean {
   return sum % 10 === 0;
 }
 
+const SYSTEM_PROMPT = `You are an OCR + document classifier specialized in Israeli government-issued ID cards ("תעודת זהות").
+Respond ONLY with valid JSON — no prose, no markdown fences.
+
+Required JSON schema:
+{
+  "is_israeli_id": boolean,
+  "confidence": number,
+  "document_type_guess": string,
+  "reasons": string[],
+  "data": {
+    "id_number": string | null,
+    "first_name_he": string | null,
+    "last_name_he": string | null,
+    "first_name_en": string | null,
+    "last_name_en": string | null,
+    "birth_date": string | null,
+    "issue_date": string | null,
+    "expiry_date": string | null,
+    "sex": "M" | "F" | null,
+    "nationality": string | null,
+    "father_name": string | null,
+    "mother_name": string | null
+  },
+  "notes": string
+}
+
+Rules:
+- Israeli IDs contain: "מדינת ישראל", "תעודת זהות", Ministry of Interior logo, blue/teal color scheme, 9-digit ID number.
+- If NOT an Israeli ID (passport, driver's license, random photo, unreadable), set is_israeli_id=false.
+- Return null for fields you cannot read confidently. Do NOT guess.
+- Dates: convert DD/MM/YYYY to YYYY-MM-DD. Partial → null.
+- id_number: digits only, no spaces or dashes.`;
+
+async function callGemini(base64: string, mimeType: string): Promise<any> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY not configured");
+
+  const body = {
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64 } },
+        { text: "Classify this document and extract fields. Return ONLY JSON per the schema in the system instructions." },
+      ],
+    }],
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.error?.message || `HTTP ${res.status}`;
+    throw new Error(`Gemini API: ${msg}`);
+  }
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Gemini returned empty response");
+  return JSON.parse(text);
+}
+
+async function callAnthropic(base64: string, mimeType: string): Promise<any> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error("ANTHROPIC_API_KEY not configured");
+  const Anthropic = (await import("@anthropic-ai/sdk")).default;
+  const client = new Anthropic({ apiKey: key });
+  const response = await client.messages.create({
+    model: "claude-opus-4-6",
+    max_tokens: 1024,
+    system: SYSTEM_PROMPT,
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: mimeType as any, data: base64 } },
+        { type: "text", text: "Classify this document and extract fields. JSON only." },
+      ],
+    }],
+  });
+  const textBlock = response.content.find((b) => b.type === "text") as { type: "text"; text: string } | undefined;
+  if (!textBlock) throw new Error("Anthropic returned empty response");
+  let raw = textBlock.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  return JSON.parse(raw);
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
+    const provider = (formData.get("provider") as string) || "gemini";
     if (!file) return NextResponse.json({ error: "נדרשת תמונה" }, { status: 400 });
 
     const validTypes = ["image/jpeg", "image/png", "image/webp"];
@@ -29,80 +120,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "גודל הקובץ מעל 10MB" }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured on server" }, { status: 503 });
-    }
-
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
 
-    const anthropic = new Anthropic({ apiKey });
-
-    const systemPrompt = `You are an OCR + document classifier specialized in Israeli government-issued ID cards ("תעודת זהות").
-Respond ONLY with valid JSON — no prose, no markdown fences.
-
-JSON schema:
-{
-  "is_israeli_id": boolean,
-  "confidence": number,          // 0-1
-  "document_type_guess": string, // e.g. "israeli_id_card", "passport", "drivers_license", "other", "unreadable"
-  "reasons": string[],           // reasons for classification (e.g. "Hebrew ministry of interior stamp", "9-digit ID number visible")
-  "data": {
-    "id_number": string | null,  // 9 digits only (no dashes)
-    "first_name_he": string | null,
-    "last_name_he": string | null,
-    "first_name_en": string | null,
-    "last_name_en": string | null,
-    "birth_date": string | null,        // YYYY-MM-DD
-    "issue_date": string | null,        // YYYY-MM-DD
-    "expiry_date": string | null,       // YYYY-MM-DD
-    "sex": "M" | "F" | null,
-    "nationality": string | null,
-    "father_name": string | null,
-    "mother_name": string | null
-  },
-  "notes": string
-}
-
-Rules:
-- If image is NOT an Israeli ID card (passport, license, random photo, blurry), set is_israeli_id=false and fill document_type_guess.
-- Israeli IDs contain: blue/teal gradient, "מדינת ישראל", "תעודת זהות", Ministry of Interior logo, 9-digit number.
-- Return null for fields you cannot read with confidence; do NOT guess.
-- Dates: try to parse DD/MM/YYYY into YYYY-MM-DD. If only partial, return null.`;
-
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: file.type as any, data: base64 } },
-          { type: "text", text: "Classify this document and extract fields. JSON only." },
-        ],
-      }],
-    });
-
-    const textBlock = response.content.find((b) => b.type === "text") as { type: "text"; text: string } | undefined;
-    if (!textBlock) return NextResponse.json({ error: "Vision API returned no text" }, { status: 500 });
-    let raw = textBlock.text.trim();
-    // Strip markdown code fences just in case
-    raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-
     let parsed: any;
-    try { parsed = JSON.parse(raw); }
-    catch { return NextResponse.json({ error: "Could not parse Vision response", raw }, { status: 500 }); }
+    let usedProvider = provider;
+    try {
+      if (provider === "anthropic") {
+        parsed = await callAnthropic(base64, file.type);
+      } else {
+        parsed = await callGemini(base64, file.type);
+      }
+    } catch (primaryErr: any) {
+      // Fallback: if primary fails, try the other
+      const fallback = provider === "anthropic" ? "gemini" : "anthropic";
+      try {
+        parsed = fallback === "gemini" ? await callGemini(base64, file.type) : await callAnthropic(base64, file.type);
+        usedProvider = fallback + " (fallback)";
+      } catch {
+        throw primaryErr;
+      }
+    }
 
-    // Local checksum verification
-    let checksumValid: boolean | null = null;
     const num = parsed?.data?.id_number;
-    if (num) checksumValid = validateIsraeliIdNumber(num);
+    const checksumValid = num ? validateIsraeliIdNumber(num) : null;
 
     return NextResponse.json({
       ...parsed,
       checksum_valid: checksumValid,
       verified: !!(parsed.is_israeli_id && checksumValid),
+      provider: usedProvider,
     });
   } catch (err: any) {
     console.error("israeli-id OCR error:", err);

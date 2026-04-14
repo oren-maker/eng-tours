@@ -8,6 +8,7 @@ export default function IsraeliIdTestPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
+  const [provider, setProvider] = useState<"gemini" | "anthropic">("gemini");
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleFile(f: File | null) {
@@ -24,6 +25,7 @@ export default function IsraeliIdTestPage() {
     try {
       const fd = new FormData();
       fd.append("image", file);
+      fd.append("provider", provider);
       const res = await fetch("/api/test/israeli-id", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) setError(data.error || "שגיאה"); else setResult(data);
@@ -53,6 +55,20 @@ export default function IsraeliIdTestPage() {
         {/* Upload */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h3 className="font-semibold text-gray-800 mb-4">📤 העלאת תמונה</h3>
+
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+            <div className="text-xs text-gray-600 mb-2 font-medium">מודל:</div>
+            <div className="flex gap-2">
+              <button onClick={() => setProvider("gemini")}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition ${provider === "gemini" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
+                🆓 Gemini 2.0 Flash (חינם)
+              </button>
+              <button onClick={() => setProvider("anthropic")}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition ${provider === "anthropic" ? "bg-orange-600 text-white border-orange-600" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"}`}>
+                💰 Claude Opus 4.6 (דורש קרדיט)
+              </button>
+            </div>
+          </div>
 
           <label
             htmlFor="idfile"
@@ -113,8 +129,11 @@ export default function IsraeliIdTestPage() {
             <div className="space-y-3 text-sm">
               {/* Verification banner */}
               <div className={`rounded-lg p-3 border-2 ${result.verified ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300"}`}>
-                <div className={`font-bold text-base ${result.verified ? "text-green-800" : "text-red-800"}`}>
-                  {result.verified ? "✅ אומת כתעודת זהות ישראלית תקינה" : "❌ לא אומת כתעודת זהות ישראלית"}
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className={`font-bold text-base ${result.verified ? "text-green-800" : "text-red-800"}`}>
+                    {result.verified ? "✅ אומת כתעודת זהות ישראלית תקינה" : "❌ לא אומת כתעודת זהות ישראלית"}
+                  </div>
+                  {result.provider && <span className="text-[10px] bg-white px-2 py-0.5 rounded-full border" dir="ltr">via {result.provider}</span>}
                 </div>
                 <div className="text-xs mt-1 text-gray-700">
                   זיהוי מסמך: <b>{result.is_israeli_id ? "כן" : "לא"}</b> · ביטחון: <b>{Math.round((result.confidence || 0) * 100)}%</b>
