@@ -563,7 +563,7 @@ function BookingContent() {
                       className="mt-1 w-4 h-4 text-primary-700 rounded focus:ring-primary-500"
                     />
                     <span className="text-xs text-gray-700 leading-relaxed">
-                      על ידי מסירת מספר הטלפון שלך, אתה מסכים ליצור חשבון בכפוף ל-
+                      על ידי מסירת הפרטים שלך הינך מאשר/ת את{" "}
                       <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline font-medium">תנאי שימוש</a>
                       {" ו-"}
                       <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary-700 hover:underline font-medium">מדיניות פרטיות</a>
