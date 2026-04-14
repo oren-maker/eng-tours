@@ -6,6 +6,7 @@ const adminPages = [
   "/dashboard", "/events", "/airlines", "/flights", "/hotels", "/tickets",
   "/packages", "/orders", "/issues", "/waiting-list", "/coupons", "/financial",
   "/faq", "/users", "/whatsapp", "/settings", "/settings-hub", "/audit-log",
+  "/test",
 ];
 
 // Public API endpoints that don't require admin auth (explicit allow-list)
