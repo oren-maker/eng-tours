@@ -66,8 +66,8 @@ async function callGemini(base64: string, mimeType: string): Promise<any> {
     },
   };
 
-  // Try models in order of preference (widest free tier first)
-  const models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash", "gemini-2.5-flash"];
+  // Try models in order of preference (verified to work with vision on free tier)
+  const models = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash"];
   let lastError: Error | null = null;
   for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
