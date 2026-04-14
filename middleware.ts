@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 const adminPages = [
   "/dashboard", "/events", "/airlines", "/flights", "/hotels", "/tickets",
   "/packages", "/orders", "/issues", "/waiting-list", "/coupons", "/financial",
-  "/faq", "/users", "/whatsapp", "/settings", "/settings-hub", "/audit-log",
+  "/faq", "/users", "/whatsapp", "/email", "/settings", "/settings-hub", "/audit-log",
   "/test",
 ];
 

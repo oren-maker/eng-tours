@@ -15,24 +15,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const link = `${base}/p/${(order as any)?.share_token || id}`;
   const eventName = (order as any)?.events?.name || "אירוע";
 
-  // Try Resend if configured, else fall back to logging
+  // Try Resend if configured
   const RESEND_KEY = process.env.RESEND_API_KEY;
   if (RESEND_KEY) {
     try {
+      const { renderEmailTemplate } = await import("@/lib/email-templates");
+      const tpl = await renderEmailTemplate("order_details", { event_name: eventName, link });
+      if (!tpl) return NextResponse.json({ success: false, error: "התבנית order_details כבויה או חסרה" }, { status: 400 });
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: process.env.EMAIL_FROM || "ENG TOURS <noreply@eng-tours.com>",
           to: [email],
-          subject: `פרטי הזמנה - ${eventName}`,
-          html: `<div dir="rtl" style="font-family:Arial,sans-serif">
-            <h2 style="color:#DD9933">ENG TOURS</h2>
-            <p>שלום,</p>
-            <p>מצורפים פרטי ההזמנה שלך לאירוע <b>${eventName}</b>.</p>
-            <p><a href="${link}" style="display:inline-block;background:#DD9933;color:white;padding:10px 20px;text-decoration:none;border-radius:6px">📄 הורד PDF של פרטי ההזמנה</a></p>
-            <p style="color:#6b7280;font-size:12px">או העתק את הקישור הבא: ${link}</p>
-          </div>`,
+          subject: tpl.subject,
+          html: tpl.html,
         }),
       });
       if (!res.ok) {
