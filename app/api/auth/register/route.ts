@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { authOptions } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase";
 import { logAction } from "@/lib/audit";
+import { validatePassword } from "@/lib/password-policy";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,12 +45,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate password length
-    if (password.length < 6) {
-      return NextResponse.json(
-        { error: "סיסמה חייבת להכיל לפחות 6 תווים" },
-        { status: 400 }
-      );
+    // Validate password policy
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.ok) {
+      return NextResponse.json({ error: pwCheck.error }, { status: 400 });
     }
 
     const supabase = createServiceClient();

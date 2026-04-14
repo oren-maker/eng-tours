@@ -33,10 +33,13 @@ export async function PATCH(
     // Password reset — admin only (any admin can reset, primary admin included)
     let passwordChanged = false;
     if (body.password) {
-      if (typeof body.password !== "string" || body.password.length < 6) {
-        return NextResponse.json({ error: "הסיסמה חייבת להיות לפחות 6 תווים" }, { status: 400 });
-      }
+      const { validatePassword } = await import("@/lib/password-policy");
+      const pc = validatePassword(body.password);
+      if (!pc.ok) return NextResponse.json({ error: pc.error }, { status: 400 });
       updateData.password_hash = await bcrypt.hash(body.password, 12);
+      updateData.password_changed_at = new Date().toISOString();
+      updateData.failed_login_count = 0;
+      updateData.locked_until = null;
       passwordChanged = true;
     }
 

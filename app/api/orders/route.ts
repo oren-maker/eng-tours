@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    const { parseOrFail, createOrderSchema } = await import("@/lib/schemas");
+    const parsed = parseOrFail(createOrderSchema, body);
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
     const {
       event_id,
       mode,

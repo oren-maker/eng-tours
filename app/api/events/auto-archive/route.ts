@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { shouldAutoArchivePastEvents } from "@/lib/event-automation";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!isAuthorizedCron(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     // Check if auto-archive is enabled
     const shouldArchive = await shouldAutoArchivePastEvents();

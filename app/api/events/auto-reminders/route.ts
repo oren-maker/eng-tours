@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { getEventsForReminders, shouldAutoSendReminders } from "@/lib/event-automation";
 import { sendWhatsApp } from "@/lib/wesender";
+import { isAuthorizedCron } from "@/lib/cron-auth";
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!isAuthorizedCron(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
     // Check if auto-reminders are enabled
     const autoSend = await shouldAutoSendReminders();

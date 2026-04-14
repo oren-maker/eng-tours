@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { createServiceClient } from "@/lib/supabase";
+import { createOtp, verifyOtp } from "@/lib/otp";
 
 declare module "next-auth" {
   interface Session {
@@ -33,6 +34,9 @@ declare module "next-auth/jwt" {
   }
 }
 
+const MAX_FAILED = 5;
+const LOCKOUT_MS = 15 * 60_000; // 15 minutes
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -40,6 +44,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "אימייל", type: "text" },
         password: { label: "סיסמה", type: "password" },
+        code: { label: "קוד אימות", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -48,7 +53,6 @@ export const authOptions: NextAuthOptions = {
 
         const supabase = createServiceClient();
 
-        // Allow login with email or phone
         const { data: user, error } = await supabase
           .from("users")
           .select("*")
@@ -60,16 +64,49 @@ export const authOptions: NextAuthOptions = {
           throw new Error("אימייל או סיסמה שגויים");
         }
 
+        // Lockout check
+        if (user.locked_until && new Date(user.locked_until) > new Date()) {
+          const minutesLeft = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60_000);
+          throw new Error(`החשבון נעול עקב ניסיונות כושלים. נסה שוב עוד ${minutesLeft} דקות.`);
+        }
+
         const isValidPassword = await bcrypt.compare(
           credentials.password,
           user.password_hash
         );
 
         if (!isValidPassword) {
+          const failed = (user.failed_login_count || 0) + 1;
+          const update: any = { failed_login_count: failed };
+          if (failed >= MAX_FAILED) {
+            update.locked_until = new Date(Date.now() + LOCKOUT_MS).toISOString();
+            update.failed_login_count = 0; // reset counter after lock
+          }
+          await supabase.from("users").update(update).eq("id", user.id);
           throw new Error("אימייל או סיסמה שגויים");
         }
 
-        // Note: no last_login column in schema, skip update
+        // 2FA required?
+        if (user.two_factor_enabled) {
+          if (!credentials.code) {
+            // Send OTP
+            const code = await createOtp(user.id, "login_2fa");
+            try {
+              const { sendTemplateMessage } = await import("@/lib/wa-templates");
+              if (user.phone) await sendTemplateMessage("2fa_code", user.phone, { code }, { recipient_type: "admin" });
+            } catch {}
+            throw new Error("2FA_REQUIRED");
+          }
+          const ok = await verifyOtp(user.id, credentials.code, "login_2fa");
+          if (!ok) throw new Error("קוד אימות שגוי או פג תוקף");
+        }
+
+        // Success: reset failed count + set last_login
+        await supabase.from("users").update({
+          failed_login_count: 0,
+          locked_until: null,
+          last_login_at: new Date().toISOString(),
+        }).eq("id", user.id);
 
         return {
           id: user.id,
@@ -83,7 +120,8 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 8 * 60 * 60, // 8 hours (down from 30 days - tighter session)
+    updateAge: 60 * 60, // refresh every hour
   },
   pages: {
     signIn: "/login",

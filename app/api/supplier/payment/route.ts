@@ -6,11 +6,10 @@ import { audit } from "@/lib/audit";
 export async function POST(request: Request) {
   const supabase = createServiceClient();
   const body = await request.json();
-  const { share_token, participant_id, amount, method, card_last4, confirmation, date } = body;
-
-  if (!share_token || !amount || Number(amount) <= 0) {
-    return NextResponse.json({ error: "חסרים שדות" }, { status: 400 });
-  }
+  const { parseOrFail, paymentSchema } = await import("@/lib/schemas");
+  const parsed = parseOrFail(paymentSchema, body);
+  if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+  const { share_token, participant_id, amount, method, card_last4, confirmation, date } = parsed.data;
 
   const { data: order } = await supabase.from("orders").select("id, amount_paid, total_price").eq("share_token", share_token).single();
   if (!order) return NextResponse.json({ error: "הזמנה לא נמצאה" }, { status: 404 });

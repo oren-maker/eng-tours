@@ -21,6 +21,13 @@ const publicApiPrefixes = [
   "/api/ocr/passport",                   // Public: OCR during booking form
 ];
 
+// Cron endpoints — auth is done inside the route via CRON_SECRET, middleware lets them through
+const cronEndpoints = [
+  "/api/events/auto-archive",
+  "/api/events/auto-reminders",
+  "/api/cron/cleanup",
+];
+
 // Public API endpoints that only allow specific HTTP methods
 // "POST-only public" means GET still requires admin
 const publicApiExact: { path: string; methods: string[] }[] = [
@@ -37,6 +44,7 @@ function isSupplierPage(pathname: string): boolean {
 
 function isPublicApi(pathname: string, method: string): boolean {
   if (publicApiPrefixes.some((p) => pathname.startsWith(p))) return true;
+  if (cronEndpoints.includes(pathname)) return true; // auth'd inside route
   return publicApiExact.some((e) => pathname === e.path && e.methods.includes(method));
 }
 

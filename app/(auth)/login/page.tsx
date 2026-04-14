@@ -19,6 +19,8 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [needCode, setNeedCode] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,11 +34,17 @@ function LoginForm() {
       const result = await signIn("credentials", {
         email,
         password,
+        code: code || undefined,
         redirect: false,
       });
 
       if (result?.error) {
-        setError(result.error);
+        if (result.error === "2FA_REQUIRED") {
+          setNeedCode(true);
+          setError("קוד אימות נשלח ל-WhatsApp שלך. הזן אותו להמשך.");
+        } else {
+          setError(result.error);
+        }
       } else {
         router.push(callbackUrl);
         router.refresh();
@@ -110,6 +118,29 @@ function LoginForm() {
                 dir="ltr"
               />
             </div>
+
+            {/* 2FA Code */}
+            {needCode && (
+              <div>
+                <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  קוד אימות (6 ספרות) *
+                </label>
+                <input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                  required
+                  autoFocus
+                  className="w-full px-4 py-3 border border-primary-400 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-800 text-center text-2xl tracking-widest font-mono"
+                  dir="ltr"
+                />
+                <p className="text-xs text-gray-500 mt-1">נשלח ב-WhatsApp · תקף 5 דקות</p>
+              </div>
+            )}
 
             {/* Remember Me */}
             <div className="flex items-center gap-2">
