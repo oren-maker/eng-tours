@@ -7,7 +7,7 @@ const TABLES = [
   "users", "events", "flights", "hotels", "rooms", "tickets", "packages",
   "orders", "participants", "supplier_confirmations", "coupons", "waiting_list",
   "whatsapp_log", "audit_log", "faq", "system_settings", "whatsapp_templates",
-  "email_templates", "email_unsubscribes", "email_log", "email_unsubscribe_log", "backups",
+  "email_templates", "email_unsubscribes", "email_log", "email_unsubscribe_log", "sms_log", "backups",
 ];
 
 async function ensureBucket(supabase: ReturnType<typeof createServiceClient>) {
