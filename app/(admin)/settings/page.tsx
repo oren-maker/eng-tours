@@ -309,8 +309,26 @@ function BackupPanel({ limit = 5, showArchiveLink = true }: { limit?: number; sh
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [elapsed, setElapsed] = useState(0);
+  const [autoEnabled, setAutoEnabled] = useState<boolean | null>(null);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadFlag(); }, []);
+
+  async function loadFlag() {
+    try {
+      const res = await fetch("/api/settings", { cache: "no-store" });
+      const d = await res.json();
+      const v = d?.settings?.backup_enabled;
+      setAutoEnabled(v === true || v === "true");
+    } catch { setAutoEnabled(false); }
+  }
+
+  function nextRunText() {
+    const now = new Date();
+    const next = new Date();
+    next.setHours(2, 0, 0, 0);
+    if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+    return next.toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
+  }
 
   useEffect(() => {
     if (!running) return;
@@ -327,6 +345,7 @@ function BackupPanel({ limit = 5, showArchiveLink = true }: { limit?: number; sh
       setTotalCount(all.length);
       setBackups(limit === Infinity ? all : all.slice(0, limit));
     } finally { setLoading(false); }
+    loadFlag();
   }
 
   async function runNow() {
@@ -370,6 +389,23 @@ function BackupPanel({ limit = 5, showArchiveLink = true }: { limit?: number; sh
 
   return (
     <div className="mt-4 pt-4 border-t">
+      {/* Status banner */}
+      {autoEnabled !== null && (
+        <div className={`mb-3 rounded-lg p-3 text-sm border flex items-center justify-between gap-2 flex-wrap ${
+          autoEnabled ? "bg-green-50 border-green-200 text-green-900" : "bg-gray-50 border-gray-200 text-gray-700"
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className={`inline-block w-2 h-2 rounded-full ${autoEnabled ? "bg-green-500 animate-pulse" : "bg-gray-400"}`} />
+            {autoEnabled ? (
+              <span>✅ <strong>גיבוי אוטומטי פעיל</strong> · הרצה הבאה: {nextRunText()} (02:00)</span>
+            ) : (
+              <span>⏸️ <strong>גיבוי אוטומטי כבוי</strong> · אין הרצה מתוזמנת — הפעל את המתג למעלה כדי להתחיל</span>
+            )}
+          </div>
+          <div className="text-xs opacity-75">תיזמון cron: <code dir="ltr">0 2 * * *</code></div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h4 className="text-sm font-medium text-gray-600">היסטוריית גיבויים</h4>
         <div className="flex items-center gap-2">
