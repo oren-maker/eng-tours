@@ -307,7 +307,7 @@ function UnsubHistory() {
               </td>
               <td className="px-4 py-2 text-xs text-gray-600">{REASON_LABELS[e.reason] || e.reason || "—"}</td>
               <td className="px-4 py-2 text-xs text-gray-500">{e.source || "—"}</td>
-              <td className="px-4 py-2 text-xs text-gray-500">{e.users?.name || e.users?.email || (e.actor_user_id ? "אדמין" : "הלקוח עצמו")}</td>
+              <td className="px-4 py-2 text-xs text-gray-500">{e.actor?.name || e.actor?.email || (e.actor_user_id ? "אדמין" : "הלקוח עצמו")}</td>
             </tr>
           ))}
         </tbody>
