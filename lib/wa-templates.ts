@@ -124,44 +124,115 @@ export async function ensureDefaultTemplates() {
   return toInsert.length;
 }
 
-/** Send WhatsApp template message + log to DB. Non-throwing. */
-export async function sendTemplateMessage(templateName: string, toPhone: string, variables: Record<string, any> = {}, context?: { order_id?: string; recipient_type?: string }) {
-  try {
-    const { wasender, isConfigured } = await import("@/lib/wasender");
-    if (!isConfigured() || !toPhone) return { ok: false, reason: "not_configured_or_no_phone" };
+/** Fetch active channels for a template. Defaults to ['whatsapp'] if not set. */
+async function getTemplateChannels(templateName: string): Promise<string[]> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("whatsapp_templates")
+    .select("channels, is_active")
+    .eq("name", templateName)
+    .maybeSingle();
+  if (!data || (data as any).is_active === false) return [];
+  const ch = (data as any).channels;
+  if (!Array.isArray(ch) || ch.length === 0) return ["whatsapp"];
+  return ch.filter((c: string) => ["whatsapp", "sms", "email"].includes(c));
+}
 
-    const sr = await wasender.listSessions();
-    const sessions: any[] = Array.isArray(sr.data) ? sr.data : ((sr.data as any)?.data || []);
-    const session = sessions.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase()));
-    if (!session?.api_key) return { ok: false, reason: "no_connected_session" };
+/**
+ * Send a template message across its configured channels.
+ * - toPhone: used for whatsapp + sms
+ * - toEmail: used for email (optional). If channel is 'email' and no email provided — that channel is skipped.
+ * Non-throwing, logs each channel attempt.
+ */
+export async function sendTemplateMessage(
+  templateName: string,
+  toPhone: string,
+  variables: Record<string, any> = {},
+  context?: { order_id?: string; recipient_type?: string; toEmail?: string }
+) {
+  const channels = await getTemplateChannels(templateName);
+  if (channels.length === 0) return { ok: false, reason: "template_disabled_or_empty" };
 
-    const text = await renderTemplate(templateName, variables);
-    if (!text) return { ok: false, reason: "template_disabled_or_empty" };
+  const results: { channel: string; ok: boolean; error?: string }[] = [];
+  const text = await renderTemplate(templateName, variables);
 
-    let digits = String(toPhone).replace(/[^0-9]/g, "");
-    if (digits.startsWith("0")) digits = "972" + digits.slice(1);
-    const to = "+" + digits;
-
-    const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
-
-    const supabase = createServiceClient();
-    await supabase.from("whatsapp_log").insert({
-      direction: "outgoing",
-      recipient: to.replace("+", ""),
-      recipient_number: to.replace("+", ""),
-      recipient_type: context?.recipient_type || null,
-      message_body: text,
-      template_name: templateName,
-      status: r.ok ? "sent" : "failed",
-      error_message: r.ok ? null : r.error,
-      order_id: context?.order_id || null,
-    });
-
-    return { ok: r.ok, msgId: (r.data as any)?.data?.msgId };
-  } catch (err: any) {
-    console.error(`sendTemplateMessage(${templateName}) error:`, err);
-    return { ok: false, error: err.message };
+  // WhatsApp
+  if (channels.includes("whatsapp") && toPhone && text) {
+    try {
+      const { wasender, isConfigured } = await import("@/lib/wasender");
+      if (!isConfigured()) {
+        results.push({ channel: "whatsapp", ok: false, error: "wasender not configured" });
+      } else {
+        const sr = await wasender.listSessions();
+        const sessions: any[] = Array.isArray(sr.data) ? sr.data : ((sr.data as any)?.data || []);
+        const session = sessions.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase()));
+        if (!session?.api_key) {
+          results.push({ channel: "whatsapp", ok: false, error: "no connected session" });
+        } else {
+          let digits = String(toPhone).replace(/[^0-9]/g, "");
+          if (digits.startsWith("0")) digits = "972" + digits.slice(1);
+          const to = "+" + digits;
+          const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
+          const supabase = createServiceClient();
+          await supabase.from("whatsapp_log").insert({
+            direction: "outgoing",
+            recipient: to.replace("+", ""),
+            recipient_number: to.replace("+", ""),
+            recipient_type: context?.recipient_type || null,
+            message_body: text,
+            template_name: templateName,
+            status: r.ok ? "sent" : "failed",
+            error_message: r.ok ? null : r.error,
+            order_id: context?.order_id || null,
+            external_id: (r.data as any)?.data?.msgId || null,
+            raw_payload: r.data || null,
+          });
+          results.push({ channel: "whatsapp", ok: r.ok, error: r.ok ? undefined : r.error });
+        }
+      }
+    } catch (err: any) {
+      results.push({ channel: "whatsapp", ok: false, error: err.message });
+    }
   }
+
+  // SMS — uses same rendered body
+  if (channels.includes("sms") && toPhone && text) {
+    try {
+      const { sendSms } = await import("@/lib/pulseem");
+      const rt = (context?.recipient_type === "supplier" ? "supplier" : context?.recipient_type === "admin" ? "admin" : "customer") as any;
+      const r = await sendSms(toPhone, text, { order_id: context?.order_id, recipient_type: rt, reference: `${templateName}-${Date.now()}` });
+      results.push({ channel: "sms", ok: r.success, error: r.error });
+    } catch (err: any) {
+      results.push({ channel: "sms", ok: false, error: err.message });
+    }
+  }
+
+  // Email — uses separate email_templates row for HTML
+  if (channels.includes("email") && context?.toEmail) {
+    try {
+      const { renderEmailTemplate } = await import("@/lib/email-templates");
+      const { sendEmail } = await import("@/lib/email");
+      const rendered = await renderEmailTemplate(templateName, variables, context.toEmail);
+      if (!rendered) {
+        results.push({ channel: "email", ok: false, error: "email template missing" });
+      } else {
+        const rt = (context?.recipient_type === "supplier" ? "supplier" : context?.recipient_type === "admin" ? "admin" : "customer") as any;
+        const r = await sendEmail(context.toEmail, rendered.subject, rendered.html, {
+          template: templateName,
+          recipient_type: rt,
+          order_id: context?.order_id,
+          prerendered: true,
+          variables: variables as any,
+        });
+        results.push({ channel: "email", ok: r.success, error: r.error });
+      }
+    } catch (err: any) {
+      results.push({ channel: "email", ok: false, error: err.message });
+    }
+  }
+
+  const ok = results.some((r) => r.ok);
+  return { ok, results, channels };
 }
 
 /** Get admin phone for admin notifications */
