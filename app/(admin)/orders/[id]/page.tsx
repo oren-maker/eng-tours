@@ -1234,11 +1234,12 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
   const [expanded, setExpanded] = useState(false);
   const [emails, setEmails] = useState<any[]>([]);
   const [whatsapps, setWhatsapps] = useState<any[]>([]);
+  const [smss, setSmss] = useState<any[]>([]);
   const [unsubs, setUnsubs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [openEmail, setOpenEmail] = useState<any | null>(null);
-  const [openWa, setOpenWa] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!expanded || loaded) return;
@@ -1247,12 +1248,14 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
     Promise.all([
       fetch(`/api/admin/email-log?order_id=${orderId}&limit=100`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { logs: [] }),
       fetch(`/api/whatsapp/log?order_id=${orderId}&limit=100`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { messages: [] }),
+      fetch(`/api/admin/sms-log?order_id=${orderId}&limit=100`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { logs: [] }),
       participantEmails.length > 0
         ? fetch(`/api/admin/unsubscribes`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { items: [] })
         : Promise.resolve({ items: [] }),
-    ]).then(([el, wl, us]) => {
+    ]).then(([el, wl, sl, us]) => {
       setEmails(el.logs || []);
       setWhatsapps(wl.messages || []);
+      setSmss(sl.logs || []);
       const unsubbed = (us.items || []).filter((u: any) => participantEmails.includes(u.email));
       setUnsubs(unsubbed);
       setLoaded(true);
@@ -1263,6 +1266,7 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
   const merged = [
     ...emails.map((e) => ({ ...e, _channel: "email" as const, _ts: e.created_at })),
     ...whatsapps.map((w) => ({ ...w, _channel: "whatsapp" as const, _ts: w.created_at })),
+    ...smss.map((s) => ({ ...s, _channel: "sms" as const, _ts: s.created_at })),
   ].sort((a, b) => new Date(b._ts).getTime() - new Date(a._ts).getTime());
 
   return (
@@ -1272,7 +1276,7 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
         className="w-full flex items-center justify-between text-right"
       >
         <span className="text-lg font-semibold text-gray-800">
-          💬📧 תקשורת עם הלקוח{loaded ? ` (${merged.length})` : ""}
+          💬📧📱 תקשורת עם הלקוח{loaded ? ` (${merged.length})` : ""}
         </span>
         <span className="text-gray-400 text-sm">{expanded ? "▲ סגור" : "▼ פתח"}</span>
       </button>
@@ -1294,15 +1298,21 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
         <div className="text-center py-6 text-gray-400 text-sm mt-4">עדיין לא נשלחה תקשורת להזמנה</div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto mt-4">
-          {merged.map((m: any) => (
+          {merged.map((m: any) => {
+            const icon = m._channel === "email" ? "📧" : m._channel === "whatsapp" ? "💬" : "📱";
+            const title = m._channel === "email"
+              ? (m.subject || "(ללא נושא)")
+              : m._channel === "sms"
+                ? `SMS מ-${m.sender || "ENGtours"}`
+                : (m.template_name || "הודעה");
+            const to = m._channel === "email" ? m.recipient_email : m.recipient_number;
+            return (
             <div key={m._channel + m.id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xl">{m._channel === "email" ? "📧" : "💬"}</span>
-                    <span className="font-medium text-sm text-gray-800">
-                      {m._channel === "email" ? (m.subject || "(ללא נושא)") : (m.template_name || "הודעה")}
-                    </span>
+                    <span className="text-xl">{icon}</span>
+                    <span className="font-medium text-sm text-gray-800">{title}</span>
                     {m.status === "sent" || m.status === "delivered" ? (
                       <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ {m.status === "delivered" ? "נמסר" : "נשלח"}</span>
                     ) : m.status === "failed" ? (
@@ -1312,25 +1322,28 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
                     )}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    אל: <span dir="ltr" className="font-mono">{m._channel === "email" ? m.recipient_email : m.recipient_number}</span>
+                    אל: <span dir="ltr" className="font-mono">{to}</span>
                     {m.template_name && m._channel === "email" && <span> · תבנית: <code dir="ltr">{m.template_name}</code></span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(m._ts).toLocaleString("he-IL")}</span>
                   <button
-                    onClick={() => m._channel === "email" ? setOpenEmail(m) : setOpenWa(m.id)}
+                    onClick={() => {
+                      if (m._channel === "email") setOpenEmail(m);
+                      else setOpenId(openId === m.id ? null : m.id);
+                    }}
                     className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded hover:bg-blue-100"
                   >
                     👁️ פתיחה
                   </button>
                 </div>
               </div>
-              {openWa === m.id && m._channel === "whatsapp" && (
+              {openId === m.id && (m._channel === "whatsapp" || m._channel === "sms") && (
                 <pre className="mt-2 bg-gray-50 border border-gray-200 rounded p-3 text-xs whitespace-pre-wrap" dir="rtl">{m.message_body}</pre>
               )}
             </div>
-          ))}
+          );})}
         </div>
       )}
 
