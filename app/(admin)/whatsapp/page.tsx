@@ -6,6 +6,7 @@ import QRCode from "react-qr-code";
 
 interface LogMessage {
   id: string;
+  channel: "whatsapp" | "sms";
   direction: string;
   recipient: string;
   recipient_type: string;
@@ -81,9 +82,35 @@ export default function WhatsAppAdminPage() {
       if (filterDirection) params.set("direction", filterDirection);
       if (filterStatus) params.set("status", filterStatus);
       if (filterRecipientType) params.set("recipient_type", filterRecipientType);
-      const res = await fetch(`/api/whatsapp/log?${params}`);
-      const data = await res.json();
-      setMessages(data.messages || []);
+
+      // Fetch WhatsApp + SMS in parallel, merge chronologically
+      const [waRes, smsRes] = await Promise.all([
+        fetch(`/api/whatsapp/log?${params}`).then((r) => r.ok ? r.json() : { messages: [] }),
+        fetch(`/api/admin/sms-log?${params}&limit=200`).then((r) => r.ok ? r.json() : { logs: [] }),
+      ]);
+
+      const wa = (waRes.messages || []).map((m: any) => ({
+        ...m,
+        channel: "whatsapp" as const,
+        recipient: m.recipient || m.recipient_number,
+      }));
+      const sms = (smsRes.logs || []).map((m: any) => ({
+        id: m.id,
+        channel: "sms" as const,
+        direction: m.direction || "outbound",
+        recipient: m.recipient_number,
+        recipient_type: m.recipient_type,
+        template_name: m.template_name || null,
+        message_body: m.message_body,
+        status: m.status,
+        error_message: m.error || null,
+        created_at: m.created_at,
+      }));
+
+      const merged = [...wa, ...sms].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setMessages(merged);
     } catch {
       setMessages([]);
     } finally {
@@ -296,6 +323,7 @@ export default function WhatsAppAdminPage() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-right p-3 font-medium text-gray-500">תאריך</th>
+                    <th className="text-right p-3 font-medium text-gray-500">ערוץ</th>
                     <th className="text-right p-3 font-medium text-gray-500">כיוון</th>
                     <th className="text-right p-3 font-medium text-gray-500">נמען</th>
                     <th className="text-right p-3 font-medium text-gray-500">תבנית</th>
@@ -306,14 +334,21 @@ export default function WhatsAppAdminPage() {
                 <tbody>
                   {messages.map((msg) => (
                     <tr
-                      key={msg.id}
+                      key={(msg as any).channel + "-" + msg.id}
                       className="border-b border-gray-50 hover:bg-gray-50"
                     >
                       <td className="p-3 text-gray-600 whitespace-nowrap">
                         {new Date(msg.created_at).toLocaleString("he-IL")}
                       </td>
                       <td className="p-3">
-                        {msg.direction === "outgoing" ? "↗ יוצאת" : msg.direction === "incoming" ? "↙ נכנסת" : "⚙ מערכת"}
+                        {(msg as any).channel === "sms" ? (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">📱 SMS</span>
+                        ) : (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">💬 WhatsApp</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {msg.direction === "outgoing" || msg.direction === "outbound" ? "↗ יוצאת" : msg.direction === "incoming" ? "↙ נכנסת" : "⚙ מערכת"}
                       </td>
                       <td className="p-3 font-mono text-xs">{msg.recipient || (msg as any).recipient_number || "-"}</td>
                       <td className="p-3 text-gray-500">{msg.template_name || "-"}</td>

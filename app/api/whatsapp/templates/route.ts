@@ -48,7 +48,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, body: templateBody, variables, is_active } = body;
+    const { id, name, body: templateBody, variables, is_active, channels } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -63,6 +63,10 @@ export async function PATCH(request: NextRequest) {
     if (templateBody !== undefined) updateData.body = templateBody;
     if (variables !== undefined) updateData.variables = variables;
     if (is_active !== undefined) updateData.is_active = !!is_active;
+    if (Array.isArray(channels)) {
+      const allowed = ["whatsapp", "sms", "email"];
+      updateData.channels = channels.filter((c: string) => allowed.includes(c));
+    }
     updateData.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase

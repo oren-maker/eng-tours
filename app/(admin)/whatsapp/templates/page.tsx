@@ -10,7 +10,15 @@ interface Template {
   variables: string[];
   is_active?: boolean;
   description?: string | null;
+  channels?: string[];
 }
+
+type Channel = "whatsapp" | "sms" | "email";
+const CHANNEL_META: Record<Channel, { label: string; icon: string; color: string }> = {
+  whatsapp: { label: "WhatsApp", icon: "💬", color: "green" },
+  sms: { label: "SMS", icon: "📱", color: "blue" },
+  email: { label: "Email", icon: "📧", color: "purple" },
+};
 
 const TEMPLATE_DESCRIPTIONS: Record<string, { title: string; usage: string; exampleVars: Record<string, string> }> = {
   order_created: { title: "אישור הזמנה חדשה", usage: "נשלח אוטומטית ללקוח עם יצירת הזמנה חדשה", exampleVars: { event_name: "פסטיבל איי יוון", order_id: "A1B2C3D4", link: "https://eng-tours.vercel.app/p/abc-123" } },
@@ -71,6 +79,24 @@ export default function TemplatesPage() {
     } finally { setSaving(false); }
   }
 
+  async function toggleChannel(t: Template, channel: Channel) {
+    const current = t.channels || ["whatsapp"];
+    const next = current.includes(channel)
+      ? current.filter((c) => c !== channel)
+      : [...current, channel];
+    if (next.length === 0) { alert("חובה להשאיר לפחות ערוץ אחד פעיל"); return; }
+    setTemplates((prev) => prev.map((x) => x.id === t.id ? { ...x, channels: next } : x));
+    const res = await fetch("/api/whatsapp/templates", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: t.id, channels: next }),
+    });
+    if (!res.ok) {
+      setTemplates((prev) => prev.map((x) => x.id === t.id ? { ...x, channels: current } : x));
+      alert("שגיאה בעדכון");
+    }
+  }
+
   async function toggleActive(t: Template) {
     const newValue = t.is_active === false;
     // Optimistic update
@@ -103,8 +129,8 @@ export default function TemplatesPage() {
       <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <div>
           <Link href="/whatsapp" className="text-sm text-primary-700 hover:underline">← חזרה ל-WhatsApp</Link>
-          <h2 className="text-2xl font-bold text-primary-900 mt-1">📝 תבניות הודעות WhatsApp</h2>
-          <p className="text-sm text-gray-500 mt-1">עריכת התבניות שנשלחות אוטומטית ללקוחות וספקים</p>
+          <h2 className="text-2xl font-bold text-primary-900 mt-1">📝 תבניות הודעות</h2>
+          <p className="text-sm text-gray-500 mt-1">עריכת תבניות + בחירת ערוצים (WhatsApp / SMS / Email) לכל תבנית</p>
         </div>
         <div className="flex gap-2">
           <button onClick={seedDefaults} disabled={seeding}
@@ -152,6 +178,30 @@ export default function TemplatesPage() {
                       {!isActive && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">⛔ כבוי</span>}
                     </div>
                     {meta?.usage && <p className="text-xs text-gray-500 mt-1">💡 {meta.usage}</p>}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className="text-xs text-gray-500">נשלח ב:</span>
+                      {(["whatsapp", "sms", "email"] as Channel[]).map((ch) => {
+                        const active = (t.channels || ["whatsapp"]).includes(ch);
+                        const m = CHANNEL_META[ch];
+                        return (
+                          <button
+                            key={ch}
+                            type="button"
+                            onClick={() => toggleChannel(t, ch)}
+                            className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-all ${
+                              active
+                                ? (ch === "whatsapp" ? "bg-green-100 text-green-800 border-green-300"
+                                   : ch === "sms" ? "bg-blue-100 text-blue-800 border-blue-300"
+                                   : "bg-purple-100 text-purple-800 border-purple-300")
+                                : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100"
+                            }`}
+                            title={active ? `לחץ לביטול ${m.label}` : `לחץ להפעלת ${m.label}`}
+                          >
+                            {active ? "✓" : "○"} {m.icon} {m.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Toggle switch */}
