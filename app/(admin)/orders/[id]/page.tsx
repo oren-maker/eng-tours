@@ -1204,14 +1204,18 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
 }
 
 function CommunicationsPanel({ orderId, participants }: { orderId: string; participants: Participant[] }) {
+  const [expanded, setExpanded] = useState(false);
   const [emails, setEmails] = useState<any[]>([]);
   const [whatsapps, setWhatsapps] = useState<any[]>([]);
   const [unsubs, setUnsubs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [openEmail, setOpenEmail] = useState<any | null>(null);
   const [openWa, setOpenWa] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!expanded || loaded) return;
+    setLoading(true);
     const participantEmails = Array.from(new Set(participants.map((p) => p.email).filter(Boolean).map((e) => e.toLowerCase().trim())));
     Promise.all([
       fetch(`/api/admin/email-log?order_id=${orderId}&limit=100`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { logs: [] }),
@@ -1224,9 +1228,10 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
       setWhatsapps(wl.messages || []);
       const unsubbed = (us.items || []).filter((u: any) => participantEmails.includes(u.email));
       setUnsubs(unsubbed);
+      setLoaded(true);
       setLoading(false);
     });
-  }, [orderId, participants]);
+  }, [expanded, loaded, orderId, participants]);
 
   const merged = [
     ...emails.map((e) => ({ ...e, _channel: "email" as const, _ts: e.created_at })),
@@ -1235,12 +1240,18 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        💬📧 תקשורת עם הלקוח ({merged.length})
-      </h3>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between text-right"
+      >
+        <span className="text-lg font-semibold text-gray-800">
+          💬📧 תקשורת עם הלקוח{loaded ? ` (${merged.length})` : ""}
+        </span>
+        <span className="text-gray-400 text-sm">{expanded ? "▲ סגור" : "▼ פתח"}</span>
+      </button>
 
-      {unsubs.length > 0 && (
-        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+      {expanded && unsubs.length > 0 && (
+        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
           {unsubs.map((u) => (
             <div key={u.email} className="text-yellow-900">
               ⚠️ <span className="font-mono" dir="ltr">{u.email}</span> הסיר/ה עצמו/ה מרשימת התפוצה ב-{new Date(u.unsubscribed_at).toLocaleDateString("he-IL")}
@@ -1250,12 +1261,12 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-6 text-gray-400 text-sm">טוען...</div>
+      {!expanded ? null : loading ? (
+        <div className="text-center py-6 text-gray-400 text-sm mt-4">טוען...</div>
       ) : merged.length === 0 ? (
-        <div className="text-center py-6 text-gray-400 text-sm">עדיין לא נשלחה תקשורת להזמנה</div>
+        <div className="text-center py-6 text-gray-400 text-sm mt-4">עדיין לא נשלחה תקשורת להזמנה</div>
       ) : (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 max-h-[400px] overflow-y-auto mt-4">
           {merged.map((m: any) => (
             <div key={m._channel + m.id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-3 flex-wrap">
