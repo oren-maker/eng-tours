@@ -66,7 +66,7 @@ export default function SettingsHubPage() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-primary-900">הגדרות כלליות</h2>
-        <p className="text-sm text-gray-500 mt-1">בחר קטגוריה לניהול</p>
+        <p className="text-sm text-gray-500 mt-1">בחר קטגוריה לניהול · v2</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
