@@ -63,8 +63,10 @@ export async function sendWhatsApp(
       template_name: templateName,
       message_body: messageBody,
       status: response.ok ? "sent" : "failed",
-      wesender_message_id: data?.id || null,
+      external_id: data?.id || data?.message_id || null,
       error_message: response.ok ? null : (data?.error || "Unknown error"),
+      raw_payload: data,
+      order_id: options.order_id || null,
     });
 
     // Also log to audit_log for comprehensive tracking on order
@@ -98,8 +100,10 @@ export async function sendWhatsApp(
       template_name: templateName,
       message_body: messageBody,
       status: "failed",
-      wesender_message_id: null,
+      external_id: null,
       error_message: err.message || "Network error",
+      raw_payload: { error: err.message },
+      order_id: options.order_id || null,
     });
 
     try {
@@ -168,13 +172,25 @@ async function logMessage(log: {
   template_name: string | null;
   message_body: string;
   status: "sent" | "delivered" | "read" | "failed";
-  wesender_message_id: string | null;
+  external_id: string | null;
   error_message: string | null;
+  raw_payload?: any;
+  order_id?: string | null;
 }) {
   try {
     const supabase = createServiceClient();
     await supabase.from("whatsapp_log").insert({
-      ...log,
+      direction: log.direction === "outgoing" ? "outbound" : log.direction,
+      recipient: log.recipient,
+      recipient_number: log.recipient,
+      recipient_type: log.recipient_type,
+      template_name: log.template_name,
+      message_body: log.message_body,
+      status: log.status,
+      external_id: log.external_id,
+      error_message: log.error_message,
+      raw_payload: log.raw_payload || null,
+      order_id: log.order_id || null,
       created_at: new Date().toISOString(),
     });
   } catch (err) {
