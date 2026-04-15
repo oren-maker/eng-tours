@@ -302,8 +302,9 @@ export default function SettingsPage() {
   );
 }
 
-function BackupPanel() {
+function BackupPanel({ limit = 5, showArchiveLink = true }: { limit?: number; showArchiveLink?: boolean }) {
   const [backups, setBackups] = useState<any[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState<string>("");
@@ -320,9 +321,11 @@ function BackupPanel() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/backups", { cache: "no-store" });
+      const res = await fetch(`/api/admin/backups?limit=${limit === Infinity ? 200 : 200}`, { cache: "no-store" });
       const d = await res.json();
-      setBackups(d.backups || []);
+      const all = d.backups || [];
+      setTotalCount(all.length);
+      setBackups(limit === Infinity ? all : all.slice(0, limit));
     } finally { setLoading(false); }
   }
 
@@ -457,6 +460,13 @@ function BackupPanel() {
             </tbody>
           </table>
           <p className="text-xs text-gray-400 mt-2">💡 שומר 30 גיבויים אחרונים · גיבוי אוטומטי רץ כל יום ב-3:00 אם מופעל</p>
+          {showArchiveLink && totalCount > limit && (
+            <div className="mt-3 text-center">
+              <a href="/settings/backups" className="text-sm text-primary-700 hover:underline">
+                צפה בכל הגיבויים ({totalCount}) ←
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>
