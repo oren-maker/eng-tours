@@ -38,6 +38,26 @@ async function runDaily(request: Request) {
   results.reminders = await call("/api/events/auto-reminders");
   results.cleanup = await call("/api/cron/cleanup");
 
+  // Backup (if enabled in system_settings)
+  try {
+    const supabase = createServiceClient();
+    const { data: setting } = await supabase
+      .from("system_settings")
+      .select("value")
+      .eq("key", "backup_enabled")
+      .maybeSingle();
+    const enabled = setting?.value === true || setting?.value === "true";
+    if (enabled) {
+      const { runBackup } = await import("@/lib/backup");
+      const r = await runBackup("auto");
+      results.backup = { ok: true, ...r };
+    } else {
+      results.backup = { skipped: "disabled" };
+    }
+  } catch (e: any) {
+    results.backup = { ok: false, error: e.message };
+  }
+
   // Direct inline work (same idea, in-process, faster)
   try {
     const supabase = createServiceClient();
