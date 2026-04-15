@@ -33,6 +33,12 @@ type Tab = "templates" | "server" | "test" | "log" | "unsubscribes";
 export default function EmailHubPage() {
   const [tab, setTab] = useState<Tab>("templates");
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab") as Tab | null;
+    if (t && ["templates", "server", "test", "log", "unsubscribes"].includes(t)) setTab(t);
+  }, []);
+
   return (
     <div>
       <div className="mb-6">

@@ -327,6 +327,7 @@ export default function OrderDetailPage() {
             >
               📋
             </button>
+            <UnsubBadge participants={order.participants || []} />
           </h2>
         </div>
         <div className="flex items-center gap-2">
@@ -1200,6 +1201,32 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
         </div>
       )}
     </div>
+  );
+}
+
+function UnsubBadge({ participants }: { participants: Participant[] }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const emails = Array.from(new Set(participants.map((p) => p.email).filter(Boolean).map((e) => e.toLowerCase().trim())));
+    if (emails.length === 0) return;
+    fetch(`/api/admin/unsubscribes`, { cache: "no-store" })
+      .then((r) => r.ok ? r.json() : { items: [] })
+      .then((d) => {
+        const hits = (d.items || []).filter((u: any) => emails.includes(u.email));
+        setCount(hits.length);
+      });
+  }, [participants]);
+
+  if (count === 0) return null;
+  return (
+    <Link
+      href="/email?tab=unsubscribes"
+      className="text-xs bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-1 rounded-full hover:bg-yellow-200 font-normal"
+      title="לחץ לצפייה ברשימת המוסרים"
+    >
+      🚫 {count === 1 ? "מוסר מייל" : `${count} מוסרי מייל`}
+    </Link>
   );
 }
 
