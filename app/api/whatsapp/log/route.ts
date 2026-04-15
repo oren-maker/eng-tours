@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const direction = searchParams.get("direction");
     const status = searchParams.get("status");
     const recipientType = searchParams.get("recipient_type");
+    const orderId = searchParams.get("order_id");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = (page - 1) * limit;
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
     if (direction) query = query.eq("direction", direction);
     if (status) query = query.eq("status", status);
     if (recipientType) query = query.eq("recipient_type", recipientType);
+    if (orderId) query = query.eq("order_id", orderId);
 
     const { data, error, count } = await query;
 

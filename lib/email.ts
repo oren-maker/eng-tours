@@ -1,4 +1,5 @@
 import { logAction } from "./audit";
+import { createServiceClient } from "./supabase";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const FROM_EMAIL = "noreply@eng-tours.com";
@@ -14,6 +15,8 @@ interface EmailContext {
   order_id?: string;
   template?: string;
   variables?: Record<string, string>;
+  recipient_type?: "customer" | "supplier" | "admin" | "test" | "marketing";
+  prerendered?: boolean; // if true, don't wrap htmlBody in layout
 }
 
 /**
@@ -28,6 +31,8 @@ export async function sendEmail(
   const startTime = new Date().toISOString();
   let result: SendEmailResult;
 
+  const finalHtml = context?.prerendered ? htmlBody : wrapInLayout(htmlBody);
+
   try {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -36,10 +41,10 @@ export async function sendEmail(
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        from: process.env.EMAIL_FROM || `${FROM_NAME} <${FROM_EMAIL}>`,
         to: [to],
         subject,
-        html: wrapInLayout(htmlBody),
+        html: finalHtml,
       }),
     });
 
@@ -55,6 +60,22 @@ export async function sendEmail(
     console.error("Email send error:", err);
     result = { success: false, error: err.message };
   }
+
+  // email_log table - structured, per-message log
+  try {
+    const sb = createServiceClient();
+    await sb.from("email_log").insert({
+      recipient_email: to,
+      recipient_type: context?.recipient_type || null,
+      template_name: context?.template || null,
+      subject,
+      body_html: finalHtml,
+      status: result.success ? "sent" : "failed",
+      error: result.error || null,
+      message_id: result.id || null,
+      order_id: context?.order_id || null,
+    });
+  } catch (e) { console.error("email_log insert failed:", e); }
 
   // Audit log - every email attempt tracked
   try {

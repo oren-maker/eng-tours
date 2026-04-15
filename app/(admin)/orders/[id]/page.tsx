@@ -796,6 +796,9 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
+      {/* Communications panel — emails + whatsapp for this order */}
+      <CommunicationsPanel orderId={orderId} participants={order.participants || []} />
+
       {/* Audit Log / Timeline - enhanced */}
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -1194,6 +1197,125 @@ function SupplierConfirmationEditable({ conf, onSaved }: { conf: any; onSaved: (
       {conf.created_at && (
         <div className="text-[10px] text-gray-400 mt-1">
           עודכן: {new Date(conf.created_at).toLocaleString("he-IL")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommunicationsPanel({ orderId, participants }: { orderId: string; participants: Participant[] }) {
+  const [emails, setEmails] = useState<any[]>([]);
+  const [whatsapps, setWhatsapps] = useState<any[]>([]);
+  const [unsubs, setUnsubs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openEmail, setOpenEmail] = useState<any | null>(null);
+  const [openWa, setOpenWa] = useState<string | null>(null);
+
+  useEffect(() => {
+    const participantEmails = Array.from(new Set(participants.map((p) => p.email).filter(Boolean).map((e) => e.toLowerCase().trim())));
+    Promise.all([
+      fetch(`/api/admin/email-log?order_id=${orderId}&limit=100`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { logs: [] }),
+      fetch(`/api/whatsapp/log?order_id=${orderId}&limit=100`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { messages: [] }),
+      participantEmails.length > 0
+        ? fetch(`/api/admin/unsubscribes`, { cache: "no-store" }).then((r) => r.ok ? r.json() : { items: [] })
+        : Promise.resolve({ items: [] }),
+    ]).then(([el, wl, us]) => {
+      setEmails(el.logs || []);
+      setWhatsapps(wl.messages || []);
+      const unsubbed = (us.items || []).filter((u: any) => participantEmails.includes(u.email));
+      setUnsubs(unsubbed);
+      setLoading(false);
+    });
+  }, [orderId, participants]);
+
+  const merged = [
+    ...emails.map((e) => ({ ...e, _channel: "email" as const, _ts: e.created_at })),
+    ...whatsapps.map((w) => ({ ...w, _channel: "whatsapp" as const, _ts: w.created_at })),
+  ].sort((a, b) => new Date(b._ts).getTime() - new Date(a._ts).getTime());
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 mb-4">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        💬📧 תקשורת עם הלקוח ({merged.length})
+      </h3>
+
+      {unsubs.length > 0 && (
+        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+          {unsubs.map((u) => (
+            <div key={u.email} className="text-yellow-900">
+              ⚠️ <span className="font-mono" dir="ltr">{u.email}</span> הסיר/ה עצמו/ה מרשימת התפוצה ב-{new Date(u.unsubscribed_at).toLocaleDateString("he-IL")}
+              {u.reason && <span> · סיבה: {u.reason}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center py-6 text-gray-400 text-sm">טוען...</div>
+      ) : merged.length === 0 ? (
+        <div className="text-center py-6 text-gray-400 text-sm">עדיין לא נשלחה תקשורת להזמנה</div>
+      ) : (
+        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          {merged.map((m: any) => (
+            <div key={m._channel + m.id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xl">{m._channel === "email" ? "📧" : "💬"}</span>
+                    <span className="font-medium text-sm text-gray-800">
+                      {m._channel === "email" ? (m.subject || "(ללא נושא)") : (m.template_name || "הודעה")}
+                    </span>
+                    {m.status === "sent" || m.status === "delivered" ? (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ {m.status === "delivered" ? "נמסר" : "נשלח"}</span>
+                    ) : m.status === "failed" ? (
+                      <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded" title={m.error}>✗ נכשל</span>
+                    ) : (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{m.status}</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    אל: <span dir="ltr" className="font-mono">{m._channel === "email" ? m.recipient_email : m.recipient_number}</span>
+                    {m.template_name && m._channel === "email" && <span> · תבנית: <code dir="ltr">{m.template_name}</code></span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(m._ts).toLocaleString("he-IL")}</span>
+                  <button
+                    onClick={() => m._channel === "email" ? setOpenEmail(m) : setOpenWa(m.id)}
+                    className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded hover:bg-blue-100"
+                  >
+                    👁️ פתיחה
+                  </button>
+                </div>
+              </div>
+              {openWa === m.id && m._channel === "whatsapp" && (
+                <pre className="mt-2 bg-gray-50 border border-gray-200 rounded p-3 text-xs whitespace-pre-wrap" dir="rtl">{m.message_body}</pre>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {openEmail && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setOpenEmail(null)}>
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+              <div>
+                <h3 className="text-sm font-bold text-gray-800">{openEmail.subject}</h3>
+                <p className="text-xs text-gray-500">
+                  אל: <span dir="ltr">{openEmail.recipient_email}</span> · {new Date(openEmail.created_at).toLocaleString("he-IL")}
+                </p>
+              </div>
+              <button onClick={() => setOpenEmail(null)} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-2">×</button>
+            </div>
+            <iframe
+              srcDoc={openEmail.body_html}
+              className="flex-1 w-full bg-white border-0"
+              style={{ minHeight: "500px" }}
+              title="email-body"
+              sandbox=""
+            />
+          </div>
         </div>
       )}
     </div>

@@ -28,7 +28,7 @@ function applyTemplate(text: string, vars: Record<string, string>) {
   return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? `{{${k}}}`);
 }
 
-type Tab = "templates" | "server" | "test" | "unsubscribes";
+type Tab = "templates" | "server" | "test" | "log" | "unsubscribes";
 
 export default function EmailHubPage() {
   const [tab, setTab] = useState<Tab>("templates");
@@ -46,6 +46,7 @@ export default function EmailHubPage() {
           { id: "templates" as const, label: "תבניות", icon: "📝" },
           { id: "server" as const, label: "שרת דואר", icon: "🖥️" },
           { id: "test" as const, label: "מייל בדיקה", icon: "🧪" },
+          { id: "log" as const, label: "לוג מיילים", icon: "📬" },
           { id: "unsubscribes" as const, label: "מיילים מוסרים", icon: "🚫" },
         ].map((t) => (
           <button
@@ -63,12 +64,135 @@ export default function EmailHubPage() {
       {tab === "templates" && <TemplatesTab />}
       {tab === "server" && <ServerTab />}
       {tab === "test" && <TestTab />}
+      {tab === "log" && <LogTab />}
       {tab === "unsubscribes" && <UnsubscribesTab />}
     </div>
   );
 }
 
+function LogTab() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/email-log?limit=200", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setLogs(d.logs || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const openRow = logs.find((l) => l.id === openId);
+
+  if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
+  if (logs.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="text-4xl mb-2">📭</div>
+        <p className="text-gray-500">עדיין לא נשלחו מיילים</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+        <div className="p-3 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-800">{logs.length} מיילים אחרונים</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-xs text-gray-600">
+              <tr>
+                <th className="text-right p-2">תאריך</th>
+                <th className="text-right p-2">נמען</th>
+                <th className="text-right p-2">תבנית</th>
+                <th className="text-right p-2">נושא</th>
+                <th className="text-right p-2">סטטוס</th>
+                <th className="text-right p-2">סוג</th>
+                <th className="p-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l) => (
+                <tr key={l.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="p-2 text-gray-500 text-xs whitespace-nowrap">{new Date(l.created_at).toLocaleString("he-IL")}</td>
+                  <td className="p-2 font-mono text-xs" dir="ltr">{l.recipient_email}</td>
+                  <td className="p-2 text-xs text-gray-600"><code dir="ltr">{l.template_name || "—"}</code></td>
+                  <td className="p-2 text-xs text-gray-700 max-w-xs truncate" title={l.subject}>{l.subject}</td>
+                  <td className="p-2">
+                    {l.status === "sent"
+                      ? <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ נשלח</span>
+                      : <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded" title={l.error}>✗ נכשל</span>}
+                  </td>
+                  <td className="p-2 text-xs text-gray-500">{l.recipient_type || "—"}</td>
+                  <td className="p-2">
+                    <button onClick={() => setOpenId(l.id)} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded hover:bg-blue-100">
+                      👁️ הצג
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {openRow && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setOpenId(null)}>
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+              <div>
+                <h3 className="text-sm font-bold text-gray-800">{openRow.subject}</h3>
+                <p className="text-xs text-gray-500">
+                  אל: <span dir="ltr">{openRow.recipient_email}</span> · {new Date(openRow.created_at).toLocaleString("he-IL")}
+                  {openRow.error && <span className="text-red-600 mr-2">· {openRow.error}</span>}
+                </p>
+              </div>
+              <button onClick={() => setOpenId(null)} className="text-gray-400 hover:text-gray-700 text-2xl leading-none px-2">×</button>
+            </div>
+            <iframe
+              srcDoc={openRow.body_html}
+              className="flex-1 w-full bg-white border-0"
+              style={{ minHeight: "500px" }}
+              title="email-body"
+              sandbox=""
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const REASON_LABELS: Record<string, string> = {
+  too_many_emails: "יותר מדי מיילים",
+  not_relevant: "תוכן לא רלוונטי",
+  never_signed_up: "לא נרשם",
+  other: "אחר",
+};
+
 function UnsubscribesTab() {
+  const [sub, setSub] = useState<"active" | "history">("active");
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-4">
+        <button onClick={() => setSub("active")}
+          className={`text-sm px-3 py-1.5 rounded-lg ${sub === "active" ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          פעילים
+        </button>
+        <button onClick={() => setSub("history")}
+          className={`text-sm px-3 py-1.5 rounded-lg ${sub === "history" ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+          היסטוריה
+        </button>
+      </div>
+      {sub === "active" ? <UnsubActive /> : <UnsubHistory />}
+    </div>
+  );
+}
+
+function UnsubActive() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -92,15 +216,7 @@ function UnsubscribesTab() {
     if (res.ok) load();
   }
 
-  const reasonLabels: Record<string, string> = {
-    too_many_emails: "יותר מדי מיילים",
-    not_relevant: "תוכן לא רלוונטי",
-    never_signed_up: "לא נרשם",
-    other: "אחר",
-  };
-
   if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
-
   if (items.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-12 text-center">
@@ -130,7 +246,7 @@ function UnsubscribesTab() {
           {items.map((it) => (
             <tr key={it.email}>
               <td className="px-4 py-2 font-mono text-xs" dir="ltr">{it.email}</td>
-              <td className="px-4 py-2 text-xs text-gray-600">{reasonLabels[it.reason] || it.reason || "—"}</td>
+              <td className="px-4 py-2 text-xs text-gray-600">{REASON_LABELS[it.reason] || it.reason || "—"}</td>
               <td className="px-4 py-2 text-xs text-gray-500">{it.source}</td>
               <td className="px-4 py-2 text-xs text-gray-500">{new Date(it.unsubscribed_at).toLocaleString("he-IL")}</td>
               <td className="px-4 py-2">
@@ -138,6 +254,60 @@ function UnsubscribesTab() {
                   החזר לרשימה
                 </button>
               </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function UnsubHistory() {
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/unsubscribes/history", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setEvents(d.events || []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
+  if (events.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <p className="text-gray-500">אין היסטוריה עדיין</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="text-right px-4 py-2 font-medium text-gray-600">תאריך</th>
+            <th className="text-right px-4 py-2 font-medium text-gray-600">מייל</th>
+            <th className="text-right px-4 py-2 font-medium text-gray-600">אירוע</th>
+            <th className="text-right px-4 py-2 font-medium text-gray-600">סיבה</th>
+            <th className="text-right px-4 py-2 font-medium text-gray-600">מקור</th>
+            <th className="text-right px-4 py-2 font-medium text-gray-600">בוצע ע״י</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {events.map((e) => (
+            <tr key={e.id}>
+              <td className="px-4 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(e.created_at).toLocaleString("he-IL")}</td>
+              <td className="px-4 py-2 font-mono text-xs" dir="ltr">{e.email}</td>
+              <td className="px-4 py-2">
+                {e.event_type === "unsubscribed"
+                  ? <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">🚫 הוסר</span>
+                  : <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">↩️ הוחזר</span>}
+              </td>
+              <td className="px-4 py-2 text-xs text-gray-600">{REASON_LABELS[e.reason] || e.reason || "—"}</td>
+              <td className="px-4 py-2 text-xs text-gray-500">{e.source || "—"}</td>
+              <td className="px-4 py-2 text-xs text-gray-500">{e.users?.name || e.users?.email || (e.actor_user_id ? "אדמין" : "הלקוח עצמו")}</td>
             </tr>
           ))}
         </tbody>

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { renderEmailTemplate, isUnsubscribed } from "@/lib/email-templates";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -38,24 +39,14 @@ export async function POST(request: Request) {
     if (await isUnsubscribed(email)) { skipped++; continue; }
     const tpl = await renderEmailTemplate(template_name, { email }, email);
     if (!tpl) { skipped++; continue; }
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM || "ENG TOURS <onboarding@resend.dev>",
-          to: [email],
-          subject: tpl.subject,
-          html: tpl.html,
-        }),
-      });
-      if (res.ok) sent++;
-      else { failed++; const d = await res.json(); errors.push(`${email}: ${d.message || res.status}`); }
-      await new Promise((r) => setTimeout(r, 200)); // gentle pacing
-    } catch (e: any) {
-      failed++;
-      errors.push(`${email}: ${e.message}`);
-    }
+    const result = await sendEmail(email, tpl.subject, tpl.html, {
+      template: template_name,
+      recipient_type: "marketing",
+      prerendered: true,
+    });
+    if (result.success) sent++;
+    else { failed++; errors.push(`${email}: ${result.error || "failed"}`); }
+    await new Promise((r) => setTimeout(r, 200));
   }
 
   return NextResponse.json({ success: true, total: targetEmails.length, sent, skipped, failed, errors: errors.slice(0, 20) });

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { renderEmailTemplate } from "@/lib/email-templates";
+import { sendEmail } from "@/lib/email";
 
 const SAMPLE_VARS: Record<string, Record<string, any>> = {
   order_created: { event_name: "פסטיבל איי יוון", order_id: "A1B2C3D4", link: "https://eng-tours.vercel.app/p/abc-123" },
@@ -18,27 +19,16 @@ export async function POST(request: Request) {
   const { to, template } = await request.json();
   if (!to || !template) return NextResponse.json({ error: "חסרים פרמטרים" }, { status: 400 });
 
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_KEY) return NextResponse.json({ error: "RESEND_API_KEY לא מוגדר" }, { status: 500 });
-
   const rendered = await renderEmailTemplate(template, SAMPLE_VARS[template] || {}, to);
   if (!rendered) return NextResponse.json({ error: "תבנית לא נמצאה או כבויה" }, { status: 404 });
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM || "ENG TOURS <onboarding@resend.dev>",
-        to: [to],
-        subject: `[בדיקה] ${rendered.subject}`,
-        html: rendered.html,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) return NextResponse.json({ error: data?.message || `Resend ${res.status}` }, { status: 500 });
-    return NextResponse.json({ ok: true, id: data?.id });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
+  const result = await sendEmail(to, `[בדיקה] ${rendered.subject}`, rendered.html, {
+    template,
+    recipient_type: "test",
+    variables: SAMPLE_VARS[template] as any,
+    prerendered: true,
+  });
+
+  if (!result.success) return NextResponse.json({ error: result.error || "שליחה נכשלה" }, { status: 500 });
+  return NextResponse.json({ ok: true, id: result.id });
 }

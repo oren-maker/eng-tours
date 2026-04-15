@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
+import { sendEmail } from "@/lib/email";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,19 +26,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }
       const tpl = await renderEmailTemplate("order_details", { event_name: eventName, link }, email);
       if (!tpl) return NextResponse.json({ success: false, error: "התבנית order_details כבויה או חסרה" }, { status: 400 });
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: process.env.EMAIL_FROM || "ENG TOURS <noreply@eng-tours.com>",
-          to: [email],
-          subject: tpl.subject,
-          html: tpl.html,
-        }),
+      const result = await sendEmail(email, tpl.subject, tpl.html, {
+        template: "order_details",
+        recipient_type: "customer",
+        order_id: id,
+        prerendered: true,
       });
-      if (!res.ok) {
-        const d = await res.json();
-        return NextResponse.json({ success: false, error: d?.message || "שגיאה בשליחת מייל" }, { status: 400 });
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: result.error || "שגיאה בשליחת מייל" }, { status: 400 });
       }
     } catch (e: any) {
       return NextResponse.json({ success: false, error: e.message }, { status: 500 });
