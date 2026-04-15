@@ -59,13 +59,6 @@ const settingsItems = [
     icon: "📧",
     color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
   },
-  {
-    href: "/settings/unsubscribes",
-    label: "מיילים מוסרים",
-    description: "רשימת כתובות שהסירו עצמן מהתפוצה",
-    icon: "🚫",
-    color: "bg-red-50 border-red-200 hover:bg-red-100",
-  },
 ];
 
 export default function SettingsHubPage() {
