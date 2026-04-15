@@ -31,6 +31,21 @@ export async function sendEmail(
   const startTime = new Date().toISOString();
   let result: SendEmailResult;
 
+  // Hard guard: never send to an unsubscribed address (except admin 2FA codes)
+  if (context?.template !== "2fa_code" && context?.recipient_type !== "admin") {
+    try {
+      const sb = createServiceClient();
+      const { data: u } = await sb
+        .from("email_unsubscribes")
+        .select("email")
+        .eq("email", to.toLowerCase().trim())
+        .maybeSingle();
+      if (u) {
+        return { success: false, error: "הנמען ברשימת ההסרה — לא נשלח" };
+      }
+    } catch { /* non-fatal: fall through to send if lookup fails */ }
+  }
+
   const finalHtml = context?.prerendered ? htmlBody : wrapInLayout(htmlBody);
 
   try {
