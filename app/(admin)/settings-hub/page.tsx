@@ -53,9 +53,9 @@ const settingsItems = [
     color: "bg-purple-50 border-purple-200 hover:bg-purple-100",
   },
   {
-    href: "/email/templates",
-    label: "תבניות מייל",
-    description: "עריכת כל הודעות המייל שהמערכת שולחת",
+    href: "/email",
+    label: "מיילים",
+    description: "תבניות, שרת דואר ומייל בדיקה",
     icon: "📧",
     color: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
   },
