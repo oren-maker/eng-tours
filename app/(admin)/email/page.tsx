@@ -127,9 +127,15 @@ function LogTab() {
                   <td className="p-2 text-xs text-gray-600"><code dir="ltr">{l.template_name || "—"}</code></td>
                   <td className="p-2 text-xs text-gray-700 max-w-xs truncate" title={l.subject}>{l.subject}</td>
                   <td className="p-2">
-                    {l.status === "sent"
-                      ? <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ נשלח</span>
-                      : <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded" title={l.error}>✗ נכשל</span>}
+                    {l.status === "read" ? (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">✓✓ נקרא</span>
+                    ) : l.status === "delivered" ? (
+                      <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded">✓✓ נמסר</span>
+                    ) : l.status === "sent" ? (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ נשלח</span>
+                    ) : (
+                      <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded" title={l.error}>✗ נכשל</span>
+                    )}
                   </td>
                   <td className="p-2 text-xs text-gray-500">{l.recipient_type || "—"}</td>
                   <td className="p-2">

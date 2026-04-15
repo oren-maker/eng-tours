@@ -1313,8 +1313,12 @@ function CommunicationsPanel({ orderId, participants }: { orderId: string; parti
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xl">{icon}</span>
                     <span className="font-medium text-sm text-gray-800">{title}</span>
-                    {m.status === "sent" || m.status === "delivered" ? (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ {m.status === "delivered" ? "נמסר" : "נשלח"}</span>
+                    {m.status === "read" ? (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">✓✓ נקרא</span>
+                    ) : m.status === "delivered" ? (
+                      <span className="text-xs bg-teal-100 text-teal-800 px-2 py-0.5 rounded">✓✓ נמסר</span>
+                    ) : m.status === "sent" ? (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">✓ נשלח</span>
                     ) : m.status === "failed" ? (
                       <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded" title={m.error}>✗ נכשל</span>
                     ) : (
