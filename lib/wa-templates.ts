@@ -172,8 +172,24 @@ export async function sendTemplateMessage(
           let digits = String(toPhone).replace(/[^0-9]/g, "");
           if (digits.startsWith("0")) digits = "972" + digits.slice(1);
           const to = "+" + digits;
-          const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
+          const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text }) as any;
           const supabase = createServiceClient();
+
+          // If retried, log the first failed attempt so the user sees "rate_limited → retried in 6s"
+          if (r.retried && r.firstError) {
+            await supabase.from("whatsapp_log").insert({
+              direction: "outgoing",
+              recipient: to.replace("+", ""),
+              recipient_number: to.replace("+", ""),
+              recipient_type: context?.recipient_type || null,
+              message_body: text,
+              template_name: templateName,
+              status: "failed",
+              error_message: `${r.firstError} · retrying in 6s`,
+              order_id: context?.order_id || null,
+            });
+          }
+
           await supabase.from("whatsapp_log").insert({
             direction: "outgoing",
             recipient: to.replace("+", ""),
@@ -182,7 +198,7 @@ export async function sendTemplateMessage(
             message_body: text,
             template_name: templateName,
             status: r.ok ? "sent" : "failed",
-            error_message: r.ok ? null : r.error,
+            error_message: r.ok ? (r.retried ? "sent on retry" : null) : r.error,
             order_id: context?.order_id || null,
             external_id: (r.data as any)?.data?.msgId || null,
             raw_payload: r.data || null,

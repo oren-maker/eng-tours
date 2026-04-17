@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       message_body: text,
       template_name: templateName || null,
       status: "sent",
-      external_id: (r.data as any)?.data?.msgId?.toString() || null,
+      external_id: ((r as any)?.data as any)?.data?.msgId?.toString() || null,
     });
 
     return NextResponse.json({ success: true });

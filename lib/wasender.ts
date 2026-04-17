@@ -64,27 +64,42 @@ export const wasender = {
     request<{ msgId?: string }>("POST", "/send-message", payload),
 
   // Send using a per-session API key (required for /send-message)
+  // Auto-retries once after 6s on rate-limit (429) or transient failure (5xx / network).
   sendTextWithSessionKey: async (sessionApiKey: string, payload: { to: string; text: string }) => {
     if (!sessionApiKey) return { ok: false, status: 0, error: "Session API key missing" };
-    try {
-      const res = await fetch(`${BASE}/send-message`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${sessionApiKey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-        cache: "no-store",
-      });
-      const text = await res.text();
-      let data: any = null;
-      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
-      if (!res.ok) return { ok: false, status: res.status, error: data?.message || `HTTP ${res.status}`, data };
-      return { ok: true, status: res.status, data };
-    } catch (err: any) {
-      return { ok: false, status: 0, error: err.message || "Network error" };
-    }
+
+    const attempt = async () => {
+      try {
+        const res = await fetch(`${BASE}/send-message`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionApiKey}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        });
+        const text = await res.text();
+        let data: any = null;
+        try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+        if (!res.ok) return { ok: false, status: res.status, error: data?.message || `HTTP ${res.status}`, data };
+        return { ok: true, status: res.status, data };
+      } catch (err: any) {
+        return { ok: false, status: 0, error: err.message || "Network error" };
+      }
+    };
+
+    const first = await attempt();
+    if (first.ok) return { ...first, retried: false };
+
+    // Retry once after 6 seconds for rate-limit or transient failures
+    const transient = first.status === 429 || first.status === 0 || (first.status >= 500 && first.status < 600);
+    if (!transient) return { ...first, retried: false };
+
+    await new Promise((r) => setTimeout(r, 6000));
+    const second = await attempt();
+    return { ...second, retried: true, firstError: first.error };
   },
 };
 

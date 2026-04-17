@@ -27,15 +27,7 @@ function normalizePhone(phone: string): string {
   return p;
 }
 
-export async function sendSms(to: string, text: string, options: SmsSendOptions = {}): Promise<SmsSendResult> {
-  const sender = options.sender || DEFAULT_SENDER;
-  const phone = normalizePhone(to);
-  const sendId = options.reference || `sms-${Date.now()}`;
-  let status: "sent" | "failed" = "failed";
-  let error: string | undefined;
-  let messageStatus: string | undefined;
-  let raw: any = null;
-
+async function callSendSms(sendId: string, sender: string, phone: string, text: string) {
   try {
     const res = await fetch(`${BASE}/api/v1/SmsApi/SendSms`, {
       method: "POST",
@@ -51,34 +43,63 @@ export async function sendSms(to: string, text: string, options: SmsSendOptions 
         },
       }),
     });
-    raw = await res.json();
-    messageStatus = raw?.items?.[0]?.message;
-    if (raw?.status === "Success" && raw?.success >= 1) {
-      status = "sent";
-    } else {
-      error = raw?.error || raw?.items?.[0]?.message || "Send failed";
-    }
+    const raw = await res.json();
+    const ok = raw?.status === "Success" && raw?.success >= 1;
+    const itemMsg = raw?.items?.[0]?.message;
+    const httpStatus = res.status;
+    return { ok, raw, httpStatus, error: ok ? undefined : (raw?.error || itemMsg || "Send failed"), messageStatus: itemMsg };
   } catch (e: any) {
-    error = e.message;
+    return { ok: false, raw: { error: e.message }, httpStatus: 0, error: e.message, messageStatus: undefined };
+  }
+}
+
+export async function sendSms(to: string, text: string, options: SmsSendOptions = {}): Promise<SmsSendResult> {
+  const sender = options.sender || DEFAULT_SENDER;
+  const phone = normalizePhone(to);
+  const sendId = options.reference || `sms-${Date.now()}`;
+  const sb = createServiceClient();
+
+  // First attempt
+  let attempt = await callSendSms(sendId, sender, phone, text);
+
+  // Retry once after 6s on transient failures (5xx / network / 429)
+  const transient = !attempt.ok && (attempt.httpStatus === 0 || attempt.httpStatus === 429 || (attempt.httpStatus >= 500 && attempt.httpStatus < 600));
+  let retried = false;
+  let firstError: string | undefined;
+  if (transient) {
+    firstError = attempt.error;
+    try {
+      await sb.from("sms_log").insert({
+        recipient_number: phone,
+        recipient_type: options.recipient_type || null,
+        sender,
+        message_body: text,
+        status: "failed",
+        error: `${firstError} · retrying in 6s`,
+        order_id: options.order_id || null,
+        raw: attempt.raw,
+      });
+    } catch {}
+    await new Promise((r) => setTimeout(r, 6000));
+    attempt = await callSendSms(`${sendId}-retry`, sender, phone, text);
+    retried = true;
   }
 
-  // Log to sms_log (best-effort)
+  // Final log row
   try {
-    const sb = createServiceClient();
     await sb.from("sms_log").insert({
       recipient_number: phone,
       recipient_type: options.recipient_type || null,
       sender,
       message_body: text,
-      status,
-      error: error || null,
-      campaign_id: null,
+      status: attempt.ok ? "sent" : "failed",
+      error: attempt.ok ? (retried ? "sent on retry" : null) : attempt.error,
       order_id: options.order_id || null,
-      raw,
+      raw: attempt.raw,
     });
   } catch (e) { console.error("sms_log insert failed:", e); }
 
-  return { success: status === "sent", sendId, messageStatus, error, raw };
+  return { success: attempt.ok, sendId, messageStatus: attempt.messageStatus, error: attempt.error, raw: attempt.raw };
 }
 
 export async function checkConnection(): Promise<{ ok: boolean; accountName?: string; error?: string }> {
