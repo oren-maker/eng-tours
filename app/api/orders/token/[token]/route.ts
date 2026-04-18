@@ -2,12 +2,18 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
 
 // GET /api/orders/token/[token] - Get order by share_token (public)
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const ip = getClientIp(request);
+  const rl = rateLimit(`order-token:${ip}`, 60, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "יותר מדי בקשות" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+  }
   const supabase = createServiceClient();
   const { token } = await params;
 

@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { couponValidateSchema, parseOrFail } from "@/lib/schemas";
 
 // POST /api/coupons/validate - Validate coupon code (public)
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rl = rateLimit(`coupon-validate:${ip}`, 30, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "יותר מדי ניסיונות" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+  }
   const supabase = createServiceClient();
 
   try {
-    const body = await request.json();
-    const { code, event_id } = body;
-
-    if (!code) {
-      return NextResponse.json(
-        { error: "נדרש קוד קופון" },
-        { status: 400 }
-      );
-    }
+    const parsed = parseOrFail(couponValidateSchema, await request.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { code, event_id } = parsed.data;
 
     const { data: coupon, error } = await supabase
       .from("coupons")

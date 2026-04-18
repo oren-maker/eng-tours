@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { wasender, isConfigured } from "@/lib/wasender";
 import { createServiceClient } from "@/lib/supabase";
+import { whatsappSendSchema, parseOrFail } from "@/lib/schemas";
 
 function normalizePhone(input: string) {
   let digits = (input || "").replace(/[^0-9]/g, "");
@@ -11,8 +12,8 @@ function normalizePhone(input: string) {
   return "+" + digits;
 }
 
-function applyTemplate(body: string, variables: Record<string, string>) {
-  return body.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => variables[k] ?? "");
+function applyTemplate(body: string, variables: Record<string, string | number>) {
+  return body.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => String(variables[k] ?? ""));
 }
 
 export async function POST(request: Request) {
@@ -26,10 +27,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "WaSender API key not configured" }, { status: 500 });
     }
 
-    const body = await request.json();
-    const { number, message, templateName, variables, sessionId } = body;
-
-    if (!number) return NextResponse.json({ error: "חסר מספר טלפון" }, { status: 400 });
+    const parsed = parseOrFail(whatsappSendSchema, await request.json());
+    if (!parsed.ok) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const { number, message, templateName, variables, sessionId } = parsed.data;
 
     let text = (message || "").trim();
     if (!text && templateName) {

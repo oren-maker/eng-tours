@@ -52,15 +52,23 @@ export const authOptions: NextAuthOptions = {
         }
 
         const supabase = createServiceClient();
+        const identifier = credentials.email;
 
-        const { data: user, error } = await supabase
+        const { data: byEmail } = await supabase
           .from("users")
           .select("*")
-          .or(`email.eq.${credentials.email},phone.eq.${credentials.email}`)
+          .eq("email", identifier)
           .eq("is_active", true)
-          .single();
+          .maybeSingle();
 
-        if (error || !user) {
+        const user = byEmail || (await supabase
+          .from("users")
+          .select("*")
+          .eq("phone", identifier)
+          .eq("is_active", true)
+          .maybeSingle()).data;
+
+        if (!user) {
           throw new Error("אימייל או סיסמה שגויים");
         }
 

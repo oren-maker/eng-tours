@@ -68,6 +68,25 @@ export const supplierAuthSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+export const whatsappSendSchema = z.object({
+  number: z.string().min(7).max(30),
+  message: z.string().max(4096).optional(),
+  templateName: z.string().max(100).optional(),
+  variables: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+  sessionId: z.union([z.string(), z.number()]).optional(),
+});
+
+export const unsubscribeSchema = z.object({
+  email: z.string().email().max(254),
+  token: z.string().max(200),
+  reason: z.string().max(500).optional().nullable(),
+});
+
+export const couponValidateSchema = z.object({
+  code: z.string().min(1).max(50),
+  event_id: z.string().max(50).optional(),
+});
+
 export { z, nonEmpty, uuid, email, phone };
 
 // Validation helper — returns 400 JSON response on failure
