@@ -13,7 +13,6 @@ function timingSafeEq(a: string, b: string): boolean {
 }
 
 export async function POST(request: Request) {
-  // Require webhook secret (fail closed)
   if (!SECRET) {
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
   }
@@ -30,11 +29,42 @@ export async function POST(request: Request) {
   }
 
   const supabase = createServiceClient();
-
-  // Common WaSender event payload shape: { event, sessionId, data: { from, body/text, ... } }
-  const event = body?.event || body?.type || "unknown";
+  const event: string = body?.event || body?.type || "unknown";
   const data = body?.data || body;
+  const now = new Date().toISOString();
 
+  // Outbound status updates — match by msgId/external_id
+  if (event.includes("message.sent") || event.includes("messages.sent")) {
+    const msgId = data?.key?.id || data?.id || data?.messageId || null;
+    if (msgId) {
+      await supabase.from("whatsapp_log").update({ status: "sent" }).eq("external_id", String(msgId));
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  if (event.includes("delivery") || event.includes("delivered") || event.includes("ack")) {
+    const msgId = data?.key?.id || data?.id || data?.messageId || null;
+    const ack = data?.ack ?? data?.status;
+    if (msgId) {
+      // ack=3 on WhatsApp = read, ack=2 = delivered. Some providers send event names instead.
+      const isRead = event.includes("read") || ack === 3 || ack === "read";
+      const patch: any = isRead
+        ? { status: "read", delivered_at: now, read_at: now }
+        : { status: "delivered", delivered_at: now };
+      await supabase.from("whatsapp_log").update(patch).eq("external_id", String(msgId));
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  if (event.includes("message.read") || event.includes("messages.read")) {
+    const msgId = data?.key?.id || data?.id || data?.messageId || null;
+    if (msgId) {
+      await supabase.from("whatsapp_log").update({ status: "read", read_at: now }).eq("external_id", String(msgId));
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  // Inbound messages
   if (event.includes("messages.received") || event.includes("message.received") || event === "message") {
     const from = data?.from || data?.sender || data?.chatId || "";
     const text = data?.body || data?.text || data?.message?.text || data?.message || "";
@@ -48,17 +78,17 @@ export async function POST(request: Request) {
       external_id: messageId,
       raw_payload: body,
     });
-  } else {
-    // Log unknown events too for debugging
-    await supabase.from("whatsapp_log").insert({
-      direction: "incoming",
-      recipient: "system",
-      message_body: `Event: ${event}`,
-      status: "delivered",
-      raw_payload: body,
-    });
+    return NextResponse.json({ success: true });
   }
 
+  // Unknown — persist raw for debugging, no other effect
+  await supabase.from("whatsapp_log").insert({
+    direction: "incoming",
+    recipient: "system",
+    message_body: `Event: ${event}`,
+    status: "delivered",
+    raw_payload: body,
+  });
   return NextResponse.json({ success: true });
 }
 

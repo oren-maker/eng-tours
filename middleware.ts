@@ -17,6 +17,7 @@ const publicApiPrefixes = [
   "/api/supplier/confirm-all",           // Public: supplier submits confirmations via share_token
   "/api/supplier/payment",               // Public: payment entry via share_token
   "/api/whatsapp/webhook",               // WaSender webhook (signed with secret)
+  "/api/pulseem/webhook",                // Pulseem DLR webhook (signed with secret)
   "/api/payments/",                      // Customer payment flow via payment_token
   "/api/coupons/validate",               // Public: validate coupon code during booking
   "/api/ocr/passport",                   // Public: OCR during booking form

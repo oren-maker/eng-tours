@@ -86,6 +86,7 @@ export async function sendSms(to: string, text: string, options: SmsSendOptions 
   }
 
   // Final log row
+  const finalSendId = retried ? `${sendId}-retry` : sendId;
   try {
     await sb.from("sms_log").insert({
       recipient_number: phone,
@@ -96,6 +97,7 @@ export async function sendSms(to: string, text: string, options: SmsSendOptions 
       error: attempt.ok ? (retried ? "sent on retry" : null) : attempt.error,
       order_id: options.order_id || null,
       raw: attempt.raw,
+      external_id: finalSendId,
     });
   } catch (e) { console.error("sms_log insert failed:", e); }
 
