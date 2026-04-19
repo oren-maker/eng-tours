@@ -134,7 +134,21 @@ async function run() {
     check('Cross-origin admin POST rejected', r.status === 403);
   }
 
-  // 11. Same-origin admin mutation is allowed through the CSRF gate
+  // 11a. sitemap.xml generated
+  {
+    const r = await fetch(`${BASE}/sitemap.xml`);
+    const text = await r.text();
+    check('sitemap.xml served', r.status === 200 && text.includes('<urlset'));
+  }
+
+  // 11b. /api/auth/me returns password rotation info for logged-in user
+  {
+    const r = await fetch(`${BASE}/api/auth/me`, { headers: { Cookie: jar.header() }, redirect: 'manual' });
+    const j = await r.json();
+    check('/api/auth/me exposes rotation_threshold_days', r.status === 200 && typeof j.rotation_threshold_days === 'number');
+  }
+
+  // 11c. Same-origin admin mutation is allowed through the CSRF gate
   {
     const r = await fetch(`${BASE}/api/events`, {
       method: 'POST',

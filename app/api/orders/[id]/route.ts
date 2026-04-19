@@ -3,6 +3,7 @@ export const revalidate = 0;
 export const fetchCache = "force-no-store";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
+import { refreshParticipantPassportUrls } from "@/lib/passport-url";
 
 // GET /api/orders/[id] - Single order detail
 export async function GET(
@@ -86,7 +87,7 @@ export async function GET(
     ...order,
     event_name: (order.events as { name: string } | null)?.name || null,
     events: undefined,
-    participants: participants || [],
+    participants: await refreshParticipantPassportUrls(participants || []),
     supplier_confirmations: supplierConfirmations || [],
     payments: payments || [],
     audit_log: enrichedLog,
