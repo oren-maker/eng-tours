@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import PrintActions from "../../orders/[id]/print/print-actions";
+import { hydratePassportNumbers } from "@/lib/pii-participants";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "טיוטה",
@@ -38,7 +39,7 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ tok
   if (!order) notFound();
   const id = order.id;
 
-  const { data: participants } = await supabase
+  const { data: rawParticipants } = await supabase
     .from("participants")
     .select(`*,
       flights(airline_name, flight_code, origin_iata, dest_iata, departure_time),
@@ -46,6 +47,7 @@ export default async function OrderPrintPage({ params }: { params: Promise<{ tok
       tickets(name)
     `)
     .eq("order_id", id);
+  const participants = hydratePassportNumbers(rawParticipants || []);
 
   const { data: confirmations } = await supabase
     .from("supplier_confirmations")

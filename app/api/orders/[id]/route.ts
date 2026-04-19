@@ -4,6 +4,7 @@ export const fetchCache = "force-no-store";
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { refreshParticipantPassportUrls } from "@/lib/passport-url";
+import { hydratePassportNumbers } from "@/lib/pii-participants";
 
 // GET /api/orders/[id] - Single order detail
 export async function GET(
@@ -87,7 +88,7 @@ export async function GET(
     ...order,
     event_name: (order.events as { name: string } | null)?.name || null,
     events: undefined,
-    participants: await refreshParticipantPassportUrls(participants || []),
+    participants: await refreshParticipantPassportUrls(hydratePassportNumbers(participants || [])),
     supplier_confirmations: supplierConfirmations || [],
     payments: payments || [],
     audit_log: enrichedLog,

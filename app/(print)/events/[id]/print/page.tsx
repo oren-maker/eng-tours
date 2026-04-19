@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import PrintActions from "../../../orders/[id]/print/print-actions";
+import { hydratePassportNumbers } from "@/lib/pii-participants";
 // (print-actions kept in old location for sharing)
 
 const STATUS_LABELS: Record<string, string> = {
@@ -25,7 +26,7 @@ export default async function EventPrintPage({ params, searchParams }: { params:
   let orderQuery = supabase
     .from("orders")
     .select(`id, status, total_price, amount_paid, created_at,
-      participants(id, first_name_en, last_name_en, phone, email, passport_number,
+      participants(id, first_name_en, last_name_en, phone, email, passport_number, passport_number_enc,
         flights(airline_name, flight_code, origin_iata, dest_iata),
         rooms(room_type, hotels(name)),
         tickets(name)
@@ -37,6 +38,9 @@ export default async function EventPrintPage({ params, searchParams }: { params:
     .order("created_at", { ascending: false });
   if (orderFilter.length > 0) orderQuery = orderQuery.in("id", orderFilter);
   const { data: orders } = await orderQuery;
+  for (const o of (orders || []) as any[]) {
+    if (o.participants) o.participants = hydratePassportNumbers(o.participants);
+  }
 
   const totalRevenue = (orders || []).reduce((s, o: any) => s + (Number(o.total_price) || 0), 0);
   const totalPaid = (orders || []).reduce((s, o: any) => s + (Number(o.amount_paid) || 0), 0);

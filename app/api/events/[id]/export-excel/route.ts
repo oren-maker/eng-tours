@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 import { createServiceClient } from "@/lib/supabase";
+import { hydratePassportNumbers } from "@/lib/pii-participants";
 
 const STATUS_LABELS: Record<string, string> = {
   draft: "טיוטה", pending_payment: "ממתין לתשלום", partial: "שולם חלקית",
@@ -32,7 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { data: orders } = await supabase
     .from("orders")
     .select(`id, status, total_price, amount_paid, created_at, cancellation_fee_amount,
-      participants(id, first_name_en, last_name_en, phone, email, passport_number, birth_date,
+      participants(id, first_name_en, last_name_en, phone, email, passport_number, passport_number_enc, birth_date,
         flights(airline_name, flight_code, origin_iata, dest_iata, departure_time),
         rooms(room_type, check_in, check_out, hotels(name)),
         tickets(name)
@@ -55,7 +56,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const rows: string[][] = [];
 
   for (const o of (orders || []) as any[]) {
-    const parts = o.participants || [];
+    const parts = hydratePassportNumbers(o.participants || []);
     const total = Number(o.total_price) || 0;
     const paid = Number(o.amount_paid) || 0;
     const remaining = Math.max(0, total - paid);

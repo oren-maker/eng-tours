@@ -3,6 +3,7 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { hydratePassportNumbers } from "@/lib/pii-participants";
 
 // GET /api/orders/token/[token] - Get order by share_token (public)
 export async function GET(
@@ -30,7 +31,7 @@ export async function GET(
   const { data: participants } = await supabase
     .from("participants")
     .select(`
-      id, first_name_en, last_name_en, phone, email, passport_number,
+      id, first_name_en, last_name_en, phone, email, passport_number, passport_number_enc,
       flight_id, room_id, ticket_id, package_id, amount_paid,
       flights(airline_name, flight_code, origin_iata, dest_iata, departure_time, price_customer),
       rooms(room_type, check_in, check_out, price_customer, hotels(name)),
@@ -60,7 +61,7 @@ export async function GET(
     total_price: order.total_price,
     amount_paid: order.amount_paid,
     created_at: order.created_at,
-    participants: participants || [],
+    participants: hydratePassportNumbers(participants || []),
     supplier_confirmations: supplierConfirmations || [],
     payments: payments || [],
   });

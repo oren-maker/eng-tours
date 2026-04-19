@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("orders")
-    .select("*, events(name, end_date, start_date), participants(first_name_en, last_name_en, phone, passport_number)")
+    .select("*, events(name, end_date, start_date), participants(first_name_en, last_name_en, phone, passport_number, passport_number_enc)")
     .order("created_at", { ascending: false });
 
   if (eventId) {
@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Return as array directly for frontend compatibility
+  const { hydratePassportNumbers } = await import("@/lib/pii-participants");
+  for (const order of data || []) {
+    if ((order as any).participants) {
+      (order as any).participants = hydratePassportNumbers((order as any).participants);
+    }
+  }
   return NextResponse.json(data || []);
 }
 
@@ -244,11 +249,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create participants
+    const { writePassportPayload } = await import("@/lib/pii-participants");
     const participantRecords = participants.map((p: Record<string, unknown>) => ({
       order_id: order.id,
       first_name_en: p.first_name_en,
       last_name_en: p.last_name_en,
-      passport_number: p.passport_number,
+      ...writePassportPayload(p.passport_number as string | null | undefined),
       passport_expiry: p.passport_expiry,
       birth_date: p.birth_date,
       age_at_event: p.age_at_event,

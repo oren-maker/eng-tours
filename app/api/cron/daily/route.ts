@@ -110,6 +110,14 @@ async function runDaily(request: Request) {
     results.backup_integrity = { ok: false, error: e.message };
   }
 
+  // Outbound queue — drain any due messages
+  try {
+    const { processQueue } = await import("@/lib/outbound-queue");
+    results.outbound_queue = await processQueue(100);
+  } catch (e: any) {
+    results.outbound_queue = { ok: false, error: e.message };
+  }
+
   // Direct inline work (same idea, in-process, faster)
   try {
     const supabase = createServiceClient();
