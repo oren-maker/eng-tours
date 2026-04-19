@@ -88,9 +88,17 @@ export const authOptions: NextAuthOptions = {
           const update: any = { failed_login_count: failed };
           if (failed >= MAX_FAILED) {
             update.locked_until = new Date(Date.now() + LOCKOUT_MS).toISOString();
-            update.failed_login_count = 0; // reset counter after lock
+            update.failed_login_count = 0;
           }
           await supabase.from("users").update(update).eq("id", user.id);
+          await supabase.from("audit_log").insert({
+            user_id: user.id,
+            action: failed >= MAX_FAILED ? "login_locked" : "login_failed",
+            entity_type: "user",
+            entity_id: user.id,
+            after_data: { attempt: failed, locked: failed >= MAX_FAILED },
+            created_at: new Date().toISOString(),
+          });
           throw new Error("אימייל או סיסמה שגויים");
         }
 
@@ -115,6 +123,14 @@ export const authOptions: NextAuthOptions = {
           locked_until: null,
           last_login_at: new Date().toISOString(),
         }).eq("id", user.id);
+        await supabase.from("audit_log").insert({
+          user_id: user.id,
+          action: "login_success",
+          entity_type: "user",
+          entity_id: user.id,
+          after_data: { with_2fa: !!user.two_factor_enabled },
+          created_at: new Date().toISOString(),
+        });
 
         return {
           id: user.id,
