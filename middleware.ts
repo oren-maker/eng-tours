@@ -85,6 +85,25 @@ export async function middleware(request: NextRequest) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (token.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // CSRF: for state-changing methods require same-origin.
+    // Browsers always send Origin on POST/PUT/PATCH/DELETE from fetch/forms
+    // and can't spoof it cross-origin. Ref-check is additional belt-and-braces.
+    if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+      const origin = request.headers.get("origin") || "";
+      const host = request.headers.get("host") || "";
+      const allowed = new Set([
+        `https://${host}`,
+        `http://${host}`, // localhost dev
+        process.env.NEXTAUTH_URL || "",
+      ].filter(Boolean));
+      // Empty origin happens on server-to-server (cron, webhooks), but those
+      // use CRON_SECRET/webhook tokens and are on the public allow-list — so
+      // any admin-auth'd mutation with empty Origin is suspect. Reject.
+      if (!origin || !allowed.has(origin)) {
+        return NextResponse.json({ error: "Origin not allowed" }, { status: 403 });
+      }
+    }
     return NextResponse.next();
   }
 

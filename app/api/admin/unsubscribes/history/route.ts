@@ -13,7 +13,7 @@ export async function GET() {
 
   const events = data || [];
   const actorIds = Array.from(new Set(events.map((e: any) => e.actor_user_id).filter(Boolean)));
-  let actorMap: Record<string, { name?: string; email?: string }> = {};
+  const actorMap: Record<string, { name?: string; email?: string }> = {};
   if (actorIds.length > 0) {
     const { data: users } = await supabase.from("users").select("id, name, email").in("id", actorIds);
     for (const u of users || []) actorMap[(u as any).id] = { name: (u as any).name, email: (u as any).email };

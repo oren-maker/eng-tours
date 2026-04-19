@@ -58,6 +58,39 @@ async function runDaily(request: Request) {
     results.backup = { ok: false, error: e.message };
   }
 
+  // Backup integrity check — read back the latest backup, confirm it parses as JSON
+  try {
+    const supabase = createServiceClient();
+    const { data: latest } = await supabase
+      .from("backups")
+      .select("id, storage_path, tables_count, total_rows")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latest?.storage_path) {
+      const { data: blob } = await supabase.storage.from("backups").download(latest.storage_path);
+      if (!blob) throw new Error("download returned null");
+      const text = await blob.text();
+      const parsed = JSON.parse(text);
+      const tableCount = parsed && typeof parsed === "object" ? Object.keys(parsed.tables || parsed).length : 0;
+      const ok = tableCount > 0 && (!latest.tables_count || tableCount === latest.tables_count);
+      results.backup_integrity = { ok, backup_id: latest.id, tables_found: tableCount, tables_expected: latest.tables_count };
+      if (!ok) {
+        await supabase.from("audit_log").insert({
+          action: "backup_integrity_fail",
+          entity_type: "backup",
+          entity_id: latest.id,
+          after_data: { tables_found: tableCount, tables_expected: latest.tables_count } as any,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } else {
+      results.backup_integrity = { skipped: "no backup yet" };
+    }
+  } catch (e: any) {
+    results.backup_integrity = { ok: false, error: e.message };
+  }
+
   // Direct inline work (same idea, in-process, faster)
   try {
     const supabase = createServiceClient();

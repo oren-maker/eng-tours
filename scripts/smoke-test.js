@@ -119,6 +119,36 @@ async function run() {
     check('health endpoint OK + db reachable', r.status === 200 && j.ok === true && j.db === 'ok');
   }
 
+  // 10. CSRF — cross-origin admin mutation should be rejected (403) even with session
+  {
+    const r = await fetch(`${BASE}/api/events`, {
+      method: 'POST',
+      headers: {
+        Cookie: jar.header(),
+        Origin: 'https://evil.example.com',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'csrf-test' }),
+      redirect: 'manual',
+    });
+    check('Cross-origin admin POST rejected', r.status === 403);
+  }
+
+  // 11. Same-origin admin mutation is allowed through the CSRF gate
+  {
+    const r = await fetch(`${BASE}/api/events`, {
+      method: 'POST',
+      headers: {
+        Cookie: jar.header(),
+        Origin: BASE,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}), // empty body — route will 400 but not 403
+      redirect: 'manual',
+    });
+    check('Same-origin admin POST passes CSRF', r.status !== 403);
+  }
+
   // 7. Public order by token — 404 on bogus token (not 500)
   {
     const r = await fetch(`${BASE}/api/orders/token/bogus-token-xyz`);

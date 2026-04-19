@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     const order = provider === "gemini" ? ["gemini", "groq"] : ["groq", "gemini"];
     let parsed: any = null;
     let usedProvider = "";
-    let errors: string[] = [];
+    const errors: string[] = [];
     for (let i = 0; i < order.length; i++) {
       const p = order[i];
       try {
