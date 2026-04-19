@@ -54,9 +54,21 @@ function isPublicApi(pathname: string, method: string): boolean {
   return publicApiExact.some((e) => pathname === e.path && e.methods.includes(method));
 }
 
+function genRequestId(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function withRequestId(response: NextResponse, requestId: string): NextResponse {
+  response.headers.set("x-request-id", requestId);
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method;
+  const requestId = request.headers.get("x-request-id") || genRequestId();
 
   // Allow static + root/login + public pages
   if (
@@ -74,37 +86,30 @@ export async function middleware(request: NextRequest) {
     pathname.endsWith("/print") ||
     pathname.includes(".")
   ) {
-    return NextResponse.next();
+    return withRequestId(NextResponse.next(), requestId);
   }
 
   // API routes
   if (pathname.startsWith("/api/")) {
-    // Allow explicit public APIs
-    if (isPublicApi(pathname, method)) return NextResponse.next();
-    // All other APIs require admin auth
+    if (isPublicApi(pathname, method)) return withRequestId(NextResponse.next(), requestId);
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (token.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!token) return withRequestId(NextResponse.json({ error: "Unauthorized", request_id: requestId }, { status: 401 }), requestId);
+    if (token.role !== "admin") return withRequestId(NextResponse.json({ error: "Forbidden", request_id: requestId }, { status: 403 }), requestId);
 
     // CSRF: for state-changing methods require same-origin.
-    // Browsers always send Origin on POST/PUT/PATCH/DELETE from fetch/forms
-    // and can't spoof it cross-origin. Ref-check is additional belt-and-braces.
     if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
       const origin = request.headers.get("origin") || "";
       const host = request.headers.get("host") || "";
       const allowed = new Set([
         `https://${host}`,
-        `http://${host}`, // localhost dev
+        `http://${host}`,
         process.env.NEXTAUTH_URL || "",
       ].filter(Boolean));
-      // Empty origin happens on server-to-server (cron, webhooks), but those
-      // use CRON_SECRET/webhook tokens and are on the public allow-list — so
-      // any admin-auth'd mutation with empty Origin is suspect. Reject.
       if (!origin || !allowed.has(origin)) {
-        return NextResponse.json({ error: "Origin not allowed" }, { status: 403 });
+        return withRequestId(NextResponse.json({ error: "Origin not allowed", request_id: requestId }, { status: 403 }), requestId);
       }
     }
-    return NextResponse.next();
+    return withRequestId(NextResponse.next(), requestId);
   }
 
   // Admin pages
@@ -113,11 +118,11 @@ export async function middleware(request: NextRequest) {
     if (!token) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+      return withRequestId(NextResponse.redirect(loginUrl), requestId);
     }
     if (token.role !== "admin") {
-      if (token.role === "supplier") return NextResponse.redirect(new URL("/portal", request.url));
-      return NextResponse.redirect(new URL("/login", request.url));
+      if (token.role === "supplier") return withRequestId(NextResponse.redirect(new URL("/portal", request.url)), requestId);
+      return withRequestId(NextResponse.redirect(new URL("/login", request.url)), requestId);
     }
   }
 
@@ -125,11 +130,11 @@ export async function middleware(request: NextRequest) {
   if (isSupplierPage(pathname)) {
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token || (token.role !== "supplier" && token.role !== "admin")) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return withRequestId(NextResponse.redirect(new URL("/login", request.url)), requestId);
     }
   }
 
-  return NextResponse.next();
+  return withRequestId(NextResponse.next(), requestId);
 }
 
 export const config = {

@@ -4,5 +4,11 @@
       "path": "/api/cron/daily",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/api/cron/daily/route.ts": { "maxDuration": 300 },
+    "app/api/admin/marketing/send/route.ts": { "maxDuration": 300 },
+    "app/api/admin/backups/route.ts": { "maxDuration": 300 },
+    "app/api/passport/ocr/route.ts": { "maxDuration": 60 }
+  }
 }

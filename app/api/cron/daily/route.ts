@@ -58,6 +58,25 @@ async function runDaily(request: Request) {
     results.backup = { ok: false, error: e.message };
   }
 
+  // Backup retention — keep the last 30 successful backups, prune older ones
+  try {
+    const supabase = createServiceClient();
+    const { data: old } = await supabase
+      .from("backups")
+      .select("id, storage_path")
+      .order("created_at", { ascending: false })
+      .range(30, 999);
+    let pruned = 0;
+    for (const b of old || []) {
+      if (b.storage_path) await supabase.storage.from("backups").remove([b.storage_path]).catch(() => {});
+      await supabase.from("backups").delete().eq("id", b.id);
+      pruned++;
+    }
+    results.backup_retention = { pruned };
+  } catch (e: any) {
+    results.backup_retention = { ok: false, error: e.message };
+  }
+
   // Backup integrity check — read back the latest backup, confirm it parses as JSON
   try {
     const supabase = createServiceClient();

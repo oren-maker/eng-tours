@@ -134,6 +134,13 @@ async function run() {
     check('Cross-origin admin POST rejected', r.status === 403);
   }
 
+  // 11. Response includes x-request-id header
+  {
+    const r = await fetch(`${BASE}/login`);
+    const rid = r.headers.get('x-request-id');
+    check('x-request-id propagated', !!rid && rid.length >= 16);
+  }
+
   // 11a. sitemap.xml generated
   {
     const r = await fetch(`${BASE}/sitemap.xml`);
