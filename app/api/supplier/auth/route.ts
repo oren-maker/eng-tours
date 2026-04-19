@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { supplierAuthSchema, parseOrFail } from "@/lib/schemas";
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
@@ -14,12 +15,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = createServiceClient();
-  const { email, password } = await request.json();
+  const parsed = parseOrFail(supplierAuthSchema, await request.json());
+  if (!parsed.ok) return NextResponse.json({ error: "יש להזין מייל וסיסמה" }, { status: 400 });
+  const { email, password } = parsed.data;
 
-  if (!email || !password) {
-    return NextResponse.json({ error: "יש להזין מייל וסיסמה" }, { status: 400 });
-  }
+  const supabase = createServiceClient();
 
   const { data: user } = await supabase
     .from("users")

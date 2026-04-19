@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { wasender, isConfigured } from "@/lib/wasender";
 import { createServiceClient } from "@/lib/supabase";
 import { whatsappSendSchema, parseOrFail } from "@/lib/schemas";
+import { logError } from "@/lib/log-error";
 
 function normalizePhone(input: string) {
   let digits = (input || "").replace(/[^0-9]/g, "");
@@ -93,6 +94,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("WhatsApp send error:", err);
+    await logError("whatsapp/send", err);
     return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }
