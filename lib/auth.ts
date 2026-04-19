@@ -128,8 +128,8 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 8 * 60 * 60, // 8 hours (down from 30 days - tighter session)
-    updateAge: 60 * 60, // refresh every hour
+    maxAge: 4 * 60 * 60, // 4 hours — a single admin workday session
+    updateAge: 30 * 60, // sliding: any action in the last 30 min extends the session
   },
   pages: {
     signIn: "/login",

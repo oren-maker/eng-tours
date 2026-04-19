@@ -105,6 +105,20 @@ async function run() {
     check('security.txt reachable', r.status === 200 && text.includes('Contact:'));
   }
 
+  // 8. robots.txt with admin disallow
+  {
+    const r = await fetch(`${BASE}/robots.txt`);
+    const text = await r.text();
+    check('robots.txt blocks /api/', r.status === 200 && text.includes('Disallow: /api/'));
+  }
+
+  // 9. health endpoint
+  {
+    const r = await fetch(`${BASE}/api/health`);
+    const j = await r.json();
+    check('health endpoint OK + db reachable', r.status === 200 && j.ok === true && j.db === 'ok');
+  }
+
   // 7. Public order by token — 404 on bogus token (not 500)
   {
     const r = await fetch(`${BASE}/api/orders/token/bogus-token-xyz`);

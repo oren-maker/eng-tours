@@ -3,8 +3,12 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { renderEmailTemplate, isUnsubscribed } from "@/lib/email-templates";
 import { sendEmail } from "@/lib/email";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { logAction } from "@/lib/audit";
 
 export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
   const body = await request.json();
   const { template_name, consent_only, emails } = body;
   if (!template_name) return NextResponse.json({ error: "חסר שם תבנית" }, { status: 400 });
@@ -49,5 +53,8 @@ export async function POST(request: Request) {
     await new Promise((r) => setTimeout(r, 200));
   }
 
+  await logAction(session?.user?.id ?? null, "marketing_campaign_sent", "email", undefined, null, {
+    template_name, consent_only: !!consent_only, total: targetEmails.length, sent, skipped, failed,
+  });
   return NextResponse.json({ success: true, total: targetEmails.length, sent, skipped, failed, errors: errors.slice(0, 20) });
 }
