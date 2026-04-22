@@ -40,6 +40,11 @@ const publicApiExact: { path: string; methods: string[] }[] = [
   { path: "/api/orders", methods: ["POST"] }, // Public can create orders; GET requires admin
 ];
 
+// Public GET-only prefixes (PATCH/POST/etc still require admin)
+const publicApiGetPrefixes = [
+  "/api/legal/", // GET terms/privacy/etc is public; PATCH is admin-only (enforced in route)
+];
+
 function isAdminPage(pathname: string): boolean {
   return adminPages.some((route) => pathname === route || pathname.startsWith(route + "/"));
 }
@@ -51,6 +56,7 @@ function isSupplierPage(pathname: string): boolean {
 function isPublicApi(pathname: string, method: string): boolean {
   if (publicApiPrefixes.some((p) => pathname.startsWith(p))) return true;
   if (cronEndpoints.includes(pathname)) return true; // auth'd inside route
+  if (method === "GET" && publicApiGetPrefixes.some((p) => pathname.startsWith(p))) return true;
   return publicApiExact.some((e) => pathname === e.path && e.methods.includes(method));
 }
 
