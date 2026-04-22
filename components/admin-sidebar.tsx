@@ -13,6 +13,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "דשבורד", icon: "📊" },
+  { href: "/ask", label: "שאל את המערכת", icon: "🔍" },
   { href: "/events", label: "אירועים", icon: "🎪" },
   {
     href: "/packages",
