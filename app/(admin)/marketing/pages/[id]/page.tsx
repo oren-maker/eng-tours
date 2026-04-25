@@ -165,7 +165,15 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
               <Field label="עיר" value={page.city || ""} onChange={(v) => setPage({ ...page, city: v })} />
               <Field label="מדינה" value={page.country || ""} onChange={(v) => setPage({ ...page, country: v })} />
             </div>
-            <Field label="קישור לרכישת כרטיס (יישלח בwhatsApp)" value={page.ticket_purchase_link || ""} onChange={(v) => setPage({ ...page, ticket_purchase_link: v })} mono />
+            <div>
+              <Field label="קישור לרכישת כרטיס (יישלח בWhatsApp + מייל)" value={page.ticket_purchase_link || ""} onChange={(v) => setPage({ ...page, ticket_purchase_link: v })} mono />
+              {page.ticket_purchase_link && (page.ticket_purchase_link.includes("/m/") || page.ticket_purchase_link.includes("?ref=")) && (
+                <p className="text-xs text-red-600 mt-1.5">
+                  ⚠️ זה נראה כמו קישור מעקב לטופס שלך, לא קישור רכישה חיצוני. הכנס כאן URL של אתר הכרטיסים (למשל eventim.co.il)
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">דוגמה: <code className="bg-gray-100 px-1">https://www.eventim.co.il/he/event/123</code></p>
+            </div>
           </div>
 
           {/* Cover image */}
