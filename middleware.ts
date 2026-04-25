@@ -89,6 +89,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/book/") ||
     pathname.startsWith("/pay/") ||
     pathname.startsWith("/p/") ||
+    pathname.startsWith("/m/") ||
     pathname.startsWith("/supplier/") ||
     pathname.endsWith("/print") ||
     pathname.includes(".")

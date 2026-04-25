@@ -156,7 +156,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
               <span className="font-medium text-gray-700">העמוד פעיל</span>
             </label>
             <div className="flex gap-2 flex-wrap">
-              <a href={`/p/${page.slug}`} target="_blank" rel="noopener noreferrer"
+              <a href={`/m/${page.slug}`} target="_blank" rel="noopener noreferrer"
                 className="text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200">
                 👁 תצוגה חיה
               </a>
@@ -223,7 +223,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
             <div className="text-center py-16 text-gray-400">
               <div className="text-4xl mb-3">📭</div>
               <p>אין לידים עדיין</p>
-              <p className="text-xs mt-2">שלח את הקישור <code className="bg-gray-100 px-2 py-0.5 rounded">/p/{page.slug}</code> והלידים יופיעו כאן</p>
+              <p className="text-xs mt-2">שלח את הקישור <code className="bg-gray-100 px-2 py-0.5 rounded">/m/{page.slug}</code> והלידים יופיעו כאן</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

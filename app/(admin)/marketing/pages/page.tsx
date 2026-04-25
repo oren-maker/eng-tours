@@ -98,7 +98,7 @@ export default function MarketingPagesList() {
                     )}
                   </div>
                   <div className="text-xs text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
-                    <span className="font-mono">/p/{p.slug}</span>
+                    <span className="font-mono">/m/{p.slug}</span>
                     {p.main_artist && <span>· 🎤 {p.main_artist}{p.guest_artist ? ` × ${p.guest_artist}` : ""}</span>}
                     {p.event_date && <span>· 📅 {new Date(p.event_date).toLocaleDateString("he-IL")}</span>}
                     {p.city && <span>· 📍 {p.city}</span>}
@@ -106,7 +106,7 @@ export default function MarketingPagesList() {
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <a
-                    href={`/p/${p.slug}`}
+                    href={`/m/${p.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200"
