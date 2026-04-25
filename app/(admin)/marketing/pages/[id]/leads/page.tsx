@@ -106,9 +106,14 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <Link href="/marketing/pages" className="text-gray-400 hover:text-primary-700 text-lg" title="חזור לרשימה">←</Link>
-        <h2 className="text-lg font-semibold text-gray-800">{page.title}</h2>
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Link href="/marketing/pages" className="text-gray-400 hover:text-primary-700 text-lg" title="חזור לרשימה">←</Link>
+          <h2 className="text-lg font-semibold text-gray-800">{page.title}</h2>
+        </div>
+        <button onClick={load} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
+          🔄 רענן
+        </button>
       </div>
 
       <PageTabs id={params.id} active="leads" />
