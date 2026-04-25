@@ -18,6 +18,7 @@ type Page = {
   venue_name: string | null;
   ticket_purchase_link: string | null;
   intro_text: string | null;
+  cover_image_url: string | null;
 };
 
 type Lead = {
@@ -51,6 +52,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [view, setView] = useState<"edit" | "leads">("edit");
 
   const load = useCallback(async () => {
@@ -93,6 +95,29 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
       setPage(d.page);
       alert("נשמר ✓");
     } finally { setSaving(false); }
+  }
+
+  async function uploadCover(file: File) {
+    if (!page) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/marketing/pages/${params.id}/cover`, { method: "POST", body: fd });
+      const d = await res.json();
+      if (!res.ok) { alert(d.error || "שגיאה בהעלאה"); return; }
+      setPage({ ...page, cover_image_url: d.cover_image_url });
+    } finally { setUploading(false); }
+  }
+
+  async function removeCover() {
+    if (!page || !confirm("להסיר את תמונת הרקע?")) return;
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/admin/marketing/pages/${params.id}/cover`, { method: "DELETE" });
+      if (!res.ok) { alert("שגיאה"); return; }
+      setPage({ ...page, cover_image_url: null });
+    } finally { setUploading(false); }
   }
 
   async function remove() {
@@ -195,6 +220,37 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
               <Field label="מדינה" value={page.country || ""} onChange={(v) => setPage({ ...page, country: v })} />
             </div>
             <Field label="קישור לרכישת כרטיס (יישלח בwhatsApp)" value={page.ticket_purchase_link || ""} onChange={(v) => setPage({ ...page, ticket_purchase_link: v })} mono />
+          </div>
+
+          {/* Cover image */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <h3 className="font-semibold text-gray-800">🖼 תמונת רקע (Hero)</h3>
+            {page.cover_image_url ? (
+              <div className="space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={page.cover_image_url} alt="cover" className="w-full max-h-64 object-cover rounded-lg border border-gray-200" />
+                <div className="flex gap-2">
+                  <label className={`text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800 cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                    {uploading ? "מעלה..." : "🔄 החלף"}
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+                      onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
+                  </label>
+                  <button onClick={removeCover} disabled={uploading}
+                    className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded hover:bg-red-200 disabled:opacity-50">
+                    🗑 הסר
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className={`block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50/30 transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                <div className="text-3xl mb-2">📤</div>
+                <div className="text-sm font-medium text-gray-700">{uploading ? "מעלה..." : "העלה תמונת רקע"}</div>
+                <div className="text-xs text-gray-500 mt-1">PNG / JPG / WEBP / GIF · עד 10MB</div>
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+                  onChange={(e) => e.target.files?.[0] && uploadCover(e.target.files[0])} />
+              </label>
+            )}
+            <p className="text-xs text-gray-500">התמונה תוצג כרקע בעמוד הציבורי, מתחת לכותרת ולשם האמן. רוחב מומלץ: 1200px+, יחס 3:4 או 16:9.</p>
           </div>
 
           {/* Custom HTML */}
