@@ -52,19 +52,19 @@ export default async function PublicMarketingPage({
   ].filter(Boolean);
 
   return (
-    <div dir="rtl" className="relative min-h-screen bg-black text-white overflow-hidden">
-      {/* Page-wide background */}
+    <div dir="rtl" className="relative min-h-screen bg-black text-white">
+      {/* Page-wide background — absolute, grows with content */}
       {page.cover_image_url ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={page.cover_image_url} alt="" className="fixed inset-0 w-full h-full object-cover pointer-events-none -z-10" />
-          <div className="fixed inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/85 pointer-events-none -z-10" />
-          <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.30),transparent_70%)] pointer-events-none -z-10" />
+          <img src={page.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/85 pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.30),transparent_70%)] pointer-events-none" />
         </>
       ) : (
         <>
-          <div className="fixed inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none -z-10" />
-          <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none -z-10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none" />
         </>
       )}
 
@@ -85,7 +85,7 @@ export default async function PublicMarketingPage({
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 pt-3 pb-8">
+      <main className="relative max-w-2xl mx-auto px-5 pt-3 pb-8">
         {/* Intro */}
         {page.intro_text && (
           <p className="text-base md:text-lg leading-relaxed text-white/80 text-center mb-5 whitespace-pre-line">
