@@ -8,10 +8,10 @@ function applyTemplate(html: string, vars: Record<string, string>) {
   return html.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] || "");
 }
 
-function formatDateHe(d: string | null) {
+function formatDate(d: string | null) {
   if (!d) return "";
   try {
-    return new Date(d).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" });
+    return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
   } catch { return d; }
 }
 
@@ -30,7 +30,7 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
     title: page.title || "",
     main_artist: page.main_artist || "",
     guest_artist: page.guest_artist || "",
-    event_date: formatDateHe(page.event_date),
+    event_date: formatDate(page.event_date),
     city: page.city || "",
     country: page.country || "",
     venue_name: page.venue_name || "",
@@ -40,7 +40,7 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
   const customHtml = page.html ? applyTemplate(page.html, vars) : "";
   const subtitleParts = [
     page.main_artist && page.guest_artist ? `${page.main_artist} hosts ${page.guest_artist}` : page.main_artist,
-    formatDateHe(page.event_date),
+    formatDate(page.event_date),
     page.city,
   ].filter(Boolean);
 
@@ -55,7 +55,7 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
             {page.title}
           </h1>
           {subtitleParts.length > 0 && (
-            <p className="mt-2 text-base md:text-lg text-red-100/90 font-medium">
+            <p dir="ltr" className="mt-2 text-base md:text-lg text-red-100/90 font-medium">
               {subtitleParts.join(" | ")}
             </p>
           )}
