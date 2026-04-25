@@ -20,6 +20,7 @@ type Page = {
   intro_text: string | null;
   cover_image_url: string | null;
   wa_message_template: string | null;
+  notification_phone: string | null;
 };
 
 const DEFAULT_WA_TEMPLATE = `שלום {{first_name}},
@@ -68,6 +69,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           ticket_purchase_link: page.ticket_purchase_link,
           intro_text: page.intro_text,
           wa_message_template: page.wa_message_template,
+          notification_phone: page.notification_phone,
         }),
       });
       const d = await res.json();
@@ -205,6 +207,13 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           </div>
 
           {/* WhatsApp template */}
+          {/* Admin lead-alert phone */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <h3 className="font-semibold text-gray-800">🔔 התראת WhatsApp על ליד חדש</h3>
+            <Field label="טלפון לקבלת התראה (פורמט בינלאומי, +972...)" value={page.notification_phone || ""} onChange={(v) => setPage({ ...page, notification_phone: v })} mono />
+            <p className="text-xs text-gray-500">בכל פעם שנכנס ליד חדש דרך הטופס, נשלחת אליך הודעה עם הפרטים והמקור. השליחה מרווחת אוטומטית ב-10 שניות בין הודעות כדי לא לחסום את חשבון WhatsApp.</p>
+          </div>
+
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="font-semibold text-gray-800">💬 הודעת WhatsApp לרוכשי כרטיסים</h3>

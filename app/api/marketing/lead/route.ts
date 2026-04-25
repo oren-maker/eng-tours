@@ -5,6 +5,7 @@ import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { wasender, isConfigured } from "@/lib/wasender";
 import { DEFAULT_WA_TEMPLATE, renderTemplate } from "@/lib/marketing-wa";
 import { sendEmail } from "@/lib/email";
+import { queueAdminLeadAlert, drainOneDueAdminAlert, formatLeadAlertText } from "@/lib/admin-notify";
 
 function normalizePhone(input: string) {
   let digits = (input || "").replace(/[^0-9]/g, "");
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
-    .select("id, title, is_active, ticket_purchase_link, wa_message_template")
+    .select("id, title, is_active, ticket_purchase_link, wa_message_template, notification_phone")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -162,6 +163,31 @@ export async function POST(request: NextRequest) {
         external_id: waRes.msgId || null,
       });
     }
+  }
+
+  // Admin lead alert — queued with 10s spacing per WA policy.
+  if (page.notification_phone) {
+    let affName: string | null = null;
+    if (affiliateId) {
+      const { data: aff } = await supabase
+        .from("marketing_affiliates")
+        .select("name")
+        .eq("id", affiliateId)
+        .maybeSingle();
+      affName = aff?.name || null;
+    }
+    const alertText = formatLeadAlertText({
+      pageTitle: page.title || "",
+      firstName,
+      lastName,
+      phone,
+      email,
+      interestType,
+      affiliateName: affName,
+    });
+    await queueAdminLeadAlert({ recipient: page.notification_phone, text: alertText });
+    // Best-effort fire if no backlog exists; otherwise cron picks it up.
+    drainOneDueAdminAlert().catch(() => {});
   }
 
   return NextResponse.json({
