@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 type Page = { id: string; slug: string; title: string };
 type Lead = {
@@ -35,8 +36,10 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const initialAff = searchParams?.get("aff") || "all";
   const [filter, setFilter] = useState<"all" | "ticket_purchase" | "package_inquiry">("all");
-  const [refFilter, setRefFilter] = useState<string>("all");
+  const [refFilter, setRefFilter] = useState<string>(initialAff);
 
   const load = useCallback(async () => {
     setLoading(true);

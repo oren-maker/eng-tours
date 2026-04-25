@@ -140,21 +140,18 @@ export default function LinksPage({ params }: { params: { id: string } }) {
                           className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800 inline-flex items-center gap-1">
                           📋 העתק קישור
                         </button>
-                        {page && origin && (
-                          <a
-                            href={`${origin}/m/${page.slug}?ref=${a.tracking_code}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] text-gray-400 hover:text-primary-700 mt-1 block truncate max-w-[260px]"
-                            dir="ltr"
-                            title="פתח בחלון חדש"
-                          >
-                            {origin.replace(/^https?:\/\//, "")}/m/{page.slug}?ref={a.tracking_code}
-                          </a>
-                        )}
                       </td>
                       <td className="px-3 py-3"><span className="text-lg font-bold text-purple-700">{a.clicks}</span></td>
-                      <td className="px-3 py-3"><span className="text-lg font-bold text-green-700">{a.leads_count}</span></td>
+                      <td className="px-3 py-3">
+                        {a.leads_count > 0 ? (
+                          <Link href={`/marketing/pages/${params.id}/leads?aff=${a.id}`}
+                            className="text-lg font-bold text-green-700 hover:text-green-800 hover:underline">
+                            {a.leads_count}
+                          </Link>
+                        ) : (
+                          <span className="text-lg font-bold text-gray-400">0</span>
+                        )}
+                      </td>
                       <td className="px-3 py-3 text-xs text-gray-600">{a.clicks > 0 ? `${conv}%` : "—"}</td>
                       <td className="px-3 py-3">
                         <button onClick={() => remove(a.id, a.name)} className="text-xs text-red-600 hover:text-red-800">🗑 מחק</button>
