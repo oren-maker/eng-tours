@@ -106,10 +106,9 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-3 flex-wrap">
-        <Link href="/marketing/pages" className="hover:text-primary-700">📄 עמודי שיווק</Link>
-        <span>›</span>
-        <span className="text-gray-700 font-medium">{page.title}</span>
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <Link href="/marketing/pages" className="text-gray-400 hover:text-primary-700 text-lg" title="חזור לרשימה">←</Link>
+        <h2 className="text-lg font-semibold text-gray-800">{page.title}</h2>
       </div>
 
       <PageTabs id={params.id} active="leads" />
