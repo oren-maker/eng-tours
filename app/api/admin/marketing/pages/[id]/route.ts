@@ -32,6 +32,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       const v = body[k];
       if (k === "is_active") update[k] = !!v;
       else if (k === "event_date") update[k] = v || null;
+      else if (k === "html") update[k] = typeof v === "string" ? v : "";
+      else if (k === "title" || k === "slug") update[k] = typeof v === "string" ? v.trim() : v;
       else if (typeof v === "string") update[k] = v.trim() || null;
       else update[k] = v;
     }
