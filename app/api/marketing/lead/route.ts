@@ -3,25 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { wasender, isConfigured } from "@/lib/wasender";
+import { DEFAULT_WA_TEMPLATE, renderTemplate } from "@/lib/marketing-wa";
 
 function normalizePhone(input: string) {
   let digits = (input || "").replace(/[^0-9]/g, "");
   if (!digits) return null;
   if (digits.startsWith("0")) digits = "972" + digits.slice(1);
   return "+" + digits;
-}
-
-export const DEFAULT_WA_TEMPLATE = `שלום {{first_name}},
-
-תודה שהתעניינת ברכישת כרטיס לאירוע {{title}}!
-
-ניתן לרכוש את הכרטיס בקישור הבא:
-{{ticket_link}}
-
-נתראה באירוע 🎉`;
-
-function renderTemplate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? "");
 }
 
 async function sendTicketWhatsapp(to: string, text: string) {
