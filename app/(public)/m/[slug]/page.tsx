@@ -47,10 +47,10 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
   return (
     <div dir="rtl" className="min-h-screen bg-black text-white">
       {/* Hero */}
-      <header className="relative overflow-hidden border-b border-red-900/40">
+      <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-6 md:pt-14 md:pb-8 text-center">
+        <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-3 md:pt-12 md:pb-4 text-center">
           <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.05em" }}>
             {page.title}
           </h1>
@@ -65,7 +65,7 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 pt-5 pb-8">
+      <main className="max-w-2xl mx-auto px-5 pt-3 pb-8">
         {/* Intro */}
         {page.intro_text && (
           <p className="text-base md:text-lg leading-relaxed text-white/80 text-center mb-5 whitespace-pre-line">
