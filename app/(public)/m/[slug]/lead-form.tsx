@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Status =
   | { kind: "idle" }
@@ -8,7 +8,16 @@ type Status =
   | { kind: "success"; interest: "package_inquiry" | "ticket_purchase"; firstName: string }
   | { kind: "error"; message: string };
 
-export default function LeadForm({ slug }: { slug: string }) {
+export default function LeadForm({ slug, affiliateCode }: { slug: string; affiliateCode: string }) {
+  useEffect(() => {
+    if (!affiliateCode) return;
+    fetch("/api/marketing/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: affiliateCode }),
+    }).catch(() => {});
+  }, [affiliateCode]);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -45,6 +54,7 @@ export default function LeadForm({ slug }: { slug: string }) {
           phone,
           email,
           interest_type: interest,
+          affiliate_code: affiliateCode || undefined,
         }),
       });
       const d = await res.json();

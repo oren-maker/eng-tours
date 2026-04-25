@@ -39,6 +39,7 @@ const cronEndpoints = [
 const publicApiExact: { path: string; methods: string[] }[] = [
   { path: "/api/orders", methods: ["POST"] }, // Public can create orders; GET requires admin
   { path: "/api/marketing/lead", methods: ["POST"] }, // Public lead capture from marketing landing pages
+  { path: "/api/marketing/track", methods: ["POST"] }, // Public click tracking for affiliate links
 ];
 
 // Public GET-only prefixes (PATCH/POST/etc still require admin)

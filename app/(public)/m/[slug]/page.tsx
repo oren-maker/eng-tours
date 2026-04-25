@@ -15,13 +15,20 @@ function formatDate(d: string | null) {
   } catch { return d; }
 }
 
-export default async function PublicMarketingPage({ params }: { params: { slug: string } }) {
+export default async function PublicMarketingPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: { ref?: string };
+}) {
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
     .select("*")
     .eq("slug", params.slug)
     .eq("is_active", true)
+    .is("archived_at", null)
     .maybeSingle();
 
   if (!page) notFound();
@@ -79,7 +86,7 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
         )}
 
         {/* Lead form */}
-        <LeadForm slug={page.slug} />
+        <LeadForm slug={page.slug} affiliateCode={searchParams.ref || ""} />
 
         <p className="mt-5 text-center text-[11px] text-white/40">
           הפרטים נשמרים אצלנו בלבד. נשלח אליך מידע רק לגבי האירוע הזה.

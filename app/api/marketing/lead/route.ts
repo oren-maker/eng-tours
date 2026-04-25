@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
   const phoneRaw = String(body.phone || "").trim().slice(0, 50);
   const email = String(body.email || "").trim().slice(0, 200);
   const interestType = String(body.interest_type || "").trim();
+  const affiliateCode = String(body.affiliate_code || "").trim().slice(0, 32) || null;
   const payload = body.payload && typeof body.payload === "object" ? body.payload : {};
 
   if (!slug) return NextResponse.json({ error: "Missing slug" }, { status: 400 });
@@ -69,6 +70,17 @@ export async function POST(request: NextRequest) {
   if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
   if (!page.is_active) return NextResponse.json({ error: "Page disabled" }, { status: 410 });
 
+  let affiliateId: string | null = null;
+  if (affiliateCode) {
+    const { data: aff } = await supabase
+      .from("marketing_affiliates")
+      .select("id")
+      .eq("tracking_code", affiliateCode)
+      .eq("page_id", page.id)
+      .maybeSingle();
+    if (aff) affiliateId = aff.id;
+  }
+
   const ua = request.headers.get("user-agent")?.slice(0, 300) || null;
 
   const initialWaStatus = interestType === "ticket_purchase" ? "pending" : "not_required";
@@ -77,6 +89,7 @@ export async function POST(request: NextRequest) {
     .from("marketing_leads")
     .insert({
       page_id: page.id,
+      affiliate_id: affiliateId,
       first_name: firstName,
       last_name: lastName,
       name: `${firstName} ${lastName}`,
