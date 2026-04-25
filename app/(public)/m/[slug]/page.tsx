@@ -52,22 +52,24 @@ export default async function PublicMarketingPage({
   ].filter(Boolean);
 
   return (
-    <div dir="rtl" className="min-h-screen bg-black text-white">
+    <div dir="rtl" className="relative min-h-screen bg-black text-white overflow-hidden">
+      {/* Page-wide background */}
+      {page.cover_image_url ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={page.cover_image_url} alt="" className="fixed inset-0 w-full h-full object-cover pointer-events-none -z-10" />
+          <div className="fixed inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/85 pointer-events-none -z-10" />
+          <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.30),transparent_70%)] pointer-events-none -z-10" />
+        </>
+      ) : (
+        <>
+          <div className="fixed inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none -z-10" />
+          <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none -z-10" />
+        </>
+      )}
+
       {/* Hero */}
-      <header className="relative overflow-hidden">
-        {page.cover_image_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={page.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.35),transparent_70%)] pointer-events-none" />
-          </>
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none" />
-          </>
-        )}
+      <header className="relative">
         <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-3 md:pt-12 md:pb-4 text-center">
           <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.05em" }}>
             {page.title}
