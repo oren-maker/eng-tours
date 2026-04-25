@@ -25,7 +25,7 @@ export default async function PublicMarketingPage({
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
-    .select("*")
+    .select("id, slug, title, html, is_active, main_artist, guest_artist, event_date, city, country, venue_name, ticket_purchase_link, intro_text, cover_image_url, archived_at")
     .eq("slug", params.slug)
     .eq("is_active", true)
     .is("archived_at", null)
