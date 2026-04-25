@@ -50,38 +50,38 @@ export default async function PublicMarketingPage({ params }: { params: { slug: 
       <header className="relative overflow-hidden border-b border-red-900/40">
         <div className="absolute inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none" />
-        <div className="relative max-w-3xl mx-auto px-5 py-20 md:py-28 text-center">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase" style={{ letterSpacing: "0.05em" }}>
+        <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-6 md:pt-14 md:pb-8 text-center">
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.05em" }}>
             {page.title}
           </h1>
           {subtitleParts.length > 0 && (
-            <p className="mt-4 text-base md:text-lg text-red-100/90 font-medium">
+            <p className="mt-2 text-base md:text-lg text-red-100/90 font-medium">
               {subtitleParts.join(" | ")}
             </p>
           )}
           {page.venue_name && (
-            <p className="mt-1 text-sm text-white/60">📍 {page.venue_name}{page.country ? `, ${page.country}` : ""}</p>
+            <p className="mt-0.5 text-sm text-white/60">📍 {page.venue_name}{page.country ? `, ${page.country}` : ""}</p>
           )}
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-5 py-10 md:py-14">
+      <main className="max-w-2xl mx-auto px-5 pt-5 pb-8">
         {/* Intro */}
         {page.intro_text && (
-          <p className="text-base md:text-lg leading-relaxed text-white/80 text-center mb-10 whitespace-pre-line">
+          <p className="text-base md:text-lg leading-relaxed text-white/80 text-center mb-5 whitespace-pre-line">
             {page.intro_text}
           </p>
         )}
 
         {/* Custom HTML (rendered above the form, sanitized only by trust — admin-edited) */}
         {customHtml && (
-          <div className="mb-10 prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: customHtml }} />
+          <div className="mb-5 prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: customHtml }} />
         )}
 
         {/* Lead form */}
         <LeadForm slug={page.slug} />
 
-        <p className="mt-8 text-center text-[11px] text-white/40">
+        <p className="mt-5 text-center text-[11px] text-white/40">
           הפרטים נשמרים אצלנו בלבד. נשלח אליך מידע רק לגבי האירוע הזה.
         </p>
       </main>

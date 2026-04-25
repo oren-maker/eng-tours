@@ -81,10 +81,10 @@ export default function LeadForm({ slug }: { slug: string }) {
   const labelClass = "block text-sm font-medium text-white/80 mb-1.5";
 
   return (
-    <form onSubmit={submit} className="space-y-4 bg-white/[0.03] border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-sm">
-      <h2 className="text-xl md:text-2xl font-bold text-center mb-6">השאר פרטים</h2>
+    <form onSubmit={submit} className="space-y-3 bg-white/[0.03] border border-white/10 rounded-2xl p-5 md:p-6 backdrop-blur-sm">
+      <h2 className="text-xl md:text-2xl font-bold text-center mb-3">השאר פרטים</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className={labelClass}>שם פרטי</label>
           <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClass} placeholder="ישראל" autoComplete="given-name" />
