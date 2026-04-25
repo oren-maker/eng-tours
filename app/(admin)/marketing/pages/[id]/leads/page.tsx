@@ -120,9 +120,6 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
           <button onClick={load} className="text-xs bg-red-700 text-white px-3 py-1 rounded mr-2 hover:bg-red-800">נסה שוב</button>
         </div>
       )}
-      <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-2 mb-3 text-xs font-mono" dir="ltr">
-        DEBUG: leads={leads.length} affiliates={affiliates.length} pageId={params.id} refFilter={refFilter}
-      </div>
 
       <div className="bg-white rounded-xl shadow-sm p-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex gap-2 flex-wrap">
