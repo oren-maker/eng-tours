@@ -43,14 +43,23 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    const safeFetch = async (url: string) => {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        return await res.json();
+      } catch (e) {
+        console.error("fetch failed", url, e);
+        return null;
+      }
+    };
     const [r1, r2, r3] = await Promise.all([
-      fetch(`/api/admin/marketing/pages/${params.id}`, { cache: "no-store" }).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/leads`, { cache: "no-store" }).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/affiliates`, { cache: "no-store" }).then((r) => r.json()),
+      safeFetch(`/api/admin/marketing/pages/${params.id}`),
+      safeFetch(`/api/admin/marketing/pages/${params.id}/leads`),
+      safeFetch(`/api/admin/marketing/pages/${params.id}/affiliates`),
     ]);
-    if (r1.page) setPage(r1.page);
-    setLeads(r2.leads || []);
-    setAffiliates(r3.affiliates || []);
+    if (r1?.page) setPage(r1.page);
+    setLeads(r2?.leads || []);
+    setAffiliates(r3?.affiliates || []);
     setLoading(false);
   }, [params.id]);
 
