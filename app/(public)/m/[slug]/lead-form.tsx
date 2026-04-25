@@ -8,7 +8,7 @@ type Status =
   | { kind: "success"; interest: "package_inquiry" | "ticket_purchase"; firstName: string }
   | { kind: "error"; message: string };
 
-export default function LeadForm({ slug, affiliateCode }: { slug: string; affiliateCode: string }) {
+export default function LeadForm({ slug, affiliateCode, onSuccess }: { slug: string; affiliateCode: string; onSuccess?: () => void }) {
   useEffect(() => {
     if (!affiliateCode) return;
     fetch("/api/marketing/track", {
@@ -67,6 +67,7 @@ export default function LeadForm({ slug, affiliateCode }: { slug: string; affili
         interest: interest as "package_inquiry" | "ticket_purchase",
         firstName: firstName.trim(),
       });
+      onSuccess?.();
     } catch {
       setStatus({ kind: "error", message: "שגיאת רשת — נסה שוב" });
     }
@@ -80,7 +81,7 @@ export default function LeadForm({ slug, affiliateCode }: { slug: string; affili
         <h2 className="text-2xl font-bold mb-2">תודה {status.firstName}!</h2>
         <p className="text-white/80 leading-relaxed">
           {isTicket
-            ? "שלחנו לך הודעת WhatsApp עם קישור הרכישה."
+            ? "שלחנו לך הודעת WhatsApp ומייל עם קישור הרכישה."
             : "ניצור איתך קשר בקרוב עם פרטי החבילה."}
         </p>
       </div>

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase";
-import LeadForm from "./lead-form";
+import HeroBody from "./hero-body";
 
 export const dynamic = "force-dynamic";
 
@@ -94,24 +94,12 @@ export default async function PublicMarketingPage({
       </header>
 
       <main className="relative max-w-2xl mx-auto px-5 pt-3 pb-8">
-        {/* Intro */}
-        {page.intro_text && (
-          <p className="text-base md:text-lg leading-relaxed text-white/80 text-center mb-5 whitespace-pre-line">
-            {page.intro_text}
-          </p>
-        )}
-
-        {/* Custom HTML (rendered above the form, sanitized only by trust — admin-edited) */}
-        {customHtml && (
-          <div className="mb-5 prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: customHtml }} />
-        )}
-
-        {/* Lead form */}
-        <LeadForm slug={page.slug} affiliateCode={searchParams.ref || ""} />
-
-        <p className="mt-5 text-center text-[11px] text-white/40">
-          הפרטים נשמרים אצלנו בלבד. נשלח אליך מידע רק לגבי האירוע הזה.
-        </p>
+        <HeroBody
+          slug={page.slug}
+          affiliateCode={searchParams.ref || ""}
+          introText={page.intro_text || ""}
+          customHtml={customHtml}
+        />
       </main>
     </div>
   );

@@ -4,12 +4,36 @@ import { createServiceClient } from "@/lib/supabase";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { wasender, isConfigured } from "@/lib/wasender";
 import { DEFAULT_WA_TEMPLATE, renderTemplate } from "@/lib/marketing-wa";
+import { sendEmail } from "@/lib/email";
 
 function normalizePhone(input: string) {
   let digits = (input || "").replace(/[^0-9]/g, "");
   if (!digits) return null;
   if (digits.startsWith("0")) digits = "972" + digits.slice(1);
   return "+" + digits;
+}
+
+async function sendTicketEmail(to: string, firstName: string, eventTitle: string, link: string | null) {
+  if (!link) return { ok: false, error: "אין קישור רכישה מוגדר" };
+  const subject = `הקישור לרכישת כרטיס לאירוע ${eventTitle}`;
+  const html = `
+    <div style="font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif; padding: 8px 0;">
+      <h2 style="color:#0f172a; margin:0 0 12px;">שלום ${firstName} 👋</h2>
+      <p style="color:#334155; line-height:1.6; margin:0 0 16px;">
+        תודה שהתעניינת ברכישת כרטיס לאירוע <b>${eventTitle}</b>!<br/>
+        ניתן לרכוש את הכרטיס בקישור הבא:
+      </p>
+      <p style="margin: 18px 0;">
+        <a href="${link}" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;">רכוש כרטיס ←</a>
+      </p>
+      <p style="color:#64748b; font-size:13px; margin: 24px 0 0;">או העתק את הקישור הזה: <br/>
+        <a href="${link}" style="color:#475569; word-break:break-all;">${link}</a>
+      </p>
+      <hr style="border:none;border-top:1px solid #e2e8f0; margin: 28px 0 16px;" />
+      <p style="color:#94a3b8; font-size:12px; margin:0;">נתראה באירוע 🎉</p>
+    </div>`;
+  const r = await sendEmail(to, subject, html, { template: "marketing_ticket_link", recipient_type: "marketing" });
+  return { ok: r.success, error: r.error };
 }
 
 async function sendTicketWhatsapp(to: string, text: string) {
@@ -111,21 +135,31 @@ export async function POST(request: NextRequest) {
         title: page.title || "",
         ticket_link: page.ticket_purchase_link || "",
       });
-      const r = await sendTicketWhatsapp(phone, text);
-      const updates: Record<string, unknown> = r.ok
-        ? { whatsapp_status: "sent", whatsapp_sent_at: new Date().toISOString() }
-        : { whatsapp_status: "failed", whatsapp_error: (r.error || "").slice(0, 500) };
+
+      const [waRes, emailRes] = await Promise.all([
+        sendTicketWhatsapp(phone, text),
+        sendTicketEmail(email, firstName, page.title || "", page.ticket_purchase_link),
+      ]);
+
+      const updates: Record<string, unknown> = {
+        ...(waRes.ok
+          ? { whatsapp_status: "sent", whatsapp_sent_at: new Date().toISOString() }
+          : { whatsapp_status: "failed", whatsapp_error: (waRes.error || "").slice(0, 500) }),
+        ...(emailRes.ok
+          ? { email_status: "sent", email_sent_at: new Date().toISOString() }
+          : { email_status: "failed", email_error: (emailRes.error || "").slice(0, 500) }),
+      };
       await supabase.from("marketing_leads").update(updates).eq("id", lead.id);
 
-      // Mirror to existing whatsapp_log so it shows up in the WA inbox/audit
+      // Mirror WA to whatsapp_log
       await supabase.from("whatsapp_log").insert({
         direction: "outgoing",
         recipient: phone.replace("+", ""),
-        message_body: r.text || "",
+        message_body: waRes.text || "",
         template_name: "marketing_ticket_link",
-        status: r.ok ? "sent" : "failed",
-        error_message: r.ok ? null : (r.error || null),
-        external_id: r.msgId || null,
+        status: waRes.ok ? "sent" : "failed",
+        error_message: waRes.ok ? null : (waRes.error || null),
+        external_id: waRes.msgId || null,
       });
     }
   }

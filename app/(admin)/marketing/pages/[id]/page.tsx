@@ -31,48 +31,17 @@ const DEFAULT_WA_TEMPLATE = `שלום {{first_name}},
 
 נתראה באירוע 🎉`;
 
-type Lead = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-  email: string | null;
-  interest_type: string | null;
-  whatsapp_status: string | null;
-  whatsapp_sent_at: string | null;
-  whatsapp_error: string | null;
-  created_at: string;
-};
-
-const interestLabel: Record<string, string> = {
-  package_inquiry: "📦 חבילה",
-  ticket_purchase: "🎫 רכישה",
-};
-
-const waBadge: Record<string, { color: string; label: string }> = {
-  pending: { color: "bg-yellow-100 text-yellow-700", label: "⏳ ממתין" },
-  sent: { color: "bg-green-100 text-green-700", label: "✓ נשלח" },
-  failed: { color: "bg-red-100 text-red-700", label: "✗ נכשל" },
-  not_required: { color: "bg-gray-100 text-gray-600", label: "—" },
-};
-
 export default function MarketingPageEdit({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [page, setPage] = useState<Page | null>(null);
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [view, setView] = useState<"edit" | "leads">("edit");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [r1, r2] = await Promise.all([
-      fetch(`/api/admin/marketing/pages/${params.id}`, { cache: "no-store" }).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/leads`, { cache: "no-store" }).then((r) => r.json()),
-    ]);
+    const r1 = await fetch(`/api/admin/marketing/pages/${params.id}`, { cache: "no-store" }).then((r) => r.json());
     if (r1.page) setPage(r1.page);
-    setLeads(r2.leads || []);
     setLoading(false);
   }, [params.id]);
 
@@ -138,25 +107,6 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
     router.push("/marketing/pages");
   }
 
-  function exportLeadsCsv() {
-    const headers = ["תאריך", "שם פרטי", "שם משפחה", "טלפון", "מייל", "סוג עניין", "סטטוס WA"];
-    const rows = leads.map((l) => [
-      new Date(l.created_at).toLocaleString("he-IL"),
-      l.first_name || "",
-      l.last_name || "",
-      l.phone || "",
-      l.email || "",
-      interestLabel[l.interest_type || ""] || l.interest_type || "",
-      l.whatsapp_status || "",
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `leads-${page?.slug || params.id}.csv`;
-    a.click();
-  }
-
   if (loading) return <div className="text-center py-12 text-gray-400">טוען...</div>;
   if (!page) return <div className="text-center py-12 text-gray-400">העמוד לא נמצא</div>;
 
@@ -170,27 +120,12 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
 
       <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4 overflow-x-auto">
         <Link href={`/marketing/pages/${params.id}/dashboard`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">📊 דשבורד</Link>
+        <Link href={`/marketing/pages/${params.id}/leads`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">📋 לידים</Link>
         <Link href={`/marketing/pages/${params.id}/links`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">🔗 קישורי מעקב</Link>
-        <span className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-700 text-white whitespace-nowrap">✏️ עריכה + לידים</span>
+        <span className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-700 text-white whitespace-nowrap">✏️ עריכה</span>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4">
-        <button
-          onClick={() => setView("edit")}
-          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${view === "edit" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}
-        >
-          ✏️ עריכת העמוד
-        </button>
-        <button
-          onClick={() => setView("leads")}
-          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${view === "leads" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}
-        >
-          📋 לידים ({leads.length})
-        </button>
-      </div>
-
-      {view === "edit" && (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Status + actions */}
           <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between gap-3 flex-wrap">
             <label className="flex items-center gap-2 text-sm">
@@ -319,59 +254,6 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
             />
           </div>
         </div>
-      )}
-
-      {view === "leads" && (
-        <div className="bg-white rounded-xl shadow-sm">
-          <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-wrap gap-2">
-            <h3 className="font-semibold text-gray-800">📋 לידים שנכנסו ({leads.length})</h3>
-            {leads.length > 0 && (
-              <button onClick={exportLeadsCsv} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700">
-                📥 הורד CSV
-              </button>
-            )}
-          </div>
-          {leads.length === 0 ? (
-            <div className="text-center py-16 text-gray-400">
-              <div className="text-4xl mb-3">📭</div>
-              <p>אין לידים עדיין</p>
-              <p className="text-xs mt-2">שלח את הקישור <code className="bg-gray-100 px-2 py-0.5 rounded">/m/{page.slug}</code> והלידים יופיעו כאן</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">תאריך</th>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">שם</th>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">טלפון</th>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">מייל</th>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">סוג</th>
-                    <th className="text-right px-3 py-2 font-medium text-gray-600">WA</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {leads.map((l) => {
-                    const wa = waBadge[l.whatsapp_status || "not_required"] || waBadge.not_required;
-                    return (
-                      <tr key={l.id}>
-                        <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(l.created_at).toLocaleString("he-IL")}</td>
-                        <td className="px-3 py-2 text-xs">{l.first_name} {l.last_name}</td>
-                        <td className="px-3 py-2 text-xs font-mono" dir="ltr">{l.phone || "—"}</td>
-                        <td className="px-3 py-2 text-xs font-mono" dir="ltr">{l.email || "—"}</td>
-                        <td className="px-3 py-2 text-xs">{interestLabel[l.interest_type || ""] || l.interest_type || "—"}</td>
-                        <td className="px-3 py-2 text-xs">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] ${wa.color}`} title={l.whatsapp_error || ""}>{wa.label}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
