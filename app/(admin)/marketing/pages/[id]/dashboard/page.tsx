@@ -73,7 +73,7 @@ export default function PageDashboard({ params }: { params: { id: string } }) {
         <Stat label="סה״כ לידים" value={leads.length} color="border-primary-500" />
         <Stat label="🎫 רכישת כרטיס" value={ticketLeads} color="border-green-500" />
         <Stat label="📦 בקשת חבילה" value={packageLeads} color="border-blue-500" />
-        <Stat label="🔗 כניסות מקישורים" value={totalClicks} color="border-purple-500" />
+        <Stat label="👁 צפיות מקישור מעקב" value={totalClicks} color="border-purple-500" />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
