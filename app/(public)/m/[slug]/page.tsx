@@ -45,11 +45,6 @@ export default async function PublicMarketingPage({
   };
 
   const customHtml = page.html ? applyTemplate(page.html, vars) : "";
-  const subtitleParts = [
-    page.main_artist && page.guest_artist ? `${page.main_artist} hosts ${page.guest_artist}` : page.main_artist,
-    formatDate(page.event_date),
-    page.city,
-  ].filter(Boolean);
 
   return (
     <div dir="rtl" className="relative min-h-screen bg-black text-white">
@@ -70,17 +65,30 @@ export default async function PublicMarketingPage({
 
       {/* Hero */}
       <header className="relative">
-        <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-3 md:pt-12 md:pb-4 text-center">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.05em" }}>
+        <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-4 md:pt-14 md:pb-6 text-center">
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.04em" }}>
             {page.title}
           </h1>
-          {subtitleParts.length > 0 && (
-            <p dir="ltr" className="mt-2 text-base md:text-lg text-red-100/90 font-medium">
-              {subtitleParts.join(" | ")}
+
+          {(page.main_artist || page.guest_artist) && (
+            <div dir="ltr" className="mt-5 leading-[1.05]">
+              {page.main_artist && (
+                <div className="text-3xl md:text-5xl font-black uppercase tracking-tight">{page.main_artist}</div>
+              )}
+              {page.guest_artist && (
+                <div className="text-3xl md:text-5xl font-black uppercase tracking-tight">{page.guest_artist}</div>
+              )}
+            </div>
+          )}
+
+          {(page.event_date || page.city) && (
+            <p dir="ltr" className="mt-4 text-xs md:text-sm font-bold tracking-[0.25em] uppercase text-white/95">
+              {[formatDate(page.event_date), page.city].filter(Boolean).join(" ")}
             </p>
           )}
+
           {page.venue_name && (
-            <p className="mt-0.5 text-sm text-white/60">📍 {page.venue_name}{page.country ? `, ${page.country}` : ""}</p>
+            <p className="mt-1.5 text-[11px] text-white/55">{page.venue_name}{page.country ? `, ${page.country}` : ""}</p>
           )}
         </div>
       </header>
