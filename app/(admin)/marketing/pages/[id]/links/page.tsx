@@ -25,8 +25,8 @@ export default function LinksPage({ params }: { params: { id: string } }) {
   const load = useCallback(async () => {
     setLoading(true);
     const [r1, r2] = await Promise.all([
-      fetch(`/api/admin/marketing/pages/${params.id}`).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/affiliates`).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}/affiliates`, { cache: "no-store" }).then((r) => r.json()),
     ]);
     if (r1.page) setPage(r1.page);
     setAffiliates(r2.affiliates || []);

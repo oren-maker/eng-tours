@@ -11,23 +11,26 @@ function normalizePhone(input: string) {
   return "+" + digits;
 }
 
-async function sendTicketWhatsapp(to: string, firstName: string, link: string) {
+export const DEFAULT_WA_TEMPLATE = `שלום {{first_name}},
+
+תודה שהתעניינת ברכישת כרטיס לאירוע {{title}}!
+
+ניתן לרכוש את הכרטיס בקישור הבא:
+{{ticket_link}}
+
+נתראה באירוע 🎉`;
+
+function renderTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] ?? "");
+}
+
+async function sendTicketWhatsapp(to: string, text: string) {
   if (!isConfigured()) return { ok: false, error: "WaSender not configured" };
   const sessionsRes = await wasender.listSessions();
   if (!sessionsRes.ok) return { ok: false, error: sessionsRes.error || "Cannot list sessions" };
   const all: any[] = Array.isArray(sessionsRes.data) ? sessionsRes.data : ((sessionsRes.data as any)?.data || []);
   const session = all.find((s) => ["connected", "ready"].includes((s.status || "").toLowerCase())) || all[0];
   if (!session?.api_key) return { ok: false, error: "אין סשן WhatsApp מחובר" };
-
-  const text = `שלום ${firstName},
-
-תודה שהתעניינת ברכישת כרטיס לאירוע!
-
-ניתן לרכוש את הכרטיס בקישור הבא:
-${link}
-
-נתראה באירוע 🎉`;
-
   const r = await wasender.sendTextWithSessionKey(session.api_key, { to, text });
   return { ok: r.ok, error: r.error, msgId: ((r as any)?.data as any)?.data?.msgId?.toString() || null, text };
 }
@@ -63,7 +66,7 @@ export async function POST(request: NextRequest) {
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
-    .select("id, is_active, ticket_purchase_link")
+    .select("id, title, is_active, ticket_purchase_link, wa_message_template")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -113,7 +116,14 @@ export async function POST(request: NextRequest) {
         .update({ whatsapp_status: "failed", whatsapp_error: "אין קישור רכישה מוגדר לעמוד" })
         .eq("id", lead.id);
     } else {
-      const r = await sendTicketWhatsapp(phone, firstName, page.ticket_purchase_link);
+      const tpl = (page.wa_message_template && page.wa_message_template.trim()) || DEFAULT_WA_TEMPLATE;
+      const text = renderTemplate(tpl, {
+        first_name: firstName,
+        last_name: lastName,
+        title: page.title || "",
+        ticket_link: page.ticket_purchase_link || "",
+      });
+      const r = await sendTicketWhatsapp(phone, text);
       const updates: Record<string, unknown> = r.ok
         ? { whatsapp_status: "sent", whatsapp_sent_at: new Date().toISOString() }
         : { whatsapp_status: "failed", whatsapp_error: (r.error || "").slice(0, 500) };

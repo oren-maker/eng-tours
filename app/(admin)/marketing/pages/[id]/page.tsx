@@ -19,7 +19,17 @@ type Page = {
   ticket_purchase_link: string | null;
   intro_text: string | null;
   cover_image_url: string | null;
+  wa_message_template: string | null;
 };
+
+const DEFAULT_WA_TEMPLATE = `שלום {{first_name}},
+
+תודה שהתעניינת ברכישת כרטיס לאירוע {{title}}!
+
+ניתן לרכוש את הכרטיס בקישור הבא:
+{{ticket_link}}
+
+נתראה באירוע 🎉`;
 
 type Lead = {
   id: string;
@@ -58,8 +68,8 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
   const load = useCallback(async () => {
     setLoading(true);
     const [r1, r2] = await Promise.all([
-      fetch(`/api/admin/marketing/pages/${params.id}`).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/leads`).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}/leads`, { cache: "no-store" }).then((r) => r.json()),
     ]);
     if (r1.page) setPage(r1.page);
     setLeads(r2.leads || []);
@@ -88,6 +98,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           venue_name: page.venue_name,
           ticket_purchase_link: page.ticket_purchase_link,
           intro_text: page.intro_text,
+          wa_message_template: page.wa_message_template,
         }),
       });
       const d = await res.json();
@@ -251,6 +262,45 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
               </label>
             )}
             <p className="text-xs text-gray-500">התמונה תוצג כרקע בעמוד הציבורי, מתחת לכותרת ולשם האמן. רוחב מומלץ: 1200px+, יחס 3:4 או 16:9.</p>
+          </div>
+
+          {/* WhatsApp template */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="font-semibold text-gray-800">💬 הודעת WhatsApp לרוכשי כרטיסים</h3>
+              <button
+                type="button"
+                onClick={() => setPage({ ...page, wa_message_template: DEFAULT_WA_TEMPLATE })}
+                className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200"
+              >
+                שחזר ברירת מחדל
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              נשלחת אוטומטית למי שבוחר "רכישת כרטיס בלבד". משתנים זמינים:{" "}
+              <code className="bg-gray-100 px-1">{`{{first_name}}`}</code>,{" "}
+              <code className="bg-gray-100 px-1">{`{{last_name}}`}</code>,{" "}
+              <code className="bg-gray-100 px-1">{`{{title}}`}</code>,{" "}
+              <code className="bg-gray-100 px-1">{`{{ticket_link}}`}</code>
+            </p>
+            <textarea
+              value={page.wa_message_template ?? DEFAULT_WA_TEMPLATE}
+              onChange={(e) => setPage({ ...page, wa_message_template: e.target.value })}
+              rows={9}
+              className="w-full border border-gray-200 rounded-lg p-3 text-sm font-mono outline-none focus:border-primary-500"
+              placeholder={DEFAULT_WA_TEMPLATE}
+              spellCheck={false}
+            />
+            <details className="text-xs">
+              <summary className="cursor-pointer text-primary-700 hover:underline">תצוגה מקדימה (דוגמה)</summary>
+              <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3 whitespace-pre-line text-sm">
+                {(page.wa_message_template ?? DEFAULT_WA_TEMPLATE)
+                  .replace(/\{\{\s*first_name\s*\}\}/g, "ישראל")
+                  .replace(/\{\{\s*last_name\s*\}\}/g, "ישראלי")
+                  .replace(/\{\{\s*title\s*\}\}/g, page.title || "האירוע")
+                  .replace(/\{\{\s*ticket_link\s*\}\}/g, page.ticket_purchase_link || "https://example.com/buy")}
+              </div>
+            </details>
           </div>
 
           {/* Custom HTML */}

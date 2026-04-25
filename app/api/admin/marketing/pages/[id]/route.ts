@@ -7,7 +7,7 @@ const editableFields = [
   "main_artist", "guest_artist", "event_date",
   "city", "country", "venue_name",
   "ticket_purchase_link", "intro_text",
-  "cover_image_url",
+  "cover_image_url", "wa_message_template",
 ] as const;
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {

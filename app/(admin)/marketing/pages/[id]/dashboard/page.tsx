@@ -28,9 +28,9 @@ export default function PageDashboard({ params }: { params: { id: string } }) {
   const load = useCallback(async () => {
     setLoading(true);
     const [r1, r2, r3] = await Promise.all([
-      fetch(`/api/admin/marketing/pages/${params.id}`).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/leads`).then((r) => r.json()),
-      fetch(`/api/admin/marketing/pages/${params.id}/affiliates`).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}/leads`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/admin/marketing/pages/${params.id}/affiliates`, { cache: "no-store" }).then((r) => r.json()),
     ]);
     if (r1.page) setPage(r1.page);
     setLeads(r2.leads || []);

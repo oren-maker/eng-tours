@@ -27,7 +27,7 @@ export default function MarketingPagesList() {
 
   async function load() {
     setLoading(true);
-    const r = await fetch("/api/admin/marketing/pages").then((r) => r.json());
+    const r = await fetch("/api/admin/marketing/pages", { cache: "no-store" }).then((r) => r.json());
     setPages(r.pages || []);
     setLoading(false);
   }
