@@ -111,7 +111,7 @@ export default function PageDashboard({ params }: { params: { id: string } }) {
                   return (
                     <tr key={a.id}>
                       <td className="px-3 py-2 font-medium text-gray-800">{a.name}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-gray-500" dir="ltr">{a.tracking_code}</td>
+                      <td className="px-3 py-2 text-right"><span className="font-mono text-xs text-gray-500" dir="ltr">{a.tracking_code}</span></td>
                       <td className="px-3 py-2 text-gray-700">{a.clicks}</td>
                       <td className="px-3 py-2 text-gray-700 font-bold">{a.leads_count}</td>
                       <td className="px-3 py-2 text-xs text-gray-500">{a.clicks > 0 ? `${conv}%` : "—"}</td>

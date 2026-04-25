@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 type Page = { id: string; slug: string; title: string };
 type Lead = {
@@ -36,30 +35,39 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
   const [loading, setLoading] = useState(true);
-  const searchParams = useSearchParams();
-  const initialAff = searchParams?.get("aff") || "all";
   const [filter, setFilter] = useState<"all" | "ticket_purchase" | "package_inquiry">("all");
-  const [refFilter, setRefFilter] = useState<string>(initialAff);
+  const [refFilter, setRefFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const aff = new URLSearchParams(window.location.search).get("aff");
+    if (aff) setRefFilter(aff);
+  }, []);
+
+  const [errMsg, setErrMsg] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const safeFetch = async (url: string) => {
-      try {
+    setErrMsg("");
+    try {
+      const fetchJson = async (url: string) => {
         const res = await fetch(url, { cache: "no-store" });
-        return await res.json();
-      } catch (e) {
-        console.error("fetch failed", url, e);
-        return null;
-      }
-    };
-    const [r1, r2, r3] = await Promise.all([
-      safeFetch(`/api/admin/marketing/pages/${params.id}`),
-      safeFetch(`/api/admin/marketing/pages/${params.id}/leads`),
-      safeFetch(`/api/admin/marketing/pages/${params.id}/affiliates`),
-    ]);
-    if (r1?.page) setPage(r1.page);
-    setLeads(r2?.leads || []);
-    setAffiliates(r3?.affiliates || []);
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(`${url}: ${res.status} ${data?.error || ""}`);
+        return data;
+      };
+      const [r1, r2, r3] = await Promise.all([
+        fetchJson(`/api/admin/marketing/pages/${params.id}`),
+        fetchJson(`/api/admin/marketing/pages/${params.id}/leads`),
+        fetchJson(`/api/admin/marketing/pages/${params.id}/affiliates`),
+      ]);
+      if (r1?.page) setPage(r1.page);
+      setLeads(r2?.leads || []);
+      setAffiliates(r3?.affiliates || []);
+    } catch (e: any) {
+      setErrMsg(e?.message || String(e));
+      console.error("load error:", e);
+    }
     setLoading(false);
   }, [params.id]);
 
@@ -105,6 +113,13 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
       </div>
 
       <PageTabs id={params.id} active="leads" />
+
+      {errMsg && (
+        <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 mb-3 text-sm">
+          ⚠ שגיאת טעינה: <code className="font-mono">{errMsg}</code>
+          <button onClick={load} className="text-xs bg-red-700 text-white px-3 py-1 rounded mr-2 hover:bg-red-800">נסה שוב</button>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm p-3 mb-4 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex gap-2 flex-wrap">
