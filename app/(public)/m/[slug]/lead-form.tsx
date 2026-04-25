@@ -97,27 +97,27 @@ export default function LeadForm({ slug, affiliateCode, onSuccess }: { slug: str
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className={labelClass}>שם פרטי</label>
+          <label className={labelClass}>שם פרטי <span className="text-red-500">*</span></label>
           <input type="text" required value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClass} placeholder="ישראל" autoComplete="given-name" />
         </div>
         <div>
-          <label className={labelClass}>שם משפחה</label>
+          <label className={labelClass}>שם משפחה <span className="text-red-500">*</span></label>
           <input type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputClass} placeholder="ישראלי" autoComplete="family-name" />
         </div>
       </div>
 
       <div>
-        <label className={labelClass}>טלפון</label>
+        <label className={labelClass}>טלפון <span className="text-red-500">*</span></label>
         <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} placeholder="050-1234567" dir="ltr" autoComplete="tel" />
       </div>
 
       <div>
-        <label className={labelClass}>מייל</label>
+        <label className={labelClass}>מייל <span className="text-red-500">*</span></label>
         <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="name@example.com" dir="ltr" autoComplete="email" />
       </div>
 
       <div>
-        <label className={labelClass}>אני מעוניין ב…</label>
+        <label className={labelClass}>אני מעוניין ב… <span className="text-red-500">*</span></label>
         <select required value={interest} onChange={(e) => setInterest(e.target.value as "package_inquiry" | "ticket_purchase")}
           className={inputClass}>
           <option value="" className="bg-black">— בחר —</option>
