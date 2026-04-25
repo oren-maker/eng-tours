@@ -140,7 +140,18 @@ export default function LinksPage({ params }: { params: { id: string } }) {
                           className="text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800 inline-flex items-center gap-1">
                           📋 העתק קישור
                         </button>
-                        <div className="text-[10px] text-gray-400 font-mono mt-1" dir="ltr">?ref={a.tracking_code}</div>
+                        {page && origin && (
+                          <a
+                            href={`${origin}/m/${page.slug}?ref=${a.tracking_code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-gray-400 hover:text-primary-700 mt-1 block truncate max-w-[260px]"
+                            dir="ltr"
+                            title="פתח בחלון חדש"
+                          >
+                            {origin.replace(/^https?:\/\//, "")}/m/{page.slug}?ref={a.tracking_code}
+                          </a>
+                        )}
                       </td>
                       <td className="px-3 py-3"><span className="text-lg font-bold text-purple-700">{a.clicks}</span></td>
                       <td className="px-3 py-3"><span className="text-lg font-bold text-green-700">{a.leads_count}</span></td>
