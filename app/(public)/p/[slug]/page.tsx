@@ -1,0 +1,90 @@
+import { notFound } from "next/navigation";
+import { createServiceClient } from "@/lib/supabase";
+import LeadForm from "./lead-form";
+
+export const dynamic = "force-dynamic";
+
+function applyTemplate(html: string, vars: Record<string, string>) {
+  return html.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => vars[k] || "");
+}
+
+function formatDateHe(d: string | null) {
+  if (!d) return "";
+  try {
+    return new Date(d).toLocaleDateString("he-IL", { day: "2-digit", month: "long", year: "numeric" });
+  } catch { return d; }
+}
+
+export default async function PublicMarketingPage({ params }: { params: { slug: string } }) {
+  const supabase = createServiceClient();
+  const { data: page } = await supabase
+    .from("marketing_pages")
+    .select("*")
+    .eq("slug", params.slug)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!page) notFound();
+
+  const vars: Record<string, string> = {
+    title: page.title || "",
+    main_artist: page.main_artist || "",
+    guest_artist: page.guest_artist || "",
+    event_date: formatDateHe(page.event_date),
+    city: page.city || "",
+    country: page.country || "",
+    venue_name: page.venue_name || "",
+    intro_text: page.intro_text || "",
+  };
+
+  const customHtml = page.html ? applyTemplate(page.html, vars) : "";
+  const subtitleParts = [
+    page.main_artist && page.guest_artist ? `${page.main_artist} hosts ${page.guest_artist}` : page.main_artist,
+    formatDateHe(page.event_date),
+    page.city,
+  ].filter(Boolean);
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-black text-white">
+      {/* Hero */}
+      <header className="relative overflow-hidden border-b border-red-900/40">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-950 via-black to-black opacity-90 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.25),transparent_60%)] pointer-events-none" />
+        <div className="relative max-w-3xl mx-auto px-5 py-20 md:py-28 text-center">
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase" style={{ letterSpacing: "0.05em" }}>
+            {page.title}
+          </h1>
+          {subtitleParts.length > 0 && (
+            <p className="mt-4 text-base md:text-lg text-red-100/90 font-medium">
+              {subtitleParts.join(" | ")}
+            </p>
+          )}
+          {page.venue_name && (
+            <p className="mt-1 text-sm text-white/60">📍 {page.venue_name}{page.country ? `, ${page.country}` : ""}</p>
+          )}
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-5 py-10 md:py-14">
+        {/* Intro */}
+        {page.intro_text && (
+          <p className="text-base md:text-lg leading-relaxed text-white/80 text-center mb-10 whitespace-pre-line">
+            {page.intro_text}
+          </p>
+        )}
+
+        {/* Custom HTML (rendered above the form, sanitized only by trust — admin-edited) */}
+        {customHtml && (
+          <div className="mb-10 prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: customHtml }} />
+        )}
+
+        {/* Lead form */}
+        <LeadForm slug={page.slug} />
+
+        <p className="mt-8 text-center text-[11px] text-white/40">
+          הפרטים נשמרים אצלנו בלבד. נשלח אליך מידע רק לגבי האירוע הזה.
+        </p>
+      </main>
+    </div>
+  );
+}
