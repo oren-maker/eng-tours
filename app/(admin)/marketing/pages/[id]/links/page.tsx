@@ -71,21 +71,14 @@ export default function LinksPage({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Link href="/marketing/pages" className="text-gray-400 hover:text-primary-700 text-lg" title="חזור לרשימה">←</Link>
-          <h2 className="text-lg font-semibold text-gray-800">{page.title}</h2>
-        </div>
-        <button onClick={load} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
-          🔄 רענן
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4 overflow-x-auto">
+      <div className="bg-white rounded-xl shadow-sm p-2 flex items-center gap-1 mb-4 overflow-x-auto">
         <Link href={`/marketing/pages/${params.id}/dashboard`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">📊 דשבורד</Link>
         <Link href={`/marketing/pages/${params.id}/leads`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">📋 לידים</Link>
         <Link href={`/marketing/pages/${params.id}/links`} className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-700 text-white whitespace-nowrap">🔗 קישורי מעקב</Link>
         <Link href={`/marketing/pages/${params.id}`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">✏️ עריכה</Link>
+        <button onClick={load} className="ms-auto text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
+          🔄 רענן
+        </button>
       </div>
 
       {/* Add new */}

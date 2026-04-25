@@ -53,7 +53,7 @@ export default function PageDashboard({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      <Breadcrumbs id={params.id} title={page.title} active="dashboard" onRefresh={load} />
+      <PageTabs id={params.id} active="dashboard" onRefresh={load} />
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-primary-700 to-primary-900 text-white rounded-xl shadow-sm p-5 mb-4 flex items-center justify-between gap-3 flex-wrap">
@@ -176,26 +176,20 @@ function Stat({ label, value, color, small = false }: { label: string; value: nu
   );
 }
 
-function Breadcrumbs({ id, title, active, onRefresh }: { id: string; title: string; active: "dashboard" | "leads" | "links" | "edit"; onRefresh?: () => void }) {
+function PageTabs({ id, active, onRefresh }: { id: string; active: "dashboard" | "leads" | "links" | "edit"; onRefresh?: () => void }) {
+  const cls = (k: string) =>
+    `px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === k ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`;
   return (
-    <div>
-      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Link href="/marketing/pages" className="text-gray-400 hover:text-primary-700 text-lg" title="חזור לרשימה">←</Link>
-          <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-        </div>
-        {onRefresh && (
-          <button onClick={onRefresh} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
-            🔄 רענן
-          </button>
-        )}
-      </div>
-      <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4 overflow-x-auto">
-        <Link href={`/marketing/pages/${id}/dashboard`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "dashboard" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>📊 דשבורד</Link>
-        <Link href={`/marketing/pages/${id}/leads`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "leads" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>📋 לידים</Link>
-        <Link href={`/marketing/pages/${id}/links`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "links" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>🔗 קישורי מעקב</Link>
-        <Link href={`/marketing/pages/${id}`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "edit" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>✏️ עריכה</Link>
-      </div>
+    <div className="bg-white rounded-xl shadow-sm p-2 flex items-center gap-1 mb-4 overflow-x-auto">
+      <Link href={`/marketing/pages/${id}/dashboard`} className={cls("dashboard")}>📊 דשבורד</Link>
+      <Link href={`/marketing/pages/${id}/leads`} className={cls("leads")}>📋 לידים</Link>
+      <Link href={`/marketing/pages/${id}/links`} className={cls("links")}>🔗 קישורי מעקב</Link>
+      <Link href={`/marketing/pages/${id}`} className={cls("edit")}>✏️ עריכה</Link>
+      {onRefresh && (
+        <button onClick={onRefresh} className="ms-auto text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
+          🔄 רענן
+        </button>
+      )}
     </div>
   );
 }

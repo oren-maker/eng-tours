@@ -106,17 +106,7 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Link href="/marketing/pages" className="text-gray-400 hover:text-primary-700 text-lg" title="חזור לרשימה">←</Link>
-          <h2 className="text-lg font-semibold text-gray-800">{page.title}</h2>
-        </div>
-        <button onClick={load} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
-          🔄 רענן
-        </button>
-      </div>
-
-      <PageTabs id={params.id} active="leads" />
+      <PageTabs id={params.id} active="leads" onRefresh={load} />
 
       {errMsg && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 mb-3 text-sm">
@@ -207,15 +197,20 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
   );
 }
 
-function PageTabs({ id, active }: { id: string; active: "dashboard" | "leads" | "links" | "edit" }) {
+function PageTabs({ id, active, onRefresh }: { id: string; active: "dashboard" | "leads" | "links" | "edit"; onRefresh?: () => void }) {
   const cls = (k: string) =>
     `px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === k ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`;
   return (
-    <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4 overflow-x-auto">
+    <div className="bg-white rounded-xl shadow-sm p-2 flex items-center gap-1 mb-4 overflow-x-auto">
       <Link href={`/marketing/pages/${id}/dashboard`} className={cls("dashboard")}>📊 דשבורד</Link>
       <Link href={`/marketing/pages/${id}/leads`} className={cls("leads")}>📋 לידים</Link>
       <Link href={`/marketing/pages/${id}/links`} className={cls("links")}>🔗 קישורי מעקב</Link>
       <Link href={`/marketing/pages/${id}`} className={cls("edit")}>✏️ עריכה</Link>
+      {onRefresh && (
+        <button onClick={onRefresh} className="ms-auto text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded hover:bg-gray-200 inline-flex items-center gap-1" title="רענן נתונים">
+          🔄 רענן
+        </button>
+      )}
     </div>
   );
 }
