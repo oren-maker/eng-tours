@@ -128,7 +128,7 @@ export default function PageDashboard({ params }: { params: { id: string } }) {
       <div className="bg-white rounded-xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="font-semibold text-gray-800">📋 לידים אחרונים</h3>
-          <Link href={`/marketing/pages/${params.id}`} className="text-xs text-primary-700 hover:underline">כל הלידים + עריכה ←</Link>
+          <Link href={`/marketing/pages/${params.id}/leads`} className="text-xs text-primary-700 hover:underline">כל הלידים ←</Link>
         </div>
         {leads.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-6">אין לידים עדיין</p>
@@ -176,7 +176,7 @@ function Stat({ label, value, color, small = false }: { label: string; value: nu
   );
 }
 
-function Breadcrumbs({ id, title, active }: { id: string; title: string; active: "dashboard" | "links" | "edit" }) {
+function Breadcrumbs({ id, title, active }: { id: string; title: string; active: "dashboard" | "leads" | "links" | "edit" }) {
   return (
     <div>
       <div className="flex items-center gap-2 text-sm text-gray-500 mb-3 flex-wrap">
@@ -186,8 +186,9 @@ function Breadcrumbs({ id, title, active }: { id: string; title: string; active:
       </div>
       <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4 overflow-x-auto">
         <Link href={`/marketing/pages/${id}/dashboard`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "dashboard" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>📊 דשבורד</Link>
+        <Link href={`/marketing/pages/${id}/leads`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "leads" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>📋 לידים</Link>
         <Link href={`/marketing/pages/${id}/links`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "links" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>🔗 קישורי מעקב</Link>
-        <Link href={`/marketing/pages/${id}`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "edit" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>✏️ עריכה + לידים</Link>
+        <Link href={`/marketing/pages/${id}`} className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${active === "edit" ? "bg-primary-700 text-white" : "text-gray-600 hover:bg-gray-50"}`}>✏️ עריכה</Link>
       </div>
     </div>
   );

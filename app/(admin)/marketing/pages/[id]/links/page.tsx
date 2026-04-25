@@ -79,8 +79,9 @@ export default function LinksPage({ params }: { params: { id: string } }) {
 
       <div className="bg-white rounded-xl shadow-sm p-2 flex gap-1 mb-4 overflow-x-auto">
         <Link href={`/marketing/pages/${params.id}/dashboard`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">📊 דשבורד</Link>
+        <Link href={`/marketing/pages/${params.id}/leads`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">📋 לידים</Link>
         <Link href={`/marketing/pages/${params.id}/links`} className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-700 text-white whitespace-nowrap">🔗 קישורי מעקב</Link>
-        <Link href={`/marketing/pages/${params.id}`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">✏️ עריכה + לידים</Link>
+        <Link href={`/marketing/pages/${params.id}`} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap">✏️ עריכה</Link>
       </div>
 
       {/* Add new */}
