@@ -71,16 +71,27 @@ export default async function PublicMarketingPage({
   };
 
   const customHtml = page.html ? applyTemplate(page.html, vars) : "";
+  const theme: string = page.theme || "default";
 
   return (
-    <div dir="rtl" className="relative min-h-screen bg-black text-white">
+    <div dir="rtl" className="relative min-h-screen bg-black text-white" data-theme={theme}>
       {/* Page-wide background — absolute, grows with content */}
       {page.cover_image_url ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={page.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/85 pointer-events-none" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.30),transparent_70%)] pointer-events-none" />
+          <div className={`absolute inset-0 pointer-events-none ${theme === "sunset" ? "bg-gradient-to-b from-black/15 via-black/25 to-black/55" : "bg-gradient-to-b from-black/40 via-black/55 to-black/85"}`} />
+          {theme === "sunset" ? (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,140,66,0.30),transparent_70%)] pointer-events-none" />
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.30),transparent_70%)] pointer-events-none" />
+          )}
+        </>
+      ) : theme === "sunset" ? (
+        <>
+          {/* Sunset gradient (purple → orange → yellow) */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #5B4B8A 0%, #FF7A3D 60%, #FFD36E 100%)" }} />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_70%,rgba(255,140,66,0.45),transparent_60%)] pointer-events-none" />
         </>
       ) : (
         <>
@@ -138,6 +149,11 @@ export default async function PublicMarketingPage({
           affiliateCode={searchParams.ref || ""}
           introText={page.intro_text || ""}
           customHtml={customHtml}
+          theme={theme}
+          interestOptions={Array.isArray(page.interest_options) && page.interest_options.length ? page.interest_options : [
+            { value: "package_inquiry", label: "חבילת סוף שבוע (טיסה + מלון)" },
+            { value: "ticket_purchase", label: "רכישת כרטיס בלבד" },
+          ]}
         />
       </main>
     </div>
