@@ -15,6 +15,28 @@ function formatDate(d: string | null) {
   } catch { return d; }
 }
 
+function formatDateRange(start: string | null, end: string | null) {
+  if (!start) return "";
+  if (!end || end === start) return formatDate(start);
+  try {
+    const s = new Date(start);
+    const e = new Date(end);
+    const sameMonth = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
+    const sameYear = s.getFullYear() === e.getFullYear();
+    const dd = (n: number) => String(n).padStart(2, "0");
+    const monthShort = (date: Date) => date.toLocaleDateString("en-GB", { month: "short" });
+    if (sameMonth) {
+      // 04-05 July 2026
+      return `${dd(s.getDate())}-${dd(e.getDate())} ${monthShort(s)} ${s.getFullYear()}`;
+    }
+    if (sameYear) {
+      // 30 July - 02 August 2026
+      return `${dd(s.getDate())} ${monthShort(s)} - ${dd(e.getDate())} ${monthShort(e)} ${s.getFullYear()}`;
+    }
+    return `${formatDate(start)} - ${formatDate(end)}`;
+  } catch { return formatDate(start); }
+}
+
 export default async function PublicMarketingPage({
   params,
   searchParams,
@@ -25,7 +47,7 @@ export default async function PublicMarketingPage({
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
-    .select("id, slug, title, html, is_active, main_artist, guest_artist, event_date, city, country, venue_name, ticket_purchase_link, intro_text, cover_image_url, archived_at")
+    .select("id, slug, title, html, is_active, main_artist, guest_artist, event_date, event_end_date, city, country, venue_name, ticket_purchase_link, intro_text, cover_image_url, archived_at")
     .eq("slug", params.slug)
     .eq("is_active", true)
     .is("archived_at", null)
@@ -37,7 +59,7 @@ export default async function PublicMarketingPage({
     title: page.title || "",
     main_artist: page.main_artist || "",
     guest_artist: page.guest_artist || "",
-    event_date: formatDate(page.event_date),
+    event_date: formatDateRange(page.event_date, page.event_end_date),
     city: page.city || "",
     country: page.country || "",
     venue_name: page.venue_name || "",
@@ -83,7 +105,7 @@ export default async function PublicMarketingPage({
 
           {(page.event_date || page.city) && (
             <p dir="ltr" className="mt-4 text-xs md:text-sm font-bold tracking-[0.25em] uppercase text-white/95">
-              {[formatDate(page.event_date), page.city].filter(Boolean).join(" ")}
+              {[formatDateRange(page.event_date, page.event_end_date), page.city].filter(Boolean).join(" ")}
             </p>
           )}
 

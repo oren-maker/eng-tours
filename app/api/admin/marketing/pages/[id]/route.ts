@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase";
 
 const editableFields = [
   "title", "slug", "html", "is_active",
-  "main_artist", "guest_artist", "event_date",
+  "main_artist", "guest_artist", "event_date", "event_end_date",
   "city", "country", "venue_name",
   "ticket_purchase_link", "intro_text",
   "cover_image_url", "wa_message_template", "notification_phone",
@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (k in body) {
       const v = body[k];
       if (k === "is_active") update[k] = !!v;
-      else if (k === "event_date") update[k] = v || null;
+      else if (k === "event_date" || k === "event_end_date") update[k] = v || null;
       else if (k === "html") update[k] = typeof v === "string" ? v : "";
       else if (k === "title" || k === "slug") update[k] = typeof v === "string" ? v.trim() : v;
       else if (typeof v === "string") update[k] = v.trim() || null;

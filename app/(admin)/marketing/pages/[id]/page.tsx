@@ -13,6 +13,7 @@ type Page = {
   main_artist: string | null;
   guest_artist: string | null;
   event_date: string | null;
+  event_end_date: string | null;
   city: string | null;
   country: string | null;
   venue_name: string | null;
@@ -63,6 +64,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           main_artist: page.main_artist,
           guest_artist: page.guest_artist,
           event_date: page.event_date,
+          event_end_date: page.event_end_date,
           city: page.city,
           country: page.country,
           venue_name: page.venue_name,
@@ -157,9 +159,26 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
             <h3 className="font-semibold text-gray-800">🎤 פרטי האירוע</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="flex items-center gap-2 text-sm cursor-pointer md:col-span-2">
+                <input type="checkbox"
+                  checked={!!page.event_end_date}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      // Default end date = start date (user will adjust)
+                      setPage({ ...page, event_end_date: page.event_end_date || page.event_date || "" });
+                    } else {
+                      setPage({ ...page, event_end_date: null });
+                    }
+                  }}
+                  className="w-4 h-4" />
+                <span className="text-gray-700">אירוע רב-יומי (טווח תאריכים)</span>
+              </label>
               <Field label="אמן ראשי" value={page.main_artist || ""} onChange={(v) => setPage({ ...page, main_artist: v })} />
               <Field label="אמן אורח" value={page.guest_artist || ""} onChange={(v) => setPage({ ...page, guest_artist: v })} />
-              <Field label="תאריך" type="date" value={page.event_date || ""} onChange={(v) => setPage({ ...page, event_date: v })} />
+              <Field label={page.event_end_date ? "מתאריך" : "תאריך"} type="date" value={page.event_date || ""} onChange={(v) => setPage({ ...page, event_date: v })} />
+              {page.event_end_date !== null && page.event_end_date !== undefined && (
+                <Field label="עד תאריך" type="date" value={page.event_end_date || ""} onChange={(v) => setPage({ ...page, event_end_date: v })} />
+              )}
               <Field label="שם המקום" value={page.venue_name || ""} onChange={(v) => setPage({ ...page, venue_name: v })} />
               <Field label="עיר" value={page.city || ""} onChange={(v) => setPage({ ...page, city: v })} />
               <Field label="מדינה" value={page.country || ""} onChange={(v) => setPage({ ...page, country: v })} />
