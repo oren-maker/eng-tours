@@ -127,7 +127,11 @@ export default function MarketingPagesList() {
                     {p.archived_at ? (
                       <span className="text-[10px] bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">בארכיון</span>
                     ) : p.is_active ? (
-                      <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">פעיל</span>
+                      <a href={`/m/${p.slug}`} target="_blank" rel="noopener noreferrer"
+                        className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full hover:bg-green-200 inline-flex items-center gap-1"
+                        title="הצג את עמוד האירוע">
+                        פעיל · 👁 הצג
+                      </a>
                     ) : (
                       <span className="text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">כבוי</span>
                     )}
