@@ -21,6 +21,7 @@ type Page = {
   intro_text: string | null;
   cover_image_url: string | null;
   hero_image_url: string | null;
+  theme: string | null;
   wa_message_template: string | null;
   notification_phone: string | null;
 };
@@ -73,6 +74,7 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           intro_text: page.intro_text,
           wa_message_template: page.wa_message_template,
           notification_phone: page.notification_phone,
+          theme: page.theme,
         }),
       });
       const d = await res.json();
@@ -172,6 +174,15 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
           {/* Basic */}
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
             <h3 className="font-semibold text-gray-800">📌 פרטים בסיסיים</h3>
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-1">🎨 ערכת עיצוב</label>
+              <select value={page.theme || "default"} onChange={(e) => setPage({ ...page, theme: e.target.value })}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary-500">
+                <option value="default">🔴 ברירת מחדל (אדום-שחור)</option>
+                <option value="aura">🔵 אאורה (כחול עמוק עם זוהר)</option>
+                <option value="sunset">🌅 שקיעה (סגול-כתום-צהוב)</option>
+              </select>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Field label="כותרת*" value={page.title} onChange={(v) => setPage({ ...page, title: v })} />
               <Field label="slug (כתובת)*" value={page.slug} onChange={(v) => setPage({ ...page, slug: v })} mono />

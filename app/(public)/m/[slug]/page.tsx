@@ -83,9 +83,11 @@ export default async function PublicMarketingPage({
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={page.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-          <div className={`absolute inset-0 pointer-events-none ${theme === "sunset" ? "bg-gradient-to-b from-black/15 via-black/25 to-black/55" : "bg-gradient-to-b from-black/40 via-black/55 to-black/85"}`} />
+          <div className={`absolute inset-0 pointer-events-none ${theme === "sunset" ? "bg-gradient-to-b from-black/15 via-black/25 to-black/55" : theme === "aura" ? "bg-gradient-to-b from-black/30 via-[#0B1E3C]/60 to-[#0B1E3C]/90" : "bg-gradient-to-b from-black/40 via-black/55 to-black/85"}`} />
           {theme === "sunset" ? (
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,140,66,0.30),transparent_70%)] pointer-events-none" />
+          ) : theme === "aura" ? (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,rgba(79,195,247,0.35),transparent_65%)] pointer-events-none" />
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(220,38,38,0.30),transparent_70%)] pointer-events-none" />
           )}
@@ -95,6 +97,12 @@ export default async function PublicMarketingPage({
           {/* Sunset gradient (purple → orange → yellow) */}
           <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, #5B4B8A 0%, #FF7A3D 60%, #FFD36E 100%)" }} />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_70%,rgba(255,140,66,0.45),transparent_60%)] pointer-events-none" />
+        </>
+      ) : theme === "aura" ? (
+        <>
+          {/* Aura: deep navy with cyan glow */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 80% 60% at 50% 25%, #1E4D8F 0%, #0B1E3C 55%, #050A1A 100%)" }} />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_15%,rgba(79,195,247,0.45),transparent_55%)] pointer-events-none" />
         </>
       ) : (
         <>
