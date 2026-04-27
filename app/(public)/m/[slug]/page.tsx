@@ -17,24 +17,28 @@ function formatDate(d: string | null) {
 
 function formatDateRange(start: string | null, end: string | null) {
   if (!start) return "";
-  if (!end || end === start) return formatDate(start);
+  const fmtSingle = (d: string) => {
+    const dt = new Date(d);
+    const yy = String(dt.getFullYear()).slice(-2);
+    return `${dt.getDate()}.${dt.getMonth() + 1}.${yy}`;
+  };
+  if (!end || end === start) return fmtSingle(start);
   try {
     const s = new Date(start);
     const e = new Date(end);
     const sameMonth = s.getFullYear() === e.getFullYear() && s.getMonth() === e.getMonth();
     const sameYear = s.getFullYear() === e.getFullYear();
-    const dd = (n: number) => String(n).padStart(2, "0");
-    const monthShort = (date: Date) => date.toLocaleDateString("en-GB", { month: "short" });
+    const yy = (d: Date) => String(d.getFullYear()).slice(-2);
     if (sameMonth) {
-      // 04-05 July 2026
-      return `${dd(s.getDate())}-${dd(e.getDate())} ${monthShort(s)} ${s.getFullYear()}`;
+      // 4-5.9.26
+      return `${s.getDate()}-${e.getDate()}.${s.getMonth() + 1}.${yy(s)}`;
     }
     if (sameYear) {
-      // 30 July - 02 August 2026
-      return `${dd(s.getDate())} ${monthShort(s)} - ${dd(e.getDate())} ${monthShort(e)} ${s.getFullYear()}`;
+      // 30.7-2.8.26
+      return `${s.getDate()}.${s.getMonth() + 1}-${e.getDate()}.${e.getMonth() + 1}.${yy(s)}`;
     }
-    return `${formatDate(start)} - ${formatDate(end)}`;
-  } catch { return formatDate(start); }
+    return `${fmtSingle(start)} - ${fmtSingle(end)}`;
+  } catch { return fmtSingle(start); }
 }
 
 export default async function PublicMarketingPage({
