@@ -20,6 +20,7 @@ type Page = {
   ticket_purchase_link: string | null;
   intro_text: string | null;
   cover_image_url: string | null;
+  hero_image_url: string | null;
   wa_message_template: string | null;
   notification_phone: string | null;
 };
@@ -101,6 +102,29 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
       const res = await fetch(`/api/admin/marketing/pages/${params.id}/cover`, { method: "DELETE" });
       if (!res.ok) { alert("שגיאה"); return; }
       setPage({ ...page, cover_image_url: null });
+    } finally { setUploading(false); }
+  }
+
+  async function uploadHero(file: File) {
+    if (!page) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/admin/marketing/pages/${params.id}/hero`, { method: "POST", body: fd });
+      const d = await res.json();
+      if (!res.ok) { alert(d.error || "שגיאה בהעלאה"); return; }
+      setPage({ ...page, hero_image_url: d.hero_image_url });
+    } finally { setUploading(false); }
+  }
+
+  async function removeHero() {
+    if (!page || !confirm("להסיר את תמונת הכותרת?")) return;
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/admin/marketing/pages/${params.id}/hero`, { method: "DELETE" });
+      if (!res.ok) { alert("שגיאה"); return; }
+      setPage({ ...page, hero_image_url: null });
     } finally { setUploading(false); }
   }
 
@@ -192,6 +216,44 @@ export default function MarketingPageEdit({ params }: { params: { id: string } }
               )}
               <p className="text-xs text-gray-500 mt-1">דוגמה: <code className="bg-gray-100 px-1">https://www.eventim.co.il/he/event/123</code></p>
             </div>
+          </div>
+
+          {/* Hero image — replaces title text block */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+            <h3 className="font-semibold text-gray-800">🎨 תמונת כותרת (במקום הטקסט)</h3>
+            <p className="text-xs text-gray-500">
+              אם תעלה תמונה — היא תוצג בראש העמוד <b>במקום</b> הכותרת והאמנים.
+              הטקסטים של תאריך/עיר/intro עדיין יופיעו מתחת.
+            </p>
+            <p className="text-xs text-gray-500">
+              <b>מידות מומלצות:</b> 1200×800 px (יחס 3:2). PNG/JPG/WEBP/GIF · עד 10MB.
+              במובייל התמונה תוקטן לרוחב המסך.
+            </p>
+            {page.hero_image_url ? (
+              <div className="space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={page.hero_image_url} alt="hero" className="w-full max-h-72 object-contain bg-black rounded-lg border border-gray-200" />
+                <div className="flex gap-2">
+                  <label className={`text-xs bg-primary-700 text-white px-3 py-1.5 rounded hover:bg-primary-800 cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                    {uploading ? "מעלה..." : "🔄 החלף"}
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+                      onChange={(e) => e.target.files?.[0] && uploadHero(e.target.files[0])} />
+                  </label>
+                  <button onClick={removeHero} disabled={uploading}
+                    className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded hover:bg-red-200 disabled:opacity-50">
+                    🗑 הסר
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className={`block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50/30 transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+                <div className="text-3xl mb-2">📤</div>
+                <div className="text-sm font-medium text-gray-700">{uploading ? "מעלה..." : "העלה תמונת כותרת"}</div>
+                <div className="text-xs text-gray-500 mt-1">תחליף את הטקסט הענק בראש העמוד</div>
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+                  onChange={(e) => e.target.files?.[0] && uploadHero(e.target.files[0])} />
+              </label>
+            )}
           </div>
 
           {/* Cover image */}

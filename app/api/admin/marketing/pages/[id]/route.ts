@@ -7,7 +7,7 @@ const editableFields = [
   "main_artist", "guest_artist", "event_date", "event_end_date",
   "city", "country", "venue_name",
   "ticket_purchase_link", "intro_text",
-  "cover_image_url", "wa_message_template", "notification_phone",
+  "cover_image_url", "hero_image_url", "wa_message_template", "notification_phone",
   "theme", "interest_options",
 ] as const;
 

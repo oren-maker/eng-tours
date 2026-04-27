@@ -91,20 +91,33 @@ export default async function PublicMarketingPage({
 
       {/* Hero */}
       <header className="relative">
-        <div className="relative max-w-3xl mx-auto px-5 pt-10 pb-4 md:pt-14 md:pb-6 text-center">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.04em" }}>
-            {page.title}
-          </h1>
-
-          {(page.main_artist || page.guest_artist) && (
-            <div dir="ltr" className="mt-5 leading-[1.05]">
-              {page.main_artist && (
-                <div className="text-3xl md:text-5xl font-black uppercase tracking-tight">{page.main_artist}</div>
+        <div className="relative max-w-3xl mx-auto px-5 pt-6 pb-4 md:pt-10 md:pb-6 text-center">
+          {page.hero_image_url ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={page.hero_image_url}
+                alt={page.title || ""}
+                className="w-full max-w-2xl mx-auto h-auto block"
+                style={{ maxHeight: "70vh", objectFit: "contain" }}
+              />
+            </>
+          ) : (
+            <>
+              <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase leading-none" style={{ letterSpacing: "0.04em" }}>
+                {page.title}
+              </h1>
+              {(page.main_artist || page.guest_artist) && (
+                <div dir="ltr" className="mt-5 leading-[1.05]">
+                  {page.main_artist && (
+                    <div className="text-3xl md:text-5xl font-black uppercase tracking-tight">{page.main_artist}</div>
+                  )}
+                  {page.guest_artist && (
+                    <div className="text-3xl md:text-5xl font-black uppercase tracking-tight">{page.guest_artist}</div>
+                  )}
+                </div>
               )}
-              {page.guest_artist && (
-                <div className="text-3xl md:text-5xl font-black uppercase tracking-tight">{page.guest_artist}</div>
-              )}
-            </div>
+            </>
           )}
 
           {(page.event_date || page.city) && (
