@@ -48,14 +48,17 @@ export default async function PublicMarketingPage({
   params: { slug: string };
   searchParams: { ref?: string };
 }) {
-  const supabase = createServiceClient();
-  const { data: page } = await supabase
-    .from("marketing_pages")
-    .select("*")
-    .eq("slug", params.slug)
-    .eq("is_active", true)
-    .is("archived_at", null)
-    .maybeSingle();
+  // Direct REST call to avoid any client-side schema cache.
+  const restUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/marketing_pages?slug=eq.${encodeURIComponent(params.slug)}&is_active=eq.true&archived_at=is.null&select=*`;
+  const restRes = await fetch(restUrl, {
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || ""}`,
+    },
+    cache: "no-store",
+  });
+  const rows: Record<string, unknown>[] = await restRes.json().catch(() => []);
+  const page = (Array.isArray(rows) ? rows[0] : null) as Record<string, any> | null;
 
   if (!page) notFound();
 
