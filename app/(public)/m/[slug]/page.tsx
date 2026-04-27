@@ -47,7 +47,7 @@ export default async function PublicMarketingPage({
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
-    .select("id, slug, title, html, is_active, main_artist, guest_artist, event_date, event_end_date, city, country, venue_name, ticket_purchase_link, intro_text, cover_image_url, archived_at")
+    .select("*")
     .eq("slug", params.slug)
     .eq("is_active", true)
     .is("archived_at", null)
@@ -108,8 +108,6 @@ export default async function PublicMarketingPage({
               {[formatDateRange(page.event_date, page.event_end_date), page.city].filter(Boolean).join(" ")}
             </p>
           )}
-          {/* DEBUG-DATES start={page.event_date} end={page.event_end_date} */}
-          <span style={{ display: "none" }} data-debug-dates={JSON.stringify({ start: page.event_date, end: page.event_end_date })} />
 
           {page.venue_name && (
             <p className="mt-1.5 text-[11px] text-white/55">{page.venue_name}{page.country ? `, ${page.country}` : ""}</p>

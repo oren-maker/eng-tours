@@ -12,6 +12,7 @@ type Page = {
   main_artist?: string | null;
   guest_artist?: string | null;
   event_date?: string | null;
+  event_end_date?: string | null;
   city?: string | null;
   leads_count: number;
   affiliates_count: number;
@@ -134,7 +135,11 @@ export default function MarketingPagesList() {
                   <div className="text-xs text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
                     <a href={`/m/${p.slug}`} target="_blank" rel="noopener noreferrer" className="font-mono hover:text-primary-700">/m/{p.slug}</a>
                     {p.main_artist && <span>· 🎤 {p.main_artist}{p.guest_artist ? ` × ${p.guest_artist}` : ""}</span>}
-                    {p.event_date && <span>· 📅 {new Date(p.event_date).toLocaleDateString("he-IL")}</span>}
+                    {p.event_date && (
+                      <span>· 📅 {new Date(p.event_date).toLocaleDateString("he-IL")}
+                        {p.event_end_date && p.event_end_date !== p.event_date && ` – ${new Date(p.event_end_date).toLocaleDateString("he-IL")}`}
+                      </span>
+                    )}
                     {p.city && <span>· 📍 {p.city}</span>}
                   </div>
                   <div className="text-xs text-gray-500 mt-1.5 flex items-center gap-3">
