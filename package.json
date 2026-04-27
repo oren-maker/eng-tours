@@ -9,13 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.88.0",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.103.0",
+    "@supabase/supabase-js": "^2.104.1",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
     "next": "14.2.35",
-    "next-auth": "^4.24.13",
+    "next-auth": "^4.24.14",
     "pg": "^8.20.0",
     "qrcode": "^1.5.4",
     "react": "^18",
