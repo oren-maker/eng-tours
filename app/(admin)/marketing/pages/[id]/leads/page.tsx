@@ -88,23 +88,40 @@ export default function LeadsPage({ params }: { params: { id: string } }) {
     return true;
   });
 
-  async function patchLead(leadId: string, body: Record<string, unknown>) {
+  async function patchLead(leadId: string, body: Record<string, unknown>, optimistic: (l: Lead) => Lead) {
+    // Optimistic update — flip UI immediately
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? optimistic(l) : l)));
     const res = await fetch(`/api/admin/marketing/pages/${params.id}/leads/${leadId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) { alert("שגיאה"); return; }
-    await load();
+    if (!res.ok) {
+      alert("שגיאה — מחזיר למצב קודם");
+      await load();
+      return;
+    }
+    const data = await res.json().catch(() => null);
+    if (data?.lead) {
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? data.lead : l)));
+    }
   }
 
   async function toggleHandled(lead: Lead) {
-    await patchLead(lead.id, { handled: !lead.handled });
+    const next = !lead.handled;
+    await patchLead(lead.id, { handled: next }, (l) => ({
+      ...l,
+      handled: next,
+      handled_at: next ? new Date().toISOString() : null,
+    }));
   }
   async function toggleArchive(lead: Lead) {
     const archive = !lead.archived_at;
     if (archive && !confirm("להעביר את הליד לארכיון?")) return;
-    await patchLead(lead.id, { archive });
+    await patchLead(lead.id, { archive }, (l) => ({
+      ...l,
+      archived_at: archive ? new Date().toISOString() : null,
+    }));
   }
 
   function exportCsv() {
