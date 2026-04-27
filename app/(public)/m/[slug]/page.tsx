@@ -108,6 +108,8 @@ export default async function PublicMarketingPage({
               {[formatDateRange(page.event_date, page.event_end_date), page.city].filter(Boolean).join(" ")}
             </p>
           )}
+          {/* DEBUG-DATES start={page.event_date} end={page.event_end_date} */}
+          <span style={{ display: "none" }} data-debug-dates={JSON.stringify({ start: page.event_date, end: page.event_end_date })} />
 
           {page.venue_name && (
             <p className="mt-1.5 text-[11px] text-white/55">{page.venue_name}{page.country ? `, ${page.country}` : ""}</p>
