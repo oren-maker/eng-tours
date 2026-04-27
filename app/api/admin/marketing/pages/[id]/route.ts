@@ -8,6 +8,7 @@ const editableFields = [
   "city", "country", "venue_name",
   "ticket_purchase_link", "intro_text",
   "cover_image_url", "wa_message_template", "notification_phone",
+  "theme", "interest_options",
 ] as const;
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -34,6 +35,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       else if (k === "event_date" || k === "event_end_date") update[k] = v || null;
       else if (k === "html") update[k] = typeof v === "string" ? v : "";
       else if (k === "title" || k === "slug") update[k] = typeof v === "string" ? v.trim() : v;
+      else if (k === "theme") update[k] = (typeof v === "string" && v.trim()) ? v.trim() : "default";
+      else if (k === "interest_options") update[k] = Array.isArray(v) ? v : null;
       else if (typeof v === "string") update[k] = v.trim() || null;
       else update[k] = v;
     }

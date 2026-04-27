@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   if (!firstName || !lastName) return NextResponse.json({ error: "שם מלא חובה" }, { status: 400 });
   if (!phoneRaw) return NextResponse.json({ error: "טלפון חובה" }, { status: 400 });
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) return NextResponse.json({ error: "מייל לא תקין" }, { status: 400 });
-  if (!["package_inquiry", "ticket_purchase"].includes(interestType)) {
+  if (!interestType) {
     return NextResponse.json({ error: "בחר סוג עניין" }, { status: 400 });
   }
 
@@ -79,12 +79,19 @@ export async function POST(request: NextRequest) {
   const supabase = createServiceClient();
   const { data: page } = await supabase
     .from("marketing_pages")
-    .select("id, title, is_active, ticket_purchase_link, wa_message_template, notification_phone")
+    .select("id, title, is_active, ticket_purchase_link, wa_message_template, notification_phone, interest_options")
     .eq("slug", slug)
     .maybeSingle();
 
   if (!page) return NextResponse.json({ error: "Page not found" }, { status: 404 });
   if (!page.is_active) return NextResponse.json({ error: "Page disabled" }, { status: 410 });
+
+  const allowedInterests: string[] = Array.isArray(page.interest_options) && page.interest_options.length
+    ? page.interest_options.map((o: { value: string }) => o.value)
+    : ["package_inquiry", "ticket_purchase"];
+  if (!allowedInterests.includes(interestType)) {
+    return NextResponse.json({ error: "סוג עניין לא חוקי לעמוד זה" }, { status: 400 });
+  }
 
   let affiliateId: string | null = null;
   if (affiliateCode) {
@@ -122,6 +129,9 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Send WA + email only when the interest is the canonical "ticket_purchase".
+  // Other custom interests (e.g. "vip", "info_only") still save the lead and
+  // notify admin, but don't auto-respond.
   if (interestType === "ticket_purchase") {
     if (!page.ticket_purchase_link) {
       await supabase
