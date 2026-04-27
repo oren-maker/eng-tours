@@ -46,7 +46,8 @@ async function main() {
   `);
   const lNames = lcols.rows.map((r) => r.column_name);
   const lReq = ["id", "page_id", "first_name", "last_name", "phone", "email", "interest_type",
-    "whatsapp_status", "whatsapp_sent_at", "email_status", "email_sent_at", "affiliate_id"];
+    "whatsapp_status", "whatsapp_sent_at", "email_status", "email_sent_at", "affiliate_id",
+    "archived_at", "handled", "handled_at"];
   for (const f of lReq) {
     if (lNames.includes(f)) ok(`marketing_leads.${f} exists`);
     else bad(`marketing_leads.${f} MISSING`);
