@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, display_name, role, phone, whatsapp_number, whatsapp } = body;
+    const { email, password, display_name, role, phone, whatsapp_number, whatsapp, marketing_page_id } = body;
 
     // Validate required fields
     if (!email || !password || !display_name || !role) {
@@ -38,9 +38,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    if (!["admin", "supplier"].includes(role)) {
+    if (!["admin", "supplier", "page_admin"].includes(role)) {
       return NextResponse.json(
         { error: "תפקיד לא תקין" },
+        { status: 400 }
+      );
+    }
+
+    if (role === "page_admin" && !marketing_page_id) {
+      return NextResponse.json(
+        { error: "אדמין עמוד צריך עמוד שיווק משויך" },
         { status: 400 }
       );
     }
@@ -80,6 +87,7 @@ export async function POST(request: NextRequest) {
         role,
         phone: phone || null,
         whatsapp_number: whatsapp_number || whatsapp || null,
+        marketing_page_id: role === "page_admin" ? marketing_page_id : null,
         is_active: true,
         is_primary_admin: false,
         created_at: new Date().toISOString(),

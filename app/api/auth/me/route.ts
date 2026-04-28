@@ -13,7 +13,7 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data: user } = await supabase
     .from("users")
-    .select("id, email, display_name, role, password_changed_at, two_factor_enabled, last_login_at")
+    .select("id, email, display_name, role, password_changed_at, two_factor_enabled, last_login_at, marketing_page_id")
     .eq("id", session.user.id)
     .maybeSingle();
 
@@ -24,10 +24,18 @@ export async function GET() {
   const rotationWarning = ageDays !== null && ageDays >= ROTATION_DAYS;
 
   return NextResponse.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      display_name: user.display_name,
+      role: user.role,
+      marketing_page_id: user.marketing_page_id || null,
+    },
     id: user.id,
     email: user.email,
     display_name: user.display_name,
     role: user.role,
+    marketing_page_id: user.marketing_page_id || null,
     two_factor_enabled: !!user.two_factor_enabled,
     last_login_at: user.last_login_at,
     password_changed_at: user.password_changed_at,

@@ -103,7 +103,18 @@ export async function middleware(request: NextRequest) {
     if (isPublicApi(pathname, method)) return withRequestId(NextResponse.next(), requestId);
     const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
     if (!token) return withRequestId(NextResponse.json({ error: "Unauthorized", request_id: requestId }, { status: 401 }), requestId);
-    if (token.role !== "admin") return withRequestId(NextResponse.json({ error: "Forbidden", request_id: requestId }, { status: 403 }), requestId);
+
+    // page_admin role: scoped to /api/admin/marketing/pages/<their-page-id>/* only
+    if (token.role === "page_admin") {
+      const pageId = token.marketing_page_id || "";
+      const allowedPrefix = `/api/admin/marketing/pages/${pageId}`;
+      const allowedSelf = pathname === "/api/auth/me";
+      if (!pageId || (!pathname.startsWith(allowedPrefix) && !allowedSelf)) {
+        return withRequestId(NextResponse.json({ error: "Forbidden", request_id: requestId }, { status: 403 }), requestId);
+      }
+    } else if (token.role !== "admin") {
+      return withRequestId(NextResponse.json({ error: "Forbidden", request_id: requestId }, { status: 403 }), requestId);
+    }
 
     // CSRF: for state-changing methods require same-origin.
     if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
@@ -129,7 +140,14 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set("callbackUrl", pathname);
       return withRequestId(NextResponse.redirect(loginUrl), requestId);
     }
-    if (token.role !== "admin") {
+    if (token.role === "page_admin") {
+      const pageId = token.marketing_page_id || "";
+      const allowedRoot = `/marketing/pages/${pageId}`;
+      // Only allow paths under the user's assigned marketing page
+      if (!pageId || !pathname.startsWith(allowedRoot)) {
+        return withRequestId(NextResponse.redirect(new URL(`/marketing/pages/${pageId}/dashboard`, request.url)), requestId);
+      }
+    } else if (token.role !== "admin") {
       if (token.role === "supplier") return withRequestId(NextResponse.redirect(new URL("/portal", request.url)), requestId);
       return withRequestId(NextResponse.redirect(new URL("/login", request.url)), requestId);
     }

@@ -12,6 +12,7 @@ declare module "next-auth" {
       role: string;
       display_name: string;
       is_primary_admin: boolean;
+      marketing_page_id?: string | null;
     };
   }
 
@@ -21,6 +22,7 @@ declare module "next-auth" {
     role: string;
     display_name: string;
     is_primary_admin: boolean;
+    marketing_page_id?: string | null;
   }
 }
 
@@ -31,6 +33,7 @@ declare module "next-auth/jwt" {
     role: string;
     display_name: string;
     is_primary_admin: boolean;
+    marketing_page_id?: string | null;
   }
 }
 
@@ -138,6 +141,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           display_name: user.display_name,
           is_primary_admin: user.is_primary_admin ?? false,
+          marketing_page_id: user.marketing_page_id ?? null,
         };
       },
     }),
@@ -159,6 +163,7 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.display_name = user.display_name;
         token.is_primary_admin = user.is_primary_admin;
+        token.marketing_page_id = user.marketing_page_id ?? null;
       }
       return token;
     },
@@ -169,6 +174,7 @@ export const authOptions: NextAuthOptions = {
         role: token.role,
         display_name: token.display_name,
         is_primary_admin: token.is_primary_admin,
+        marketing_page_id: token.marketing_page_id ?? null,
       };
       return session;
     },

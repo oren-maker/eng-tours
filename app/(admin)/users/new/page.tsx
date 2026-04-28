@@ -1,21 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+
+type MarketingPage = { id: string; title: string; slug: string };
 
 export default function NewUserPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const [saving, setSaving] = useState(false);
+  const [pages, setPages] = useState<MarketingPage[]>([]);
   const [form, setForm] = useState({
     display_name: "",
     email: "",
     phone: "",
     whatsapp_number: "",
     password: "",
-    role: "admin" as "admin" | "supplier",
+    role: "admin" as "admin" | "supplier" | "page_admin",
+    marketing_page_id: "" as string,
   });
+
+  useEffect(() => {
+    fetch("/api/admin/marketing/pages", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setPages(d.pages || []))
+      .catch(() => {});
+  }, []);
 
   // Only primary admin can access
   if (session && !session.user?.is_primary_admin) {
@@ -32,6 +43,11 @@ export default function NewUserPage() {
     setSaving(true);
 
     try {
+      if (form.role === "page_admin" && !form.marketing_page_id) {
+        alert("בחר עמוד שיווק עבור משתמש מסוג 'אדמין עמוד'");
+        setSaving(false);
+        return;
+      }
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,6 +58,7 @@ export default function NewUserPage() {
           whatsapp_number: form.whatsapp_number || undefined,
           password: form.password,
           role: form.role,
+          marketing_page_id: form.role === "page_admin" ? form.marketing_page_id : null,
         }),
       });
 
@@ -141,10 +158,31 @@ export default function NewUserPage() {
               onChange={(e) => updateField("role", e.target.value)}
               className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="admin">מנהל</option>
+              <option value="admin">מנהל מערכת (גישה מלאה)</option>
+              <option value="page_admin">📄 אדמין עמוד שיווק (גישה לעמוד אחד בלבד)</option>
               <option value="supplier">ספק</option>
             </select>
           </div>
+
+          {form.role === "page_admin" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                עמוד שיווק <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.marketing_page_id}
+                onChange={(e) => updateField("marketing_page_id", e.target.value)}
+                className="w-full rounded-lg border-gray-200 border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                required
+              >
+                <option value="">— בחר עמוד —</option>
+                {pages.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title} ({p.slug})</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">המשתמש יוכל לראות רק את העמוד הזה — דשבורד, לידים, קישורי מעקב ועריכה.</p>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-4">
             <button

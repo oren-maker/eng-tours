@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 interface NavItem {
   href: string;
@@ -35,9 +36,22 @@ const navItems: NavItem[] = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isPageAdmin = session?.user?.role === "page_admin";
+  const pageId = session?.user?.marketing_page_id;
+
+  // Build nav based on role
+  const items: NavItem[] = isPageAdmin && pageId
+    ? [
+        { href: `/marketing/pages/${pageId}/dashboard`, label: "📊 דשבורד", icon: "📊" },
+        { href: `/marketing/pages/${pageId}/leads`, label: "📋 לידים", icon: "📋" },
+        { href: `/marketing/pages/${pageId}/links`, label: "🔗 קישורי מעקב", icon: "🔗" },
+        { href: `/marketing/pages/${pageId}`, label: "✏️ עריכת העמוד", icon: "✏️" },
+      ]
+    : navItems;
+
   const [openGroups, setOpenGroups] = useState<string[]>(() => {
-    // Auto-open the group that contains the current page
-    return navItems
+    return items
       .filter((item) => item.children?.some((child) => pathname?.startsWith(child.href)))
       .map((item) => item.href);
   });
@@ -63,7 +77,7 @@ export default function AdminSidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
-          {navItems.map((item) => {
+          {items.map((item) => {
             const hasChildren = item.children && item.children.length > 0;
             const isOpen = openGroups.includes(item.href);
             const isGroupActive = hasChildren && item.children!.some((c) => isActive(c.href));
@@ -130,13 +144,21 @@ export default function AdminSidebar() {
 
       {/* Mobile Bottom Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-primary-700 text-white flex justify-around items-center h-14 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
-        {[
-          { href: "/dashboard", label: "דשבורד", icon: "📊" },
-          { href: "/events", label: "אירועים", icon: "🎪" },
-          { href: "/orders", label: "הזמנות", icon: "📋" },
-          { href: "/financial", label: "כלכלי", icon: "💰" },
-          { href: "/settings", label: "הגדרות", icon: "⚙️" },
-        ].map((item) => (
+        {(isPageAdmin && pageId
+          ? [
+              { href: `/marketing/pages/${pageId}/dashboard`, label: "דשבורד", icon: "📊" },
+              { href: `/marketing/pages/${pageId}/leads`, label: "לידים", icon: "📋" },
+              { href: `/marketing/pages/${pageId}/links`, label: "קישורים", icon: "🔗" },
+              { href: `/marketing/pages/${pageId}`, label: "עריכה", icon: "✏️" },
+            ]
+          : [
+              { href: "/dashboard", label: "דשבורד", icon: "📊" },
+              { href: "/events", label: "אירועים", icon: "🎪" },
+              { href: "/orders", label: "הזמנות", icon: "📋" },
+              { href: "/financial", label: "כלכלי", icon: "💰" },
+              { href: "/settings", label: "הגדרות", icon: "⚙️" },
+            ]
+        ).map((item) => (
           <Link
             key={item.href}
             href={item.href}

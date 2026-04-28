@@ -46,7 +46,19 @@ function LoginForm() {
           setError(result.error);
         }
       } else {
-        router.push(callbackUrl);
+        // For page_admin role, fetch their own profile to learn the assigned page
+        // and redirect there. For everyone else, use the callbackUrl.
+        try {
+          const r = await fetch("/api/auth/me", { cache: "no-store" });
+          const me = await r.json();
+          if (me?.user?.role === "page_admin" && me.user.marketing_page_id) {
+            router.push(`/marketing/pages/${me.user.marketing_page_id}/dashboard`);
+          } else {
+            router.push(callbackUrl);
+          }
+        } catch {
+          router.push(callbackUrl);
+        }
         router.refresh();
       }
     } catch {
